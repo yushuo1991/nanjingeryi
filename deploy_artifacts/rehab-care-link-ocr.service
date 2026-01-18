@@ -1,0 +1,14 @@
+﻿[Unit]
+Description=RehabCareLink OCR Server
+After=network.target
+
+[Service]
+WorkingDirectory=/var/www/rehab-care-link
+Environment=NODE_ENV=production
+EnvironmentFile=/var/www/rehab-care-link/server/.env
+ExecStart=/usr/bin/node /var/www/rehab-care-link/server/ocr-server.js
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

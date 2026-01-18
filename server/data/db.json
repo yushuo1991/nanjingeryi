@@ -1,0 +1,100 @@
+{
+  "patients": [
+    {
+      "id": "pat_demo_1",
+      "name": "张小宝",
+      "gender": "男",
+      "birthDate": "2023-08-12",
+      "guardianName": "张妈妈",
+      "phone": "13800000001",
+      "department": "新生儿科",
+      "bedNo": "01",
+      "diagnosis": "早产儿随访",
+      "notes": "演示数据：用于展示患者信息与关联记录。",
+      "createdAt": "2026-01-14T00:00:00.000Z",
+      "updatedAt": "2026-01-14T00:00:00.000Z"
+    },
+    {
+      "id": "pat_demo_2",
+      "name": "李小米",
+      "gender": "女",
+      "birthDate": "2022-11-03",
+      "guardianName": "李爸爸",
+      "phone": "13800000002",
+      "department": "儿科",
+      "bedNo": "02",
+      "diagnosis": "支气管炎恢复期",
+      "notes": "演示数据：用于展示康复护理与病历管理。",
+      "createdAt": "2026-01-14T00:00:00.000Z",
+      "updatedAt": "2026-01-14T00:00:00.000Z"
+    }
+  ],
+  "records": [
+    {
+      "id": "rec_demo_1",
+      "patientId": "pat_demo_1",
+      "title": "入院记录",
+      "type": "text",
+      "date": "2026-01-14",
+      "text": "主诉：喂养困难。\n现病史：早产后入院观察。\n处理：监测生命体征，指导喂养。",
+      "attachmentName": "",
+      "ocr": null,
+      "createdAt": "2026-01-14T00:00:00.000Z",
+      "updatedAt": "2026-01-14T00:00:00.000Z"
+    },
+    {
+      "id": "rec_demo_2",
+      "patientId": "pat_demo_2",
+      "title": "病程记录",
+      "type": "text",
+      "date": "2026-01-14",
+      "text": "症状：咳嗽减轻，精神可。\n体征：呼吸音较前改善。\n建议：继续雾化与呼吸训练。",
+      "attachmentName": "",
+      "ocr": null,
+      "createdAt": "2026-01-14T00:00:00.000Z",
+      "updatedAt": "2026-01-14T00:00:00.000Z"
+    }
+  ],
+  "rehabSessions": [
+    {
+      "id": "rehab_demo_1",
+      "patientId": "pat_demo_1",
+      "date": "2026-01-14",
+      "items": [
+        {
+          "id": "item_demo_1a",
+          "name": "呼吸训练 15min",
+          "completedAt": null
+        },
+        {
+          "id": "item_demo_1b",
+          "name": "吞咽训练 10min",
+          "completedAt": null
+        }
+      ],
+      "notes": "演示数据：可勾选完成并保存备注。",
+      "createdAt": "2026-01-14T00:00:00.000Z",
+      "updatedAt": "2026-01-14T00:00:00.000Z"
+    },
+    {
+      "id": "rehab_demo_2",
+      "patientId": "pat_demo_2",
+      "date": "2026-01-14",
+      "items": [
+        {
+          "id": "item_demo_2a",
+          "name": "拍背排痰 10min",
+          "completedAt": null
+        },
+        {
+          "id": "item_demo_2b",
+          "name": "步态训练 15min",
+          "completedAt": null
+        }
+      ],
+      "notes": "演示数据：用于展示今日康复计划统计。",
+      "createdAt": "2026-01-14T00:00:00.000Z",
+      "updatedAt": "2026-01-14T00:00:00.000Z"
+    }
+  ]
+}

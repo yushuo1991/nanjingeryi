@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100">
+  <defs>
+    <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2d3a8c"/>
+      <stop offset="100%" style="stop-color:#1e2761"/>
+    </linearGradient>
+    <linearGradient id="childGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f06292"/>
+      <stop offset="100%" style="stop-color:#e91e63"/>
+    </linearGradient>
+  </defs>
+  <!-- 黄色点缀 -->
+  <path d="M25 70 Q15 55 25 45 Q35 55 25 70" fill="#FFB300"/>
+  <!-- 蓝色叶片 -->
+  <path d="M30 75 Q45 45 85 30 Q95 50 75 75 Q55 85 30 75" fill="url(#leafGrad)"/>
+  <!-- 粉色儿童剪影 -->
+  <ellipse cx="65" cy="22" rx="12" ry="14" fill="url(#childGrad)"/>
+  <path d="M53 35 Q50 50 55 60 Q60 65 70 65 Q75 60 78 50 Q80 40 75 35 Q70 32 65 35 Q58 32 53 35" fill="url(#childGrad)"/>
+</svg>

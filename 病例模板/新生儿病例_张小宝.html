@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>住院病历 - 张小宝</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: "SimSun", "宋体", serif;
+      font-size: 14px;
+      line-height: 1.8;
+      padding: 40px;
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      color: #000;
+    }
+    .header {
+      text-align: center;
+      border-bottom: 2px solid #000;
+      padding-bottom: 15px;
+      margin-bottom: 20px;
+    }
+    .hospital-name {
+      font-size: 22px;
+      font-weight: bold;
+      letter-spacing: 4px;
+    }
+    .doc-title {
+      font-size: 18px;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px 20px;
+      margin-bottom: 20px;
+      padding: 10px 0;
+      border-bottom: 1px solid #ccc;
+    }
+    .info-item {
+      display: flex;
+    }
+    .info-label {
+      min-width: 70px;
+      color: #333;
+    }
+    .info-value {
+      border-bottom: 1px solid #000;
+      flex: 1;
+      padding-left: 5px;
+    }
+    .section {
+      margin-bottom: 15px;
+    }
+    .section-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+      background: #f5f5f5;
+      padding: 5px 10px;
+    }
+    .section-content {
+      padding: 10px;
+      text-indent: 2em;
+    }
+    .section-content p {
+      margin-bottom: 8px;
+    }
+    .diagnosis-box {
+      border: 1px solid #000;
+      padding: 15px;
+      margin: 15px 0;
+      background: #fffef0;
+    }
+    .diagnosis-title {
+      font-weight: bold;
+      margin-bottom: 10px;
+      font-size: 15px;
+    }
+    .diagnosis-list {
+      padding-left: 20px;
+    }
+    .diagnosis-list li {
+      margin-bottom: 5px;
+    }
+    .vital-signs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      padding: 10px;
+      background: #f9f9f9;
+      margin: 10px 0;
+    }
+    .vital-item {
+      text-align: center;
+    }
+    .vital-label {
+      font-size: 12px;
+      color: #666;
+    }
+    .vital-value {
+      font-weight: bold;
+      font-size: 16px;
+    }
+    .warning-box {
+      background: #fff3f3;
+      border: 2px solid #ff6b6b;
+      border-radius: 5px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .warning-title {
+      color: #d63031;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    .footer {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #ccc;
+      display: flex;
+      justify-content: space-between;
+    }
+    .signature {
+      text-align: center;
+    }
+    .signature-line {
+      width: 150px;
+      border-bottom: 1px solid #000;
+      margin-bottom: 5px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+    }
+    table th, table td {
+      border: 1px solid #000;
+      padding: 8px;
+      text-align: left;
+    }
+    table th {
+      background: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="hospital-name">南京市儿童医院</div>
+    <div class="doc-title">住 院 病 历</div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-item">
+      <span class="info-label">姓名：</span>
+      <span class="info-value">张小宝</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">性别：</span>
+      <span class="info-value">男</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">年龄：</span>
+      <span class="info-value">28天</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">床号：</span>
+      <span class="info-value">新生儿科 102-3</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">住院号：</span>
+      <span class="info-value">2026010892</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">入院日期：</span>
+      <span class="info-value">2026-01-10</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">出生日期：</span>
+      <span class="info-value">2025-12-14</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">出生体重：</span>
+      <span class="info-value">2450g（早产）</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">胎龄：</span>
+      <span class="info-value">35+2周</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">主 诉</div>
+    <div class="section-content">
+      <p>发现反应差、肌张力低下20天。</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">现 病 史</div>
+    <div class="section-content">
+      <p>患儿系G1P1，胎龄35+2周，因"胎膜早破"于2025年12月14日在外院剖宫产出生，出生体重2450g，Apgar评分1分钟7分，5分钟8分，10分钟9分。生后有短暂青紫，经吸氧后好转。</p>
+      <p>生后第3天出现黄疸，胆红素最高达18.5mg/dL，予蓝光治疗3天后好转。生后1周家长发现患儿吸吮力弱，哭声低弱，四肢活动少，抬头困难，遂于当地医院就诊，头颅MRI示：双侧侧脑室旁白质软化灶。为求进一步康复治疗转入我院。</p>
+      <p>病程中患儿无发热、抽搐，无呕吐、腹泻，大小便正常，喂养以母乳为主，每次约40-50ml，每日8次。</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">出 生 史</div>
+    <div class="section-content">
+      <p>母孕期体健，定期产检，孕28周时发现胎儿偏小，孕35+2周因胎膜早破行剖宫产。羊水清，量约800ml，脐带胎盘未见异常。</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">既 往 史</div>
+    <div class="section-content">
+      <p>生后因早产于NICU住院观察1周，期间有黄疸，予蓝光治疗。否认先天性心脏病、遗传代谢病等。预防接种：已接种卡介苗、乙肝疫苗第一针。</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">体 格 检 查</div>
+    <div class="section-content">
+      <div class="vital-signs">
+        <div class="vital-item">
+          <div class="vital-label">体温</div>
+          <div class="vital-value">36.8℃</div>
+        </div>
+        <div class="vital-item">
+          <div class="vital-label">心率</div>
+          <div class="vital-value">136次/分</div>
+        </div>
+        <div class="vital-item">
+          <div class="vital-label">呼吸</div>
+          <div class="vital-value">42次/分</div>
+        </div>
+        <div class="vital-item">
+          <div class="vital-label">体重</div>
+          <div class="vital-value">3.1kg</div>
+        </div>
+      </div>
+      <p><strong>一般情况：</strong>早产儿貌，发育欠佳，营养中等，反应略迟钝，哭声低弱。</p>
+      <p><strong>头颅：</strong>前囟平软，约1.5×1.5cm，头围33cm。</p>
+      <p><strong>神经系统：</strong>觉醒状态欠佳，原始反射减弱：吸吮反射弱，觅食反射弱，拥抱反射不完全，握持反射存在但弱。四肢肌张力低下，尤以下肢明显，关节活动度增大。拉坐试验头后垂明显。俯卧位抬头困难。</p>
+      <p><strong>心肺腹：</strong>心肺听诊未见明显异常。腹软，肝脾未触及。</p>
+      <p><strong>四肢脊柱：</strong>四肢对称，无畸形，髋关节外展正常。</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">辅 助 检 查</div>
+    <div class="section-content">
+      <table>
+        <tr>
+          <th>检查项目</th>
+          <th>检查日期</th>
+          <th>结果</th>
+        </tr>
+        <tr>
+          <td>头颅MRI</td>
+          <td>2026-01-08（外院）</td>
+          <td>双侧侧脑室旁白质软化灶，考虑早产儿脑损伤</td>
+        </tr>
+        <tr>
+          <td>脑电图</td>
+          <td>2026-01-10</td>
+          <td>背景活动偏慢，未见明显痫性放电</td>
+        </tr>
+        <tr>
+          <td>NBNA评分</td>
+          <td>2026-01-10</td>
+          <td>32分（正常≥37分）</td>
+        </tr>
+        <tr>
+          <td>血常规</td>
+          <td>2026-01-10</td>
+          <td>WBC 9.8×10^9/L，Hb 145g/L，PLT 285×10^9/L</td>
+        </tr>
+        <tr>
+          <td>肝肾功能</td>
+          <td>2026-01-10</td>
+          <td>基本正常</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="diagnosis-box">
+    <div class="diagnosis-title">入 院 诊 断</div>
+    <ol class="diagnosis-list">
+      <li><strong>新生儿缺氧缺血性脑病（中度）</strong></li>
+      <li>早产儿脑损伤（脑室周围白质软化）</li>
+      <li>早产儿（胎龄35+2周）</li>
+      <li>低出生体重儿</li>
+      <li>发育落后待评估</li>
+    </ol>
+  </div>
+
+  <div class="warning-box">
+    <div class="warning-title">⚠️ 注意事项 / 禁忌症</div>
+    <ul style="padding-left: 20px;">
+      <li>注意保暖，避免低体温</li>
+      <li>喂养需少量多次，警惕呛奶、误吸</li>
+      <li>注意监测呼吸暂停</li>
+      <li>训练时避免过度刺激，注意患儿疲劳表现</li>
+      <li>密切观察有无抽搐发作</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-title">治 疗 计 划</div>
+    <div class="section-content">
+      <p>1. 完善相关检查，评估神经发育水平</p>
+      <p>2. 营养支持，保证热卡摄入</p>
+      <p>3. 康复治疗：</p>
+      <ul style="padding-left: 40px; margin-top: 5px;">
+        <li>新生儿抚触</li>
+        <li>早期干预训练</li>
+        <li>肌张力调节训练</li>
+        <li>视听觉刺激</li>
+        <li>口腔运动训练（改善吸吮）</li>
+      </ul>
+      <p>4. 家长宣教，指导家庭康复训练</p>
+      <p>5. 定期随访，监测发育里程碑</p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="signature">
+      <div class="signature-line"></div>
+      <div>主治医师：李明华</div>
+    </div>
+    <div class="signature">
+      <div class="signature-line"></div>
+      <div>住院医师：王小燕</div>
+    </div>
+    <div class="signature">
+      <div class="signature-line"></div>
+      <div>记录日期：2026-01-10</div>
+    </div>
+  </div>
+</body>
+</html>
