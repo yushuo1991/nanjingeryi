@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Home, Calendar, MessageSquare, User, Plus, ChevronRight, ChevronLeft,
-  AlertTriangle, Shield, Baby, Stethoscope, Brain, Bone, Heart, Lung,
+  AlertTriangle, Shield, Baby, Stethoscope, Brain, Bone, Heart,
   Clock, CheckCircle2, Circle, FileText, Upload, Sparkles, X, Check,
   Edit3, Trash2, Activity, Target, TrendingUp, Clipboard, Send,
   Play, Pause, RotateCcw, Zap, BookOpen, Star, Filter, Search,
@@ -10,6 +10,7 @@ import {
   Moon, Sun, Award, Flag, AlertCircle, Info, ThumbsUp, MessageCircle,
   Download
 } from 'lucide-react';
+import AIModal from './components/AIModal';
 
 // ==================== Mock 数据 ====================
 const initialDepartments = [
@@ -399,10 +400,6 @@ export default function RehabCareLink() {
   const [detailTab, setDetailTab] = useState('today'); // today | logs
   const [exportingPDF, setExportingPDF] = useState(false);
 
-  // AI收治状态
-  const [aiStep, setAiStep] = useState(0); // 0:上传, 1:分析中, 2:结果确认
-  const [aiResult, setAiResult] = useState(null);
-
   // 批量生成状态
   const [batchPatients, setBatchPatients] = useState([]);
   const [currentBatchIndex, setCurrentBatchIndex] = useState(0);
@@ -459,64 +456,29 @@ export default function RehabCareLink() {
     }
   };
 
-  // AI分析模拟
-  const startAIAnalysis = () => {
-    setAiStep(1);
-    setTimeout(() => {
-      setAiResult({
-        name: '小新',
-        age: '4岁2个月',
-        gender: '男',
-        diagnosis: '脑炎恢复期，运动功能障碍',
-        department: '神经内科',
-        bedNo: '205-1',
-        gasGoals: [
-          { name: '运动功能', target: 70, current: 20 },
-          { name: '平衡能力', target: 65, current: 15 },
-          { name: '日常生活', target: 75, current: 25 }
-        ],
-        treatmentPlan: {
-          focus: '促进运动功能恢复，改善平衡能力',
-          highlights: ['新收患儿，需全面评估后调整方案'],
-          items: [
-            { id: 1, name: '运动功能评估', icon: '📋', duration: '30min', completed: false, note: 'GMFM评估' },
-            { id: 2, name: '关节活动训练', icon: '🔄', duration: '20min', completed: false, note: '四肢关节' },
-            { id: 3, name: '平衡训练', icon: '⚖️', duration: '15min', completed: false, note: '坐位平衡' },
-            { id: 4, name: '感觉刺激', icon: '✨', duration: '15min', completed: false, note: '促进感觉输入' }
-          ],
-          precautions: ['注意生命体征监测', '避免过度疲劳', '警惕颅内压增高症状']
-        },
-        safetyAlerts: ['颅内压监测', '防跌倒']
-      });
-      setAiStep(2);
-    }, 3000);
-  };
-
-  // 确认AI收治
-  const confirmAIAdmission = () => {
-    const newPatient = {
-      id: patients.length + 1,
-      ...aiResult,
+  // AI建档成功后的回调
+  const handleAISuccess = (createdPatient) => {
+    // 添加到患者列表
+    setPatients(prev => [...prev, {
+      ...createdPatient,
       avatar: '👦',
-      departmentId: 2,
-      admissionDate: '2026-01-11',
       status: 'active',
       todayTreated: false,
-      gasScore: 20,
+      gasScore: 0,
+      gasGoals: [],
+      treatmentPlan: { focus: '', highlights: [], items: [], precautions: [] },
       treatmentLogs: [],
-      homework: []
-    };
-    setPatients(prev => [...prev, newPatient]);
-    setShowAIModal(false);
-    setAiStep(0);
-    setAiResult(null);
+      homework: [],
+      safetyAlerts: []
+    }]);
+
     // 跳转到患者详情
     setTimeout(() => {
-      navigateTo('patientDetail', newPatient);
+      navigateTo('patientDetail', createdPatient);
     }, 500);
   };
 
-  // 初始化批量生成
+  // 批量生成初始化
   const initBatchGenerate = () => {
     const todayPending = patients.filter(p => p.status === 'active' && !p.todayTreated);
     setBatchPatients(todayPending.map(p => ({
@@ -1400,158 +1362,6 @@ export default function RehabCareLink() {
 
   // ==================== 弹窗组件 ====================
 
-  // AI智能收治弹窗
-  const AIModal = () => (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => { setShowAIModal(false); setAiStep(0); setAiResult(null); }}>
-      <div
-        className="bg-white rounded-t-3xl w-full max-h-[90vh] overflow-y-auto animate-slide-up"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Sparkles className="text-purple-500" size={20} />
-            AI智能收治
-          </h3>
-          <button onClick={() => { setShowAIModal(false); setAiStep(0); setAiResult(null); }} className="p-2 hover:bg-gray-100 rounded-full">
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="p-4">
-          {aiStep === 0 && (
-            <div className="text-center py-8">
-              <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Upload size={40} className="text-purple-500" />
-              </div>
-              <h4 className="text-lg font-semibold text-gray-800 mb-2">上传病历资料</h4>
-              <p className="text-sm text-gray-500 mb-6">支持图片、PDF格式的病历文件</p>
-
-              <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 mb-4 hover:border-purple-400 transition cursor-pointer"
-                   onClick={startAIAnalysis}>
-                <Camera size={32} className="text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">点击上传或拍照</p>
-              </div>
-
-              <button
-                onClick={startAIAnalysis}
-                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl font-medium"
-              >
-                模拟上传并分析
-              </button>
-            </div>
-          )}
-
-          {aiStep === 1 && (
-            <div className="text-center py-12">
-              <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-                <Brain size={40} className="text-purple-500" />
-              </div>
-              <h4 className="text-lg font-semibold text-gray-800 mb-2">AI正在分析病历...</h4>
-              <p className="text-sm text-gray-500">正在识别诊断信息，生成康复方案</p>
-
-              <div className="mt-8 space-y-3">
-                <AnalysisStep label="识别病历文本" done />
-                <AnalysisStep label="提取诊断信息" done />
-                <AnalysisStep label="分析康复需求" loading />
-                <AnalysisStep label="生成治疗方案" />
-              </div>
-            </div>
-          )}
-
-          {aiStep === 2 && aiResult && (
-            <div>
-              <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-4 flex items-center gap-2">
-                <CheckCircle2 size={20} className="text-green-500" />
-                <span className="text-sm text-green-700">AI分析完成，请确认以下信息</span>
-              </div>
-
-              {/* 基本信息 */}
-              <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                <h5 className="text-sm font-medium text-gray-700 mb-3">基本信息</h5>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><span className="text-gray-500">姓名：</span>{aiResult.name}</div>
-                  <div><span className="text-gray-500">年龄：</span>{aiResult.age}</div>
-                  <div><span className="text-gray-500">性别：</span>{aiResult.gender}</div>
-                  <div><span className="text-gray-500">床号：</span>{aiResult.bedNo}</div>
-                  <div className="col-span-2"><span className="text-gray-500">诊断：</span>{aiResult.diagnosis}</div>
-                </div>
-              </div>
-
-              {/* 安全注意 */}
-              {aiResult.safetyAlerts.length > 0 && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
-                  <h5 className="text-sm font-medium text-red-700 mb-2 flex items-center gap-2">
-                    <AlertTriangle size={16} />
-                    安全注意事项
-                  </h5>
-                  <div className="flex flex-wrap gap-2">
-                    {aiResult.safetyAlerts.map((alert, i) => (
-                      <span key={i} className="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full">{alert}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 治疗方案 */}
-              <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 mb-4">
-                <h5 className="text-sm font-medium text-teal-700 mb-2">AI生成的康复方案</h5>
-                <p className="text-sm text-teal-800 mb-3">{aiResult.treatmentPlan.focus}</p>
-                <div className="space-y-2">
-                  {aiResult.treatmentPlan.items.map((item, i) => (
-                    <div key={i} className="flex items-center gap-2 bg-white rounded-lg p-2">
-                      <span>{item.icon}</span>
-                      <span className="text-sm">{item.name}</span>
-                      <span className="text-xs text-gray-500">{item.duration}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* 注意事项 */}
-              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-4">
-                <h5 className="text-sm font-medium text-orange-700 mb-2">训练注意点</h5>
-                <ul className="text-sm text-orange-800 space-y-1">
-                  {aiResult.treatmentPlan.precautions.map((p, i) => (
-                    <li key={i}>• {p}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => { setAiStep(0); setAiResult(null); }}
-                  className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-xl font-medium"
-                >
-                  重新上传
-                </button>
-                <button
-                  onClick={confirmAIAdmission}
-                  className="flex-1 bg-gradient-to-r from-teal-500 to-cyan-500 text-white py-3 rounded-xl font-medium flex items-center justify-center gap-2"
-                >
-                  <Check size={20} />
-                  确认建档
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  const AnalysisStep = ({ label, done, loading }) => (
-    <div className="flex items-center gap-3 text-left px-4">
-      {done ? (
-        <CheckCircle2 size={20} className="text-green-500" />
-      ) : loading ? (
-        <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-      ) : (
-        <Circle size={20} className="text-gray-300" />
-      )}
-      <span className={done ? 'text-green-700' : loading ? 'text-purple-700' : 'text-gray-400'}>{label}</span>
-    </div>
-  );
-
   // 批量生成日报弹窗
   const BatchGenerateModal = () => {
     const current = batchPatients[currentBatchIndex];
@@ -1824,7 +1634,11 @@ export default function RehabCareLink() {
       <BottomNav />
 
       {/* 弹窗 */}
-      {showAIModal && <AIModal />}
+      <AIModal
+        isOpen={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        onSuccess={handleAISuccess}
+      />
       {showBatchGenerate && <BatchGenerateModal />}
       {showTemplates && <TemplatesModal />}
       {showQuickEntry && <QuickEntryModal />}
