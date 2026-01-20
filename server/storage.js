@@ -131,6 +131,7 @@ function readDb() {
     patients: Array.isArray(db.patients) ? db.patients : [],
     records: Array.isArray(db.records) ? db.records : [],
     rehabSessions: Array.isArray(db.rehabSessions) ? db.rehabSessions : [],
+    cases: Array.isArray(db.cases) ? db.cases : [],
   };
 }
 

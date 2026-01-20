@@ -3,6 +3,9 @@ const cors = require('cors');
 const crypto = require('crypto');
 
 const { readDb, writeDb } = require('./storage');
+const { analyzeWithQwen } = require('./qwen-vision');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 
 function nowIso() {
   return new Date().toISOString();
@@ -30,6 +33,12 @@ function createApp() {
   const corsOrigin = process.env.CORS_ORIGIN;
   app.use(corsOrigin ? cors({ origin: corsOrigin, credentials: true }) : cors());
   app.use(express.json({ limit: '50mb' }));
+
+  // Log all incoming requests
+  app.use((req, res, next) => {
+    console.log(`[请求] ${req.method} ${req.url} - Content-Type: ${req.headers['content-type'] || 'none'}`);
+    next();
+  });
 
   app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
@@ -224,6 +233,161 @@ function createApp() {
     db.rehabSessions[idx] = updated;
     await writeDb(db);
     res.json(updated);
+  });
+
+  // AI Case Management Endpoints
+  app.post('/api/cases', (req, res, next) => {
+    console.log('[上传] 准备处理文件上传...');
+    upload.array('files', 10)(req, res, (err) => {
+      if (err) {
+        console.error('[上传] Multer错误:', err.message);
+        console.error('[上传] 错误代码:', err.code);
+        console.error('[上传] 错误堆栈:', err.stack);
+        return res.status(400).json({
+          error: '文件上传失败',
+          message: err.message,
+          code: err.code
+        });
+      }
+      next();
+    });
+  }, async (req, res) => {
+    try {
+      console.log('[上传文件] 开始处理上传请求');
+      console.log('[上传文件] Content-Type:', req.headers['content-type']);
+
+      const db = readDb();
+      const files = req.files || [];
+
+      console.log('[上传文件] 收到文件数量:', files.length);
+
+      if (!files.length) {
+        console.log('[上传文件] 错误: 没有文件');
+        return res.status(400).json({ error: '请上传至少一张图片' });
+      }
+
+      // Log file details
+      files.forEach((file, idx) => {
+        console.log(`[上传文件] 文件${idx + 1}: ${file.originalname}, 大小: ${Math.round(file.size / 1024)}KB, 类型: ${file.mimetype}`);
+      });
+
+      // Store files as base64 in memory case
+      const images = files.map((file) => ({
+        name: file.originalname,
+        mimeType: file.mimetype,
+        data: file.buffer.toString('base64'),
+      }));
+
+      const caseId = newId('case');
+      const caseData = {
+        id: caseId,
+        images,
+        createdAt: nowIso(),
+        status: 'uploaded',
+      };
+
+      // Store in db.cases (create array if doesn't exist)
+      if (!db.cases) db.cases = [];
+      db.cases.push(caseData);
+
+      console.log('[上传文件] 准备写入数据库...');
+      await writeDb(db);
+      console.log('[上传文件] 数据库写入成功');
+
+      const response = { success: true, caseId, imageCount: images.length };
+      console.log('[上传文件] 返回响应:', response);
+      res.status(201).json(response);
+    } catch (err) {
+      console.error('[上传文件] 处理失败:', err.message);
+      console.error('[上传文件] 错误堆栈:', err.stack);
+      res.status(500).json({
+        error: '文件上传失败',
+        message: err.message,
+        details: err.stack
+      });
+    }
+  });
+
+  app.post('/api/cases/:caseId/analyze', async (req, res) => {
+    const db = readDb();
+    const caseId = req.params.caseId;
+
+    console.log(`[AI分析] 开始分析病例 ${caseId}`);
+
+    if (!db.cases) db.cases = [];
+    const caseData = db.cases.find((c) => c.id === caseId);
+
+    if (!caseData) {
+      console.error(`[AI分析] 病例不存在: ${caseId}`);
+      return res.status(404).json({ error: '病例不存在' });
+    }
+
+    if (!caseData.images || caseData.images.length === 0) {
+      console.error(`[AI分析] 病例没有图片: ${caseId}`);
+      return res.status(400).json({ error: '病例没有图片' });
+    }
+
+    console.log(`[AI分析] 病例 ${caseId} 包含 ${caseData.images.length} 张图片`);
+
+    try {
+      // Extract base64 data from all images
+      const base64Images = caseData.images.map((img) => img.data);
+
+      // Log image sizes for debugging
+      const imageSizes = base64Images.map((img, idx) => ({
+        index: idx,
+        sizeKB: Math.round(img.length / 1024)
+      }));
+      console.log(`[AI分析] 图片大小:`, imageSizes);
+
+      // Call Qwen Vision API to analyze images and generate rehabilitation plan
+      console.log(`[AI分析] 开始调用Qwen API...`);
+      const startTime = Date.now();
+      const result = await analyzeWithQwen(base64Images);
+      const duration = Date.now() - startTime;
+      console.log(`[AI分析] API调用完成，耗时: ${duration}ms`);
+
+      if (!result || !result.patient || !result.rehabPlan) {
+        throw new Error('AI分析失败：返回数据格式不正确');
+      }
+
+      // Update case with analysis result
+      caseData.status = 'analyzed';
+      caseData.aiResult = result;
+      caseData.extractedData = result.patient;
+      caseData.rehabPlan = result.rehabPlan;
+      caseData.analyzedAt = nowIso();
+
+      const caseIdx = db.cases.findIndex((c) => c.id === caseId);
+      if (caseIdx >= 0) {
+        db.cases[caseIdx] = caseData;
+        await writeDb(db);
+      }
+
+      console.log(`[AI分析] 分析成功，患者: ${result.patient.name || '未知'}`);
+      res.json(result);
+    } catch (err) {
+      console.error(`[AI分析] 分析失败 (${caseId}):`, err.message);
+      console.error(err.stack);
+      res.status(500).json({
+        error: 'AI分析失败',
+        message: err.message || '未知错误'
+      });
+    }
+  });
+
+  // Global error handler - must be after all routes
+  app.use((err, req, res, next) => {
+    console.error('[全局错误] 捕获到未处理的错误:');
+    console.error('[全局错误] URL:', req.method, req.url);
+    console.error('[全局错误] 错误:', err.message);
+    console.error('[全局错误] 堆栈:', err.stack);
+
+    res.status(err.status || 500).json({
+      error: '服务器内部错误',
+      message: err.message,
+      path: req.url
+    });
   });
 
   return app;
