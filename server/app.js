@@ -4,6 +4,7 @@ const crypto = require('crypto');
 
 const { readDb, writeDb } = require('./storage');
 const { analyzeWithQwen } = require('./qwen-vision');
+const { generatePatientPDF } = require('./pdf-generator');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 
@@ -372,6 +373,49 @@ function createApp() {
       res.status(500).json({
         error: 'AI分析失败',
         message: err.message || '未知错误'
+      });
+    }
+  });
+
+  // PDF Export Endpoint
+  app.get('/api/patients/:id/export-pdf', async (req, res) => {
+    try {
+      const patientId = req.params.id;
+      console.log(`[PDF导出] 开始生成患者 ${patientId} 的PDF文档`);
+
+      const db = readDb();
+
+      // Find patient
+      const patient = db.patients.find((p) => p.id === patientId);
+      if (!patient) {
+        return res.status(404).json({ error: '患者不存在' });
+      }
+
+      // Get related records
+      const records = db.records.filter((r) => r.patientId === patientId);
+      const rehabSessions = db.rehabSessions.filter((s) => s.patientId === patientId);
+
+      console.log(`[PDF导出] 患者: ${patient.name}, 病历: ${records.length}条, 康复记录: ${rehabSessions.length}次`);
+
+      // Generate PDF
+      const pdfBuffer = await generatePatientPDF(patient, records, rehabSessions);
+
+      console.log(`[PDF导出] PDF生成成功，大小: ${Math.round(pdfBuffer.length / 1024)}KB`);
+
+      // Set response headers
+      const filename = `${patient.name}_康复治疗档案_${localIsoDate()}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+
+      // Send PDF
+      res.send(pdfBuffer);
+    } catch (err) {
+      console.error('[PDF导出] 生成失败:', err.message);
+      console.error(err.stack);
+      res.status(500).json({
+        error: 'PDF生成失败',
+        message: err.message
       });
     }
   });

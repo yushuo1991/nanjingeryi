@@ -10,10 +10,14 @@ const https = require('https');
  * @param {string[]} base64Images - Array of base64 encoded images
  * @param {object} options - Configuration options
  * @param {string} options.apiKey - DashScope API key
+ * @param {number} options.timeout - Request timeout in ms (default: 60000)
+ * @param {number} options.maxRetries - Max retry attempts (default: 2)
  * @returns {Promise<object>} Analysis result with patient info and rehabilitation plan
  */
 async function analyzeWithQwen(base64Images, options = {}) {
   const apiKey = options.apiKey || process.env.QWEN_API_KEY;
+  const timeout = options.timeout || 60000; // 60s timeout
+  const maxRetries = options.maxRetries || 2;
 
   if (!apiKey) {
     throw new Error('未配置 QWEN_API_KEY');
@@ -21,6 +25,12 @@ async function analyzeWithQwen(base64Images, options = {}) {
 
   if (!base64Images || base64Images.length === 0) {
     throw new Error('请提供至少一张图片');
+  }
+
+  // Limit number of images to avoid timeout
+  if (base64Images.length > 5) {
+    console.warn(`[Qwen] 图片数量过多(${base64Images.length}),仅使用前5张`);
+    base64Images = base64Images.slice(0, 5);
   }
 
   // Prepare image content for API
@@ -105,76 +115,147 @@ async function analyzeWithQwen(base64Images, options = {}) {
     max_tokens: 2000,
   });
 
-  return new Promise((resolve, reject) => {
-    const options = {
-      hostname: 'dashscope.aliyuncs.com',
-      port: 443,
-      path: '/compatible-mode/v1/chat/completions',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Length': Buffer.byteLength(requestBody),
-      },
-    };
+  // Retry wrapper
+  async function attemptRequest(retryCount = 0) {
+    return new Promise((resolve, reject) => {
+      const reqOptions = {
+        hostname: 'dashscope.aliyuncs.com',
+        port: 443,
+        path: '/compatible-mode/v1/chat/completions',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Length': Buffer.byteLength(requestBody),
+        },
+        timeout: timeout, // Add timeout to request options
+      };
 
-    const req = https.request(options, (res) => {
-      let data = '';
+      let timeoutHandle;
 
-      res.on('data', (chunk) => {
-        data += chunk;
+      const req = https.request(reqOptions, (res) => {
+        // Clear timeout on response
+        if (timeoutHandle) clearTimeout(timeoutHandle);
+
+        let data = '';
+
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          try {
+            if (res.statusCode !== 200) {
+              console.error(`[Qwen] API错误响应 (${res.statusCode}):`, data.substring(0, 500));
+              const error = new Error(`API请求失败 (${res.statusCode})`);
+              error.statusCode = res.statusCode;
+              error.retryable = res.statusCode >= 500 || res.statusCode === 429; // Retry on server errors or rate limits
+              reject(error);
+              return;
+            }
+
+            const response = JSON.parse(data);
+
+            if (!response.choices || !response.choices[0] || !response.choices[0].message) {
+              reject(new Error('API返回格式错误'));
+              return;
+            }
+
+            const content = response.choices[0].message.content;
+            console.log(`[Qwen] 原始响应内容:`, content.substring(0, 200));
+
+            // Extract JSON from response (try multiple patterns)
+            let jsonStr;
+
+            // Try markdown code block first
+            const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+            if (codeBlockMatch) {
+              jsonStr = codeBlockMatch[1];
+            } else {
+              // Try to find JSON object directly
+              const jsonMatch = content.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                jsonStr = jsonMatch[0];
+              }
+            }
+
+            if (!jsonStr) {
+              console.error('[Qwen] 无法提取JSON:', content);
+              reject(new Error('无法从AI响应中提取JSON数据'));
+              return;
+            }
+
+            const result = JSON.parse(jsonStr);
+
+            // Validate result structure
+            if (!result.patient || !result.rehabPlan) {
+              console.error('[Qwen] 数据格式不完整:', result);
+              reject(new Error('AI返回的数据格式不完整'));
+              return;
+            }
+
+            // Return in expected format
+            resolve({
+              success: true,
+              profile: { patient: result.patient },
+              plan: result.rehabPlan
+            });
+          } catch (err) {
+            console.error('[Qwen] 解析错误:', err.message, '原始数据:', data.substring(0, 500));
+            reject(new Error(`解析AI响应失败: ${err.message}`));
+          }
+        });
       });
 
-      res.on('end', () => {
-        try {
-          if (res.statusCode !== 200) {
-            console.error('Qwen API Error Response:', data);
-            reject(new Error(`API请求失败 (${res.statusCode}): ${data}`));
-            return;
-          }
+      // Set timeout
+      timeoutHandle = setTimeout(() => {
+        req.destroy();
+        const error = new Error(`请求超时(${timeout}ms)`);
+        error.retryable = true;
+        reject(error);
+      }, timeout);
 
-          const response = JSON.parse(data);
-
-          if (!response.choices || !response.choices[0] || !response.choices[0].message) {
-            reject(new Error('API返回格式错误'));
-            return;
-          }
-
-          const content = response.choices[0].message.content;
-
-          // Extract JSON from response (might be wrapped in markdown code blocks)
-          const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/\{[\s\S]*\}/);
-
-          if (!jsonMatch) {
-            console.error('Cannot extract JSON from response:', content);
-            reject(new Error('无法从AI响应中提取JSON数据'));
-            return;
-          }
-
-          const jsonStr = jsonMatch[1] || jsonMatch[0];
-          const result = JSON.parse(jsonStr);
-
-          // Validate result structure
-          if (!result.patient || !result.rehabPlan) {
-            reject(new Error('AI返回的数据格式不完整'));
-            return;
-          }
-
-          resolve(result);
-        } catch (err) {
-          console.error('Parse error:', err.message, 'Raw data:', data);
-          reject(new Error(`解析AI响应失败: ${err.message}`));
-        }
+      req.on('error', (err) => {
+        if (timeoutHandle) clearTimeout(timeoutHandle);
+        const error = new Error(`网络请求失败: ${err.message}`);
+        error.retryable = true;
+        reject(error);
       });
-    });
 
-    req.on('error', (err) => {
-      reject(new Error(`网络请求失败: ${err.message}`));
-    });
+      req.on('timeout', () => {
+        req.destroy();
+        const error = new Error(`请求超时(${timeout}ms)`);
+        error.retryable = true;
+        reject(error);
+      });
 
-    req.write(requestBody);
-    req.end();
-  });
+      req.write(requestBody);
+      req.end();
+    });
+  }
+
+  // Retry logic
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[Qwen] 尝试请求 (${attempt + 1}/${maxRetries + 1})...`);
+      const result = await attemptRequest(attempt);
+      console.log(`[Qwen] 请求成功`);
+      return result;
+    } catch (error) {
+      console.error(`[Qwen] 请求失败 (尝试 ${attempt + 1}/${maxRetries + 1}):`, error.message);
+
+      // Check if we should retry
+      if (attempt < maxRetries && error.retryable) {
+        const delay = Math.min(1000 * Math.pow(2, attempt), 5000); // Exponential backoff, max 5s
+        console.log(`[Qwen] ${delay}ms 后重试...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      // No more retries or non-retryable error
+      throw error;
+    }
+  }
 }
 
 module.exports = {

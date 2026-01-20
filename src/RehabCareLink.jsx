@@ -7,7 +7,8 @@ import {
   Play, Pause, RotateCcw, Zap, BookOpen, Star, Filter, Search,
   Bell, Settings, LogOut, Eye, EyeOff, Camera, File, ArrowRight,
   Users, Building2, Bed, ClipboardList, Timer, Coffee, Utensils,
-  Moon, Sun, Award, Flag, AlertCircle, Info, ThumbsUp, MessageCircle
+  Moon, Sun, Award, Flag, AlertCircle, Info, ThumbsUp, MessageCircle,
+  Download
 } from 'lucide-react';
 
 // ==================== Mock 数据 ====================
@@ -396,6 +397,7 @@ export default function RehabCareLink() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showFabMenu, setShowFabMenu] = useState(false);
   const [detailTab, setDetailTab] = useState('today'); // today | logs
+  const [exportingPDF, setExportingPDF] = useState(false);
 
   // AI收治状态
   const [aiStep, setAiStep] = useState(0); // 0:上传, 1:分析中, 2:结果确认
@@ -551,6 +553,53 @@ export default function RehabCareLink() {
 
     if (index < batchPatients.length - 1) {
       setCurrentBatchIndex(index + 1);
+    }
+  };
+
+  // PDF导出功能
+  const handleExportPDF = async (patientId) => {
+    if (exportingPDF) return;
+
+    setExportingPDF(true);
+    try {
+      const response = await fetch(`/api/patients/${patientId}/export-pdf`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/pdf',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('PDF导出失败');
+      }
+
+      // Get filename from Content-Disposition header
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'patient_record.pdf';
+      if (contentDisposition) {
+        const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+        if (matches != null && matches[1]) {
+          filename = decodeURIComponent(matches[1].replace(/['"]/g, ''));
+        }
+      }
+
+      // Download PDF
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      console.log('PDF导出成功');
+    } catch (error) {
+      console.error('PDF导出失败:', error);
+      alert('PDF导出失败: ' + error.message);
+    } finally {
+      setExportingPDF(false);
     }
   };
 
@@ -863,11 +912,27 @@ export default function RehabCareLink() {
           title="患儿详情"
           showBack
           rightAction={
-            userRole === 'therapist' && (
-              <button className="p-2 hover:bg-white/20 rounded-full transition">
-                <Edit3 size={20} />
+            <div className="flex items-center gap-2">
+              {/* PDF导出按钮 - 两种权限都可以使用 */}
+              <button
+                onClick={() => handleExportPDF(patient.id)}
+                disabled={exportingPDF}
+                className="flex items-center gap-1 p-2 hover:bg-white/20 rounded-full transition disabled:opacity-50"
+                title="导出PDF"
+              >
+                <Download size={20} />
               </button>
-            )
+
+              {/* 修改按钮 - 只有治疗师可以使用 */}
+              {userRole === 'therapist' && (
+                <button
+                  className="p-2 hover:bg-white/20 rounded-full transition"
+                  title="编辑"
+                >
+                  <Edit3 size={20} />
+                </button>
+              )}
+            </div>
           }
         />
 
