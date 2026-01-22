@@ -1,0 +1,41 @@
+# 依赖包
+node_modules/
+
+# 构建输出
+dist/
+
+# 环境配置文件 - 包含敏感信息
+.env
+server/.env
+
+# 日志文件
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 编辑器和IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 操作系统文件
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.temp
+
+# 上传的文件（如果包含用户数据）
+uploads/
+
+# 测试覆盖率
+coverage/
+
+# 本地配置
+.local
