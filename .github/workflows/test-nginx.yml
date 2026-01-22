@@ -1,0 +1,36 @@
+name: 测试Nginx访问
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-nginx:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 测试Nginx
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 检查Nginx是否在监听80端口 =========="
+          netstat -tlnp | grep :80
+
+          echo ""
+          echo "========== 测试localhost:80 =========="
+          curl -I http://localhost:80
+
+          echo ""
+          echo "========== 测试localhost访问ey.yushuo.click =========="
+          curl -H "Host: ey.yushuo.click" -I http://localhost/
+
+          echo ""
+          echo "========== 检查Nginx错误日志 =========="
+          tail -50 /var/log/nginx/ey.yushuo.click.error.log || echo "无错误日志"
+
+          echo ""
+          echo "========== 服务器外网IP =========="
+          curl -s ifconfig.me || hostname -I
