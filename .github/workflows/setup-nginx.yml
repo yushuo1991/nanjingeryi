@@ -1,0 +1,89 @@
+name: 配置Nginx域名
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup-nginx:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+
+    - name: 部署Nginx配置
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 备份旧配置 =========="
+          sudo cp /etc/nginx/sites-enabled/children-hospital /etc/nginx/sites-enabled/children-hospital.backup 2>/dev/null || true
+
+          echo "========== 创建Nginx配置文件 =========="
+          sudo tee /etc/nginx/sites-available/ey.yushuo.click > /dev/null << 'NGINX_EOF'
+          server {
+              listen 80;
+              server_name ey.yushuo.click;
+
+              # 前端静态文件
+              location / {
+                  root /var/www/rehab-care-link/dist;
+                  try_files $uri $uri/ /index.html;
+                  add_header Cache-Control "no-cache";
+              }
+
+              # 代理后端API请求
+              location /api/ {
+                  proxy_pass http://localhost:3201/api/;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_cache_bypass $http_upgrade;
+                  proxy_connect_timeout 60s;
+                  proxy_send_timeout 60s;
+                  proxy_read_timeout 60s;
+              }
+
+              # 上传文件访问
+              location /uploads/ {
+                  alias /var/www/rehab-care-link/uploads/;
+                  add_header Cache-Control "public, max-age=31536000";
+              }
+
+              # Gzip压缩
+              gzip on;
+              gzip_vary on;
+              gzip_min_length 1024;
+              gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/json application/javascript;
+
+              # 日志
+              access_log /var/log/nginx/ey.yushuo.click.access.log;
+              error_log /var/log/nginx/ey.yushuo.click.error.log;
+          }
+          NGINX_EOF
+
+          echo "========== 创建软链接 =========="
+          sudo ln -sf /etc/nginx/sites-available/ey.yushuo.click /etc/nginx/sites-enabled/ey.yushuo.click
+
+          echo "========== 测试Nginx配置 =========="
+          sudo nginx -t
+
+          echo "========== 重新加载Nginx =========="
+          sudo systemctl reload nginx
+
+          echo "========== 检查Nginx状态 =========="
+          sudo systemctl status nginx --no-pager
+
+          echo "========== 验证配置 =========="
+          ls -la /etc/nginx/sites-enabled/
+          echo ""
+          echo "Nginx配置完成！"
+          echo "请确保DNS已解析: ey.yushuo.click -> $(hostname -I | awk '{print $1}')"
+          echo "访问地址: http://ey.yushuo.click"
