@@ -1,0 +1,50 @@
+name: 强制重启PM2服务
+
+on:
+  workflow_dispatch:
+
+jobs:
+  restart-pm2:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 重启PM2服务
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 停止旧进程 =========="
+          cd /var/www/rehab-care-link/server
+          pm2 stop rehab-care-link-server || true
+          pm2 delete rehab-care-link-server || true
+
+          echo "========== 安装依赖 =========="
+          npm install --production
+
+          echo "========== 验证.env文件 =========="
+          if [ -f .env ]; then
+            echo ".env文件存在"
+            ls -l .env
+          else
+            echo "错误：.env文件不存在！"
+            exit 1
+          fi
+
+          echo "========== 启动新进程 =========="
+          pm2 start index.js --name rehab-care-link-server
+
+          echo "========== 查看PM2状态 =========="
+          pm2 list
+
+          echo "========== 查看最新日志 =========="
+          sleep 2
+          pm2 logs rehab-care-link-server --lines 30 --nostream
+
+          echo "========== 测试服务 =========="
+          sleep 1
+          curl -I http://localhost:3201 || echo "服务尚未就绪"
+
+          echo "重启完成！$(date)"
