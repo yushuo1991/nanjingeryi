@@ -1,0 +1,62 @@
+name: 清理缓存并重启
+
+on:
+  workflow_dispatch:
+
+jobs:
+  clear-cache:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 清理所有缓存并重启
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 检查当前dist文件时间 =========="
+          ls -la /var/www/rehab-care-link/dist/
+
+          echo ""
+          echo "========== 清理Nginx缓存 =========="
+          sudo rm -rf /var/cache/nginx/*
+          sudo rm -rf /tmp/nginx/*
+
+          echo ""
+          echo "========== 清理浏览器缓存头 =========="
+          # 修改Nginx配置，添加强制不缓存
+          sudo sed -i '/add_header Cache-Control/d' /etc/nginx/sites-available/ey.yushuo.click
+          sudo sed -i '/location \/ {/a\        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0";' /etc/nginx/sites-available/ey.yushuo.click
+
+          echo ""
+          echo "========== 测试Nginx配置 =========="
+          sudo nginx -t
+
+          echo ""
+          echo "========== 停止Nginx =========="
+          sudo systemctl stop nginx
+
+          echo ""
+          echo "========== 等待2秒 =========="
+          sleep 2
+
+          echo ""
+          echo "========== 启动Nginx =========="
+          sudo systemctl start nginx
+
+          echo ""
+          echo "========== 检查Nginx状态 =========="
+          sudo systemctl status nginx --no-pager
+
+          echo ""
+          echo "========== 测试访问 =========="
+          curl -I http://localhost/
+
+          echo ""
+          echo "========== 查看实际文件内容 =========="
+          cat /var/www/rehab-care-link/dist/index.html
+
+          echo ""
+          echo "缓存已清理，Nginx已重启！"
