@@ -1,0 +1,35 @@
+name: 检查前端JS文件
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-js:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检查前端文件
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 1. 查看dist/assets中的JS文件 =========="
+          ls -lh /var/www/rehab-care-link/dist/assets/*.js
+
+          echo ""
+          echo "========== 2. 查看index.html引用的JS =========="
+          grep "index-.*\.js" /var/www/rehab-care-link/dist/index.html
+
+          echo ""
+          echo "========== 3. 检查JS文件中是否有UUID生成 =========="
+          grep -o "case_[a-f0-9-]*" /var/www/rehab-care-link/dist/assets/*.js | head -5 || echo "未找到UUID"
+
+          echo ""
+          echo "========== 4. 搜索createCaseWithFiles =========="
+          grep -o "createCaseWithFiles" /var/www/rehab-care-link/dist/assets/*.js | head -3 || echo "未找到"
+
+          echo ""
+          echo "完成！"
