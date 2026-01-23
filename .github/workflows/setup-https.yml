@@ -1,0 +1,45 @@
+name: 配置HTTPS证书
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup-https:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 安装并配置SSL证书
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 1. 安装certbot =========="
+          sudo apt-get update
+          sudo apt-get install -y certbot python3-certbot-nginx
+
+          echo ""
+          echo "========== 2. 申请SSL证书 =========="
+          sudo certbot --nginx -d ey.yushuo.click -d www.ey.yushuo.click \
+            --non-interactive \
+            --agree-tos \
+            --email admin@yushuo.click \
+            --redirect
+
+          echo ""
+          echo "========== 3. 设置自动续期 =========="
+          sudo systemctl enable certbot.timer
+          sudo systemctl start certbot.timer
+
+          echo ""
+          echo "========== 4. 测试证书 =========="
+          sudo certbot certificates
+
+          echo ""
+          echo "========== 5. 验证HTTPS访问 =========="
+          curl -I https://ey.yushuo.click/ || echo "HTTPS可能还需要几秒钟生效"
+
+          echo ""
+          echo "完成！"
