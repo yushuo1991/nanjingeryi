@@ -21,12 +21,14 @@ function query(sql, params = []) {
 
   // 处理SELECT查询
   if (sql.trim().toUpperCase().startsWith('SELECT') || sql.trim().toUpperCase().startsWith('SHOW')) {
-    const rows = db.prepare(sql).all(...params);
+    const stmt = db.prepare(sql);
+    const rows = stmt.all(params);
     return Promise.resolve([rows, []]);
   }
 
   // 处理INSERT/UPDATE/DELETE
-  const info = db.prepare(sql).run(...params);
+  const stmt = db.prepare(sql);
+  const info = stmt.run(params);
   return Promise.resolve([{
     insertId: info.lastInsertRowid,
     affectedRows: info.changes
