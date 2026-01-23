@@ -1,0 +1,91 @@
+name: 深度清理磁盘
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deep-clean:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 深度清理并保留当前项目
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 1. 当前磁盘状态 =========="
+          df -h
+
+          echo ""
+          echo "========== 2. 查找最大的目录 =========="
+          sudo du -sh /var/* 2>/dev/null | sort -hr | head -10
+          sudo du -sh /usr/* 2>/dev/null | sort -hr | head -10
+
+          echo ""
+          echo "========== 3. 清理Docker（如果有） =========="
+          docker system prune -af --volumes 2>/dev/null || echo "Docker未安装或已清理"
+
+          echo ""
+          echo "========== 4. 清理旧的日志文件 =========="
+          sudo find /var/log -type f -name "*.log" -size +100M -delete 2>/dev/null || true
+          sudo find /var/log -type f -name "*.gz" -delete 2>/dev/null || true
+          sudo find /var/log -type f -name "*.1" -delete 2>/dev/null || true
+
+          echo ""
+          echo "========== 5. 清理journalctl日志 =========="
+          sudo journalctl --vacuum-size=50M
+
+          echo ""
+          echo "========== 6. 删除其他网站/项目（只保留rehab-care-link） =========="
+          cd /var/www
+          ls -la
+          # 只保留rehab-care-link，删除其他项目
+          for dir in */; do
+            if [ "$dir" != "rehab-care-link/" ] && [ "$dir" != "html/" ]; then
+              echo "删除项目: $dir"
+              sudo rm -rf "$dir"
+            fi
+          done
+
+          echo ""
+          echo "========== 7. 清理/opt下的其他项目 =========="
+          sudo du -sh /opt/* 2>/dev/null | sort -hr
+          # 删除children-hospital项目
+          sudo rm -rf /opt/children-hospital 2>/dev/null || echo "已删除或不存在"
+
+          echo ""
+          echo "========== 8. 清理宝塔面板缓存（如果不需要） =========="
+          sudo du -sh /www/* 2>/dev/null | sort -hr | head -10
+
+          echo ""
+          echo "========== 9. 清理npm全局缓存 =========="
+          sudo npm cache clean --force 2>/dev/null || true
+          sudo rm -rf /root/.npm 2>/dev/null || true
+          sudo rm -rf ~/.npm 2>/dev/null || true
+
+          echo ""
+          echo "========== 10. 清理旧的内核 =========="
+          sudo apt-get autoremove --purge -y
+
+          echo ""
+          echo "========== 11. 清理PackageKit缓存 =========="
+          sudo rm -rf /var/cache/PackageKit/* 2>/dev/null || true
+
+          echo ""
+          echo "========== 12. 清理临时文件 =========="
+          sudo rm -rf /tmp/* 2>/dev/null || true
+          sudo rm -rf /var/tmp/* 2>/dev/null || true
+
+          echo ""
+          echo "========== 13. 查找超大文件（>500M） =========="
+          sudo find / -type f -size +500M -exec ls -lh {} \; 2>/dev/null | head -10
+
+          echo ""
+          echo "========== 14. 清理后的磁盘状态 =========="
+          df -h
+
+          echo ""
+          echo "完成！"
