@@ -1,0 +1,45 @@
+name: 查看后端错误日志
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-backend-error:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 查看后端详细错误
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 1. 查看PM2日志（最近50行错误） =========="
+          pm2 logs rehab-care-link-server --err --lines 50 --nostream
+
+          echo ""
+          echo "========== 2. 查看PM2完整日志 =========="
+          pm2 logs rehab-care-link-server --lines 30 --nostream
+
+          echo ""
+          echo "========== 3. 检查后端进程状态 =========="
+          pm2 list | grep rehab
+
+          echo ""
+          echo "========== 4. 测试后端API =========="
+          curl -X POST http://localhost:3201/api/cases \
+            -F "files=@/var/www/rehab-care-link/dist/favicon.svg" \
+            -v 2>&1 | tail -30
+
+          echo ""
+          echo "========== 5. 检查数据库文件 =========="
+          ls -lh /var/www/rehab-care-link/server/rehab_care.db
+
+          echo ""
+          echo "========== 6. 检查.env配置 =========="
+          cat /var/www/rehab-care-link/server/.env | grep -v "API_KEY"
+
+          echo ""
+          echo "完成！"
