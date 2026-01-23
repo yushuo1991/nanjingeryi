@@ -1,0 +1,159 @@
+name: 完整部署和测试
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 构建前端
+      run: |
+        npm install
+        npm run build
+
+    - name: 部署到服务器
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        source: "dist/,server/,package.json"
+        target: "/var/www/rehab-care-link/"
+        strip_components: 0
+
+    - name: 配置并启动服务
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          cd /var/www/rehab-care-link/server
+
+          # 创建.env
+          cat > .env << 'ENV_EOF'
+          ${{ secrets.SERVER_ENV }}
+          ENV_EOF
+
+          # 安装依赖
+          npm install --production
+
+          # 重启服务
+          pm2 delete rehab-care-link-server || true
+          pm2 start index.js --name rehab-care-link-server
+
+          # 等待启动
+          sleep 5
+
+          echo "服务已重启"
+
+    - name: 运行完整测试
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========================================="
+          echo "开始全面测试"
+          echo "========================================="
+
+          # 测试1: 后端健康检查
+          echo -e "\n[测试1] 后端健康检查"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3201/)
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✓ 后端服务正常 (HTTP $HTTP_CODE)"
+          else
+            echo "✗ 后端服务异常 (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+          # 测试2: 前端访问
+          echo -e "\n[测试2] 前端页面访问"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/)
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✓ 前端页面正常 (HTTP $HTTP_CODE)"
+          else
+            echo "✗ 前端页面异常 (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+          # 测试3: 创建病例API
+          echo -e "\n[测试3] 创建病例API"
+          # 创建一个1x1像素的PNG图片
+          printf '\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90\x77\x53\xde\x00\x00\x00\x0c\x49\x44\x41\x54\x08\xd7\x63\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb4\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82' > /tmp/test.png
+
+          RESPONSE=$(curl -s -X POST http://localhost:3201/api/cases -F "files=@/tmp/test.png")
+          if echo "$RESPONSE" | grep -q '"success":true'; then
+            CASE_ID=$(echo "$RESPONSE" | grep -o '"caseId":[0-9]*' | grep -o '[0-9]*')
+            echo "✓ 创建病例成功 (caseId: $CASE_ID)"
+
+            # 测试4: AI识别API
+            echo -e "\n[测试4] AI识别API"
+            EXTRACT_RESPONSE=$(curl -s -X POST "http://localhost:3201/api/cases/$CASE_ID/extract" \
+              -H "Content-Type: application/json" -d '{}')
+
+            if echo "$EXTRACT_RESPONSE" | grep -q '"success"'; then
+              echo "✓ AI识别API响应正常"
+              echo "响应: $EXTRACT_RESPONSE" | head -c 200
+            else
+              echo "✗ AI识别API异常"
+              echo "响应: $EXTRACT_RESPONSE"
+              exit 1
+            fi
+          else
+            echo "✗ 创建病例失败"
+            echo "响应: $RESPONSE"
+            exit 1
+          fi
+
+          # 测试5: 数据库检查
+          echo -e "\n[测试5] 数据库文件检查"
+          if [ -f /var/www/rehab-care-link/server/rehab_care.db ]; then
+            DB_SIZE=$(du -h /var/www/rehab-care-link/server/rehab_care.db | cut -f1)
+            echo "✓ 数据库文件存在 (大小: $DB_SIZE)"
+          else
+            echo "✗ 数据库文件不存在"
+            exit 1
+          fi
+
+          # 测试6: PM2进程检查
+          echo -e "\n[测试6] PM2进程状态"
+          PM2_STATUS=$(pm2 list | grep rehab-care-link-server | grep -c "online")
+          if [ "$PM2_STATUS" -gt 0 ]; then
+            echo "✓ PM2进程运行正常"
+          else
+            echo "✗ PM2进程异常"
+            pm2 list
+            exit 1
+          fi
+
+          # 测试7: 检查错误日志
+          echo -e "\n[测试7] 检查最近错误日志"
+          ERROR_COUNT=$(pm2 logs rehab-care-link-server --err --lines 10 --nostream 2>/dev/null | grep -i "error" | wc -l)
+          if [ "$ERROR_COUNT" -gt 5 ]; then
+            echo "⚠ 发现较多错误 ($ERROR_COUNT 条)"
+            pm2 logs rehab-care-link-server --err --lines 5 --nostream
+          else
+            echo "✓ 错误日志正常 ($ERROR_COUNT 条)"
+          fi
+
+          echo -e "\n========================================="
+          echo "✅ 所有测试通过！"
+          echo "========================================="
+          echo ""
+          echo "访问地址:"
+          echo "  HTTP:  http://ey.yushuo.click"
+          echo "  IP:    http://107.173.154.147"
+          echo ""
+          echo "部署时间: $(date)"
