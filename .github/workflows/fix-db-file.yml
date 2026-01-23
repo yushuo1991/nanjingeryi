@@ -1,0 +1,87 @@
+ name: 修复db.js文件问题
+
+  on:
+    workflow_dispatch:
+
+  jobs:
+    fix-db:
+      runs-on: ubuntu-latest
+
+      steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 修复服务器上的db.js
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            echo "========== 1. 检查当前server目录文件 =========="
+            ls -la /var/www/rehab-care-link/server/
+
+            echo ""
+            echo "========== 2. 检查db.js是否存在 =========="
+            test -f /var/www/rehab-care-link/server/db.js && echo "✓ db.js存在" || echo "✗ db.js不存在"
+
+            echo ""
+            echo "========== 3. 查看db.js内容前10行 =========="
+            head -10 /var/www/rehab-care-link/server/db.js || echo "无法读取"
+
+            echo ""
+            echo "========== 4. 检查文件权限 =========="
+            ls -l /var/www/rehab-care-link/server/*.js
+
+            echo ""
+            echo "========== 5. 强制重新部署server目录 =========="
+            cd /var/www/rehab-care-link
+            # 先删除server目录
+            rm -rf server/
+            # 重新创建
+            mkdir -p server
+
+      - name: 复制server文件到服务器
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          source: "server/*"
+          target: "/var/www/rehab-care-link/"
+          strip_components: 0
+
+      - name: 安装依赖并重启
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            echo "========== 验证文件复制 =========="
+            ls -la /var/www/rehab-care-link/server/
+            test -f /var/www/rehab-care-link/server/db.js && echo "✓ db.js已复制" || echo "✗ db.js复制失败"
+
+            echo ""
+            echo "========== 安装依赖 =========="
+            cd /var/www/rehab-care-link/server
+            npm install --production
+
+            echo ""
+            echo "========== 重启服务 =========="
+            pm2 delete rehab-care-link-server || true
+            pm2 start index.js --name rehab-care-link-server
+
+            echo ""
+            echo "========== 等待启动 =========="
+            sleep 3
+
+            echo ""
+            echo "========== 查看日志 =========="
+            pm2 logs rehab-care-link-server --lines 20 --nostream
+
+            echo ""
+            echo "完成！"
