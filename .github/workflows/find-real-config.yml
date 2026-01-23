@@ -1,0 +1,51 @@
+name: 查找Nginx真实配置
+
+on:
+  workflow_dispatch:
+
+jobs:
+  find-config:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 查找Nginx配置问题
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 1. 查看Nginx完整配置 =========="
+          sudo nginx -T 2>/dev/null | grep -A 10 "server_name ey.yushuo.click"
+
+          echo ""
+          echo "========== 2. 查找所有包含ey.yushuo.click的配置文件 =========="
+          sudo find /etc/nginx -type f -exec grep -l "ey.yushuo.click" {} \;
+
+          echo ""
+          echo "========== 3. 查看主配置文件 =========="
+          sudo cat /www/server/nginx/conf/nginx.conf | grep -A 5 "include"
+
+          echo ""
+          echo "========== 4. 查找所有index.html位置 =========="
+          sudo find /var/www -name "index.html" -type f -exec ls -lh {} \;
+
+          echo ""
+          echo "========== 5. 查看/var/www/rehab-care-link/dist/index.html =========="
+          cat /var/www/rehab-care-link/dist/index.html | grep "index-"
+
+          echo ""
+          echo "========== 6. 搜索B2a-KFnw.js文件位置 =========="
+          sudo find /var/www -name "*B2a-KFnw.js" -type f 2>/dev/null
+
+          echo ""
+          echo "========== 7. 查看宝塔面板配置目录 =========="
+          ls -la /www/server/panel/vhost/nginx/ 2>/dev/null || echo "不存在"
+
+          echo ""
+          echo "========== 8. 检查所有vhost配置 =========="
+          sudo find /www/server -name "*ey.yushuo*" -type f 2>/dev/null
+
+          echo ""
+          echo "完成！"
