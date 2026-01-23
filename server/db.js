@@ -22,13 +22,15 @@ function query(sql, params = []) {
   // 处理SELECT查询
   if (sql.trim().toUpperCase().startsWith('SELECT') || sql.trim().toUpperCase().startsWith('SHOW')) {
     const stmt = db.prepare(sql);
-    const rows = stmt.all(params);
+    // better-sqlite3需要展开参数数组
+    const rows = stmt.all(...params);
     return Promise.resolve([rows, []]);
   }
 
   // 处理INSERT/UPDATE/DELETE
   const stmt = db.prepare(sql);
-  const info = stmt.run(params);
+  // better-sqlite3需要展开参数数组
+  const info = stmt.run(...params);
   return Promise.resolve([{
     insertId: info.lastInsertRowid,
     affectedRows: info.changes
