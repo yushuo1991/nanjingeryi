@@ -1,0 +1,44 @@
+name: 检查宝塔卸载状态
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-status:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检查当前状态
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 1. 检查宝塔是否还在 =========="
+          ls -la /www/server 2>/dev/null && echo "宝塔还在" || echo "✓ 宝塔已卸载"
+
+          echo ""
+          echo "========== 2. 检查Nginx版本和来源 =========="
+          nginx -v
+          which nginx
+
+          echo ""
+          echo "========== 3. 检查Nginx配置位置 =========="
+          ls -la /etc/nginx/sites-enabled/
+
+          echo ""
+          echo "========== 4. 查看当前Nginx配置 =========="
+          cat /etc/nginx/sites-enabled/ey.yushuo.click 2>/dev/null || cat /www/server/panel/vhost/nginx/ey.yushuo.click.conf 2>/dev/null || echo "配置文件位置未知"
+
+          echo ""
+          echo "========== 5. 检查磁盘空间 =========="
+          df -h | grep "/dev/vda"
+
+          echo ""
+          echo "========== 6. 检查80和443端口 =========="
+          sudo netstat -tlnp | grep -E ":80|:443"
+
+          echo ""
+          echo "完成！"
