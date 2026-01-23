@@ -1,0 +1,33 @@
+name: 检查服务器文件完整性
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-files:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检查server目录文件
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 服务器上的server目录文件 =========="
+          ls -la /var/www/rehab-care-link/server/
+
+          echo ""
+          echo "========== 检查关键文件 =========="
+          for file in db.js files.js qwen.js seed.js; do
+            if [ -f "/var/www/rehab-care-link/server/$file" ]; then
+              echo "✓ $file 存在"
+            else
+              echo "✗ $file 缺失"
+            fi
+          done
+
+          echo ""
+          echo "========== 检查完成 =========="
