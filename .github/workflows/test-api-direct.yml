@@ -1,0 +1,49 @@
+name: 直接测试API返回值
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-api-direct:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 直接测试API
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 创建真实图片文件 =========="
+          # 创建一个1x1像素的PNG图片
+          printf '\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90\x77\x53\xde\x00\x00\x00\x0c\x49\x44\x41\x54\x08\xd7\x63\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb4\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82' > /tmp/test.png
+
+          echo ""
+          echo "========== 调用API创建病例 =========="
+          RESPONSE=$(curl -X POST http://localhost:3201/api/cases \
+            -F "files=@/tmp/test.png" \
+            -s -w "\nHTTP_CODE:%{http_code}")
+
+          echo "完整响应:"
+          echo "$RESPONSE"
+
+          echo ""
+          echo "========== 解析caseId =========="
+          CASE_ID=$(echo "$RESPONSE" | grep -o '"caseId":[0-9]*' | grep -o '[0-9]*')
+          echo "提取的 Case ID: [$CASE_ID]"
+          echo "Case ID 类型: $(echo $CASE_ID | wc -c) 字符"
+
+          echo ""
+          echo "========== 测试extract API =========="
+          if [ ! -z "$CASE_ID" ]; then
+            echo "调用 URL: http://localhost:3201/api/cases/$CASE_ID/extract"
+            curl -X POST "http://localhost:3201/api/cases/$CASE_ID/extract" \
+              -H "Content-Type: application/json" \
+              -d '{}' \
+              -s -w "\nHTTP_CODE:%{http_code}" | head -50
+          fi
+
+          echo ""
+          echo "完成！"
