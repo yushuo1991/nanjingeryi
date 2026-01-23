@@ -1,0 +1,75 @@
+name: 查看AI识别详细日志
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-ai-logs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 查看详细日志和配置
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 1. 查看最新的50行日志 =========="
+          pm2 logs rehab-care-link-server --lines 50 --nostream
+
+          echo ""
+          echo "========== 2. 检查.env配置 =========="
+          if [ -f /var/www/rehab-care-link/server/.env ]; then
+            echo "DASHSCOPE_API_KEY存在: $(grep -q DASHSCOPE_API_KEY /var/www/rehab-care-link/server/.env && echo 'YES' || echo 'NO')"
+            echo "QWEN_MODEL配置: $(grep QWEN_MODEL /var/www/rehab-care-link/server/.env || echo '未配置，将使用默认值')"
+            echo "DB配置: $(grep DB_ /var/www/rehab-care-link/server/.env | sed 's/=.*/=***/' || echo '未配置')"
+          else
+            echo "❌ .env文件不存在！"
+          fi
+
+          echo ""
+          echo "========== 3. 测试创建病例API =========="
+          cd /var/www/rehab-care-link
+          echo "Test" > test.txt
+          curl -X POST http://localhost:3201/api/cases \
+            -F "files=@test.txt" \
+            -s || echo "API调用失败"
+          rm test.txt
+
+          echo ""
+          echo "========== 4. 检查uploads目录 =========="
+          ls -la /var/www/rehab-care-link/uploads/ | tail -5
+
+          echo ""
+          echo "========== 5. 检查数据库表 =========="
+          cd /var/www/rehab-care-link/server
+          node -e "
+            require('dotenv').config();
+            const { getPool } = require('./db');
+            (async () => {
+              try {
+                const pool = await getPool();
+                const [tables] = await pool.query('SHOW TABLES');
+                console.log('数据库表:', tables.map(t => Object.values(t)[0]).join(', '));
+                const [cases] = await pool.query('SELECT COUNT(*) as count FROM cases');
+                console.log('病例数量:', cases[0].count);
+                await pool.end();
+              } catch(e) {
+                console.log('数据库错误:', e.message);
+              }
+            })();
+          " || echo "数据库检查失败"
+
+          echo ""
+          echo "========== 6. 手动测试AI API调用 =========="
+          cd /var/www/rehab-care-link/server
+          node -e "
+            require('dotenv').config();
+            console.log('DASHSCOPE_API_KEY配置:', process.env.DASHSCOPE_API_KEY ? '已配置' : '未配置');
+            console.log('QWEN_MODEL:', process.env.QWEN_MODEL || 'qwen-vl-plus (默认)');
+          " || echo "环境变量检查失败"
+
+          echo ""
+          echo "完成！"
