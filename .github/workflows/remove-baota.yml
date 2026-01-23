@@ -1,0 +1,117 @@
+name: 卸载宝塔并配置纯净Nginx
+
+on:
+  workflow_dispatch:
+
+jobs:
+  remove-baota:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 卸载宝塔面板并配置纯净环境
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 1. 备份当前Nginx配置 =========="
+          sudo mkdir -p /root/nginx-backup
+          sudo cp /www/server/panel/vhost/nginx/ey.yushuo.click.conf /root/nginx-backup/ 2>/dev/null || echo "配置已备份"
+
+          echo ""
+          echo "========== 2. 停止所有服务 =========="
+          sudo systemctl stop nginx 2>/dev/null || true
+          sudo /etc/init.d/nginx stop 2>/dev/null || true
+
+          echo ""
+          echo "========== 3. 卸载宝塔面板 =========="
+          # 宝塔官方卸载脚本
+          wget -O /tmp/bt_uninstall.sh http://download.bt.cn/install/bt-uninstall.sh && sudo bash /tmp/bt_uninstall.sh <<EOF
+y
+EOF
+
+          echo ""
+          echo "========== 4. 清理宝塔残留 =========="
+          sudo rm -rf /www/server
+          sudo rm -rf /www/wwwlogs
+          sudo rm -rf /www/wwwroot
+          sudo rm -rf /www/backup
+          sudo systemctl disable bt 2>/dev/null || true
+
+          echo ""
+          echo "========== 5. 安装纯净Nginx =========="
+          sudo apt-get update
+          sudo apt-get install -y nginx
+
+          echo ""
+          echo "========== 6. 创建新的Nginx配置 =========="
+          sudo tee /etc/nginx/sites-available/ey.yushuo.click > /dev/null <<'NGINX_CONF'
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ey.yushuo.click www.ey.yushuo.click;
+
+    # 前端静态文件
+    root /var/www/rehab-care-link/dist;
+    index index.html;
+
+    # Gzip压缩
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/json application/javascript;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # 后端API代理
+    location /api/ {
+        proxy_pass http://localhost:3201/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # 上传文件访问
+    location /uploads/ {
+        alias /var/www/rehab-care-link/uploads/;
+    }
+
+    # 日志
+    access_log /var/log/nginx/ey.yushuo.click-access.log;
+    error_log /var/log/nginx/ey.yushuo.click-error.log;
+}
+NGINX_CONF
+
+          echo ""
+          echo "========== 7. 启用站点配置 =========="
+          sudo ln -sf /etc/nginx/sites-available/ey.yushuo.click /etc/nginx/sites-enabled/
+          sudo rm -f /etc/nginx/sites-enabled/default
+
+          echo ""
+          echo "========== 8. 测试Nginx配置 =========="
+          sudo nginx -t
+
+          echo ""
+          echo "========== 9. 启动Nginx =========="
+          sudo systemctl enable nginx
+          sudo systemctl start nginx
+
+          echo ""
+          echo "========== 10. 检查服务状态 =========="
+          sudo systemctl status nginx --no-pager
+
+          echo ""
+          echo "========== 11. 检查磁盘空间 =========="
+          df -h
+
+          echo ""
+          echo "完成！宝塔已卸载，纯净Nginx已配置"
