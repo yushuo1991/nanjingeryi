@@ -1,0 +1,58 @@
+name: 测试AI API接口
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-api:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 测试创建病例和AI识别
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 1. 创建测试图片 =========="
+          cd /tmp
+          echo "Test Image" > test.jpg
+
+          echo ""
+          echo "========== 2. 测试创建病例API =========="
+          RESPONSE=$(curl -X POST http://localhost:3201/api/cases \
+            -F "files=@test.jpg" \
+            -s)
+          echo "Response: $RESPONSE"
+
+          CASE_ID=$(echo $RESPONSE | grep -o '"caseId":[0-9]*' | grep -o '[0-9]*')
+          echo "Case ID: $CASE_ID"
+
+          echo ""
+          echo "========== 3. 检查数据库 =========="
+          cd /var/www/rehab-care-link/server
+          node -e "
+            const sqlite3 = require('better-sqlite3');
+            const db = new sqlite3('rehab_care.db');
+            const cases = db.prepare('SELECT * FROM cases').all();
+            console.log('Cases:', JSON.stringify(cases, null, 2));
+            const files = db.prepare('SELECT * FROM case_files').all();
+            console.log('Files:', JSON.stringify(files, null, 2));
+            db.close();
+          " || echo "数据库查询失败"
+
+          echo ""
+          echo "========== 4. 测试extract API =========="
+          if [ ! -z "$CASE_ID" ]; then
+            curl -X POST http://localhost:3201/api/cases/$CASE_ID/extract \
+              -H "Content-Type: application/json" \
+              -d '{}' \
+              -s | head -100
+          else
+            echo "无法获取CASE_ID"
+          fi
+
+          echo ""
+          echo "测试完成！"
