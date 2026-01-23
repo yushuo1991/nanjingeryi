@@ -1,0 +1,50 @@
+name: 检查并清除所有缓存层
+
+on:
+  workflow_dispatch:
+
+jobs:
+  clear-all-cache:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 清除所有可能的缓存
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 1. 检查Nginx完整配置中的缓存设置 =========="
+          sudo nginx -T 2>/dev/null | grep -i cache | head -20
+
+          echo ""
+          echo "========== 2. 清除所有Nginx缓存 =========="
+          sudo rm -rf /var/cache/nginx/*
+          sudo rm -rf /var/lib/nginx/cache/*
+          sudo rm -rf /tmp/nginx/*
+          sudo rm -rf /var/run/nginx-cache/*
+
+          echo ""
+          echo "========== 3. 删除dist目录重新复制 =========="
+          sudo rm -rf /var/www/rehab-care-link/dist.old
+          sudo mv /var/www/rehab-care-link/dist /var/www/rehab-care-link/dist.old
+          sudo cp -r /var/www/rehab-care-link/dist.old /var/www/rehab-care-link/dist
+
+          echo ""
+          echo "========== 4. 确认新文件 =========="
+          cat /var/www/rehab-care-link/dist/index.html
+
+          echo ""
+          echo "========== 5. 完全重启Nginx（kill进程） =========="
+          sudo pkill -9 nginx || true
+          sleep 2
+          sudo systemctl start nginx
+
+          echo ""
+          echo "========== 6. 验证Nginx返回内容 =========="
+          curl -v http://localhost/ 2>&1 | head -40
+
+          echo ""
+          echo "完成！"
