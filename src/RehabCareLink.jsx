@@ -1,3 +1,4 @@
+// Version: 2.0.1 - SQLite migration fix
 import React, { useState, useEffect } from 'react';
 import {
   Home, Calendar, MessageSquare, User, Plus, ChevronRight, ChevronLeft,
