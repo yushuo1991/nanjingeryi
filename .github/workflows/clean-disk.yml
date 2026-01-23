@@ -1,0 +1,45 @@
+name: 清理磁盘空间
+
+on:
+  workflow_dispatch:
+
+jobs:
+  clean-disk:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检查并清理磁盘
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 1. 检查磁盘使用情况 =========="
+          df -h
+
+          echo ""
+          echo "========== 2. 查找占用空间最大的目录 =========="
+          sudo du -sh /* 2>/dev/null | sort -hr | head -10
+
+          echo ""
+          echo "========== 3. 清理APT缓存 =========="
+          sudo apt-get clean
+          sudo apt-get autoclean
+          sudo apt-get autoremove -y
+
+          echo ""
+          echo "========== 4. 清理日志文件 =========="
+          sudo journalctl --vacuum-time=7d
+
+          echo ""
+          echo "========== 5. 清理npm缓存 =========="
+          npm cache clean --force 2>/dev/null || echo "npm缓存已清理或不存在"
+
+          echo ""
+          echo "========== 6. 再次检查磁盘 =========="
+          df -h
+
+          echo ""
+          echo "完成！"
