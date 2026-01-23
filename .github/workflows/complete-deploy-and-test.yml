@@ -1,0 +1,431 @@
+name: 完整部署和测试流程
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+
+    - name: 设置 Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: 安装前端依赖
+      run: npm ci
+
+    - name: 构建前端
+      run: npm run build
+
+    - name: 步骤1 - 清理并部署后端代码
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "=== 步骤1: 清理并部署后端代码 ==="
+
+          # 停止并删除旧的PM2进程
+          pm2 stop rehab-care-link-server || true
+          pm2 delete rehab-care-link-server || true
+
+          # 清理旧文件
+          rm -rf /var/www/rehab-care-link/*
+          mkdir -p /var/www/rehab-care-link
+
+          echo "清理完成"
+
+    - name: 步骤2 - 上传文件到服务器
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        source: "dist/,server/"
+        target: "/var/www/rehab-care-link/"
+        strip_components: 0
+        rm: false
+
+    - name: 步骤3 - 创建package.json和配置环境
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "=== 步骤3: 创建package.json和配置环境 ==="
+          cd /var/www/rehab-care-link/server
+
+          # 创建package.json（注意：不设置 "type": "module"，因为代码使用CommonJS）
+          cat > package.json << 'PACKAGE_EOF'
+          {
+            "name": "rehab-care-link-server",
+            "version": "1.0.0",
+            "description": "Rehab Care Link Backend Server",
+            "main": "index.js",
+            "scripts": {
+              "start": "node index.js"
+            },
+            "dependencies": {
+              "better-sqlite3": "^9.2.2",
+              "cors": "^2.8.5",
+              "dotenv": "^17.2.3",
+              "express": "^4.18.2",
+              "multer": "^1.4.5-lts.1",
+              "axios": "^1.6.2",
+              "crypto": "^1.0.1"
+            }
+          }
+          PACKAGE_EOF
+
+          echo "package.json 创建完成"
+          cat package.json
+
+          # 创建.env文件
+          cat > .env << 'ENV_EOF'
+          ${{ secrets.SERVER_ENV }}
+          ENV_EOF
+          chmod 600 .env
+
+          echo ".env文件创建完成"
+
+    - name: 步骤4 - 验证服务器文件
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "=== 步骤4: 验证服务器文件 ==="
+          cd /var/www/rehab-care-link/server
+
+          echo "检查必需文件:"
+          for file in index.js db.js files.js qwen.js seed.js package.json .env; do
+            if [ -f "$file" ]; then
+              echo "✓ $file 存在 ($(wc -c < $file) bytes)"
+            else
+              echo "✗ $file 缺失"
+            fi
+          done
+
+          echo ""
+          echo "目录结构:"
+          ls -lah
+
+    - name: 步骤5 - 安装依赖
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        timeout: 300s
+        script: |
+          echo "=== 步骤5: 安装依赖 ==="
+          cd /var/www/rehab-care-link/server
+
+          # 清理旧的node_modules
+          rm -rf node_modules package-lock.json
+
+          # 设置npm镜像加速（可选）
+          npm config set registry https://registry.npmmirror.com
+
+          echo "开始安装依赖..."
+          npm install --production --verbose 2>&1 | tee npm-install.log
+
+          echo ""
+          echo "安装结果:"
+          if [ -d "node_modules" ]; then
+            echo "✓ node_modules 目录已创建"
+            echo "已安装的包:"
+            ls -la node_modules/ | head -20
+          else
+            echo "✗ node_modules 目录不存在"
+            exit 1
+          fi
+
+          # 特别检查better-sqlite3
+          if [ -d "node_modules/better-sqlite3" ]; then
+            echo "✓ better-sqlite3 已安装"
+            ls -la node_modules/better-sqlite3/
+          else
+            echo "✗ better-sqlite3 未安装"
+            echo "尝试单独安装 better-sqlite3..."
+            npm install better-sqlite3@9.2.2 --verbose
+          fi
+
+    - name: 步骤6 - 启动PM2服务
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "=== 步骤6: 启动PM2服务 ==="
+          cd /var/www/rehab-care-link/server
+
+          # 检查PM2是否安装
+          if ! command -v pm2 &> /dev/null; then
+            echo "PM2未安装，正在安装..."
+            npm install -g pm2
+          fi
+
+          # 启动服务
+          echo "启动服务..."
+          pm2 start index.js --name rehab-care-link-server --time
+
+          # 等待服务启动
+          sleep 5
+
+          # 检查进程状态
+          echo ""
+          echo "PM2进程列表:"
+          pm2 list
+
+          echo ""
+          echo "服务详细信息:"
+          pm2 info rehab-care-link-server
+
+    - name: 步骤7 - 检查服务日志
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "=== 步骤7: 检查服务日志 ==="
+
+          echo "最近的PM2日志:"
+          pm2 logs rehab-care-link-server --lines 50 --nostream
+
+          echo ""
+          echo "检查是否有错误:"
+          pm2 logs rehab-care-link-server --lines 100 --nostream --err
+
+    - name: 测试 8a - 后端基础API
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "=== 测试 8a: 后端基础API ==="
+
+          # 测试健康检查
+          echo "测试 GET /api/health"
+          curl -s -w "\nHTTP状态码: %{http_code}\n" http://localhost:3201/api/health || echo "请求失败"
+
+          echo ""
+          echo "测试 GET /api/patients"
+          curl -s -w "\nHTTP状态码: %{http_code}\n" http://localhost:3201/api/patients || echo "请求失败"
+
+    - name: 测试 8b - 创建病例
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "=== 测试 8b: 创建病例 ==="
+          cd /var/www/rehab-care-link/server
+
+          # 创建一个测试图片
+          echo "创建测试图片..."
+          cat > test-image.txt << 'IMG_EOF'
+          这是一个测试文件
+          IMG_EOF
+
+          # 使用curl上传
+          echo "上传测试图片..."
+          RESPONSE=$(curl -s -w "\nHTTP状态码: %{http_code}" -X POST \
+            -F "files=@test-image.txt" \
+            http://localhost:3201/api/cases 2>&1)
+
+          echo "响应:"
+          echo "$RESPONSE"
+
+          # 清理
+          rm -f test-image.txt
+
+    - name: 测试 8c - 数据库功能
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "=== 测试 8c: 数据库功能 ==="
+          cd /var/www/rehab-care-link/server
+
+          # 检查数据库文件
+          if [ -f "rehab_care.db" ]; then
+            echo "✓ 数据库文件存在"
+            ls -lh rehab_care.db
+
+            # 检查数据库是否可访问
+            if command -v sqlite3 &> /dev/null; then
+              echo ""
+              echo "数据库表:"
+              sqlite3 rehab_care.db ".tables"
+
+              echo ""
+              echo "患者数量:"
+              sqlite3 rehab_care.db "SELECT COUNT(*) FROM patients;"
+
+              echo ""
+              echo "病例数量:"
+              sqlite3 rehab_care.db "SELECT COUNT(*) FROM cases;"
+            else
+              echo "sqlite3命令不可用，跳过数据库详细检查"
+            fi
+          else
+            echo "✗ 数据库文件不存在"
+          fi
+
+    - name: 测试 8d - 前端静态资源
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "=== 测试 8d: 前端静态资源 ==="
+
+          # 检查dist目录
+          if [ -d "/var/www/rehab-care-link/dist" ]; then
+            echo "✓ dist目录存在"
+            echo "文件列表:"
+            ls -lah /var/www/rehab-care-link/dist/
+
+            echo ""
+            echo "检查index.html:"
+            if [ -f "/var/www/rehab-care-link/dist/index.html" ]; then
+              echo "✓ index.html存在 ($(wc -c < /var/www/rehab-care-link/dist/index.html) bytes)"
+            else
+              echo "✗ index.html不存在"
+            fi
+          else
+            echo "✗ dist目录不存在"
+          fi
+
+    - name: 测试 8e - 通过域名访问
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "=== 测试 8e: 通过域名访问 ==="
+
+          # 测试API端点
+          echo "测试 https://rehab.yushuwu.top/api/health"
+          curl -k -s -w "\nHTTP状态码: %{http_code}\n" https://rehab.yushuwu.top/api/health || echo "请求失败"
+
+          echo ""
+          echo "测试主页"
+          curl -k -s -w "\nHTTP状态码: %{http_code}\n" https://rehab.yushuwu.top/ | head -20 || echo "请求失败"
+
+    - name: 最终报告 - 生成测试总结
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========================================="
+          echo "         最终测试报告"
+          echo "========================================="
+          echo ""
+
+          # 1. PM2进程状态
+          echo "1. PM2进程状态:"
+          if pm2 list | grep -q "rehab-care-link-server.*online"; then
+            echo "   ✓ 服务正在运行"
+          else
+            echo "   ✗ 服务未运行"
+          fi
+
+          # 2. 端口监听
+          echo ""
+          echo "2. 端口监听状态:"
+          if netstat -tlnp 2>/dev/null | grep -q ":3201"; then
+            echo "   ✓ 端口3201正在监听"
+          else
+            echo "   ✗ 端口3201未监听"
+          fi
+
+          # 3. 数据库
+          echo ""
+          echo "3. 数据库状态:"
+          if [ -f "/var/www/rehab-care-link/server/rehab_care.db" ]; then
+            echo "   ✓ 数据库文件存在"
+          else
+            echo "   ✗ 数据库文件不存在"
+          fi
+
+          # 4. 关键模块
+          echo ""
+          echo "4. 关键模块:"
+          cd /var/www/rehab-care-link/server
+          for module in better-sqlite3 express cors dotenv multer; do
+            if [ -d "node_modules/$module" ]; then
+              echo "   ✓ $module 已安装"
+            else
+              echo "   ✗ $module 未安装"
+            fi
+          done
+
+          # 5. API测试
+          echo ""
+          echo "5. API可访问性:"
+          HEALTH_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3201/api/health)
+          if [ "$HEALTH_CODE" = "200" ]; then
+            echo "   ✓ /api/health 返回 200"
+          else
+            echo "   ✗ /api/health 返回 $HEALTH_CODE"
+          fi
+
+          PATIENTS_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3201/api/patients)
+          if [ "$PATIENTS_CODE" = "200" ]; then
+            echo "   ✓ /api/patients 返回 200"
+          else
+            echo "   ✗ /api/patients 返回 $PATIENTS_CODE"
+          fi
+
+          # 6. 前端文件
+          echo ""
+          echo "6. 前端文件:"
+          if [ -f "/var/www/rehab-care-link/dist/index.html" ]; then
+            echo "   ✓ index.html 存在"
+          else
+            echo "   ✗ index.html 不存在"
+          fi
+
+          # 7. 最近错误日志
+          echo ""
+          echo "7. 最近错误日志 (如有):"
+          pm2 logs rehab-care-link-server --lines 10 --nostream --err 2>/dev/null | grep -i error || echo "   无错误"
+
+          echo ""
+          echo "========================================="
+          echo "部署时间: $(date)"
+          echo "========================================="
