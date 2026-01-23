@@ -1,0 +1,35 @@
+name: 检查SQLite数据库文件
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-db-file:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检查数据库文件
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 查找所有.db文件 =========="
+          find /var/www/rehab-care-link -name "*.db" -ls
+
+          echo ""
+          echo "========== 检查server目录下的db文件 =========="
+          ls -lah /var/www/rehab-care-link/server/*.db 2>/dev/null || echo "server目录下没有.db文件"
+
+          echo ""
+          echo "========== 检查.env中的数据库路径配置 =========="
+          grep SQLITE /var/www/rehab-care-link/server/.env || echo "未配置SQLITE_DB_PATH"
+
+          echo ""
+          echo "========== 查看PM2进程的环境变量 =========="
+          pm2 env 0 | grep -i sqlite || echo "PM2环境变量中没有SQLITE"
+
+          echo ""
+          echo "完成！"
