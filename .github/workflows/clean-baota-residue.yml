@@ -1,0 +1,53 @@
+name: 完全清理宝塔残留
+
+on:
+  workflow_dispatch:
+
+jobs:
+  clean-baota:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 清理宝塔残留文件
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 1. 当前磁盘状态 =========="
+          df -h | grep "/dev/vda"
+
+          echo ""
+          echo "========== 2. 查看/www目录大小 =========="
+          sudo du -sh /www/* 2>/dev/null | sort -hr
+
+          echo ""
+          echo "========== 3. 删除宝塔相关目录（保留项目文件） =========="
+          # 保留 /var/www/rehab-care-link
+          sudo rm -rf /www/server/panel
+          sudo rm -rf /www/server/nginx
+          sudo rm -rf /www/server/mysql
+          sudo rm -rf /www/server/php
+          sudo rm -rf /www/server/redis
+          sudo rm -rf /www/server/mongodb
+          sudo rm -rf /www/wwwlogs
+          sudo rm -rf /www/wwwroot
+          sudo rm -rf /www/backup
+
+          echo ""
+          echo "========== 4. 停止宝塔服务 =========="
+          sudo systemctl stop bt 2>/dev/null || true
+          sudo systemctl disable bt 2>/dev/null || true
+
+          echo ""
+          echo "========== 5. 清理后的磁盘状态 =========="
+          df -h | grep "/dev/vda"
+
+          echo ""
+          echo "========== 6. 验证网站仍然正常 =========="
+          curl -I http://localhost/
+
+          echo ""
+          echo "完成！宝塔残留已清理"
