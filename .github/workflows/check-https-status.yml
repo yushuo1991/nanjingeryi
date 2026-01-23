@@ -1,0 +1,39 @@
+name: 检查HTTPS配置状态
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-https-status:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 详细检查HTTPS状态
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 1. 检查certbot证书 =========="
+          sudo certbot certificates || echo "certbot未正确安装或无证书"
+
+          echo ""
+          echo "========== 2. 检查Nginx配置文件中的SSL =========="
+          cat /www/server/panel/vhost/nginx/ey.yushuo.click.conf
+
+          echo ""
+          echo "========== 3. 检查是否有SSL证书文件 =========="
+          sudo ls -la /etc/letsencrypt/live/ 2>/dev/null || echo "无证书目录"
+
+          echo ""
+          echo "========== 4. 检查443端口监听 =========="
+          sudo netstat -tlnp | grep :443 || echo "无443端口监听"
+
+          echo ""
+          echo "========== 5. 检查Nginx进程 =========="
+          ps aux | grep nginx | grep -v grep
+
+          echo ""
+          echo "完成！"
