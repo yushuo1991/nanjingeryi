@@ -1,0 +1,44 @@
+name: 修复Nginx指向正确目录
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-path:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 修复Nginx配置路径
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 1. 备份当前Nginx配置 =========="
+          sudo cp /etc/nginx/sites-available/ey.yushuo.click /etc/nginx/sites-available/ey.yushuo.click.backup.$(date +%Y%m%d)
+
+          echo ""
+          echo "========== 2. 修改root路径 =========="
+          sudo sed -i 's|root /opt/children-hospital/dist;|root /var/www/rehab-care-link/dist;|g' /etc/nginx/sites-available/ey.yushuo.click
+
+          echo ""
+          echo "========== 3. 查看修改后的配置 =========="
+          sudo cat /etc/nginx/sites-available/ey.yushuo.click | grep -A 5 "location /"
+
+          echo ""
+          echo "========== 4. 测试Nginx配置 =========="
+          sudo nginx -t
+
+          echo ""
+          echo "========== 5. 重载Nginx =========="
+          sudo nginx -s reload
+
+          echo ""
+          echo "========== 6. 验证访问 =========="
+          sleep 2
+          curl -s http://localhost/ | grep "index-"
+
+          echo ""
+          echo "修复完成！"
