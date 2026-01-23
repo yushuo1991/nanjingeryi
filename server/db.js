@@ -1,20 +1,49 @@
-const mysql = require('mysql2/promise');
+const sqlite3 = require('better-sqlite3');
+const path = require('path');
 
-function requiredEnv(name) {
-  const value = process.env[name];
-  if (!value) throw new Error(`Missing required env var: ${name}`);
-  return value;
+let db = null;
+
+function getDb() {
+  if (db) return db;
+
+  const dbPath = process.env.SQLITE_DB_PATH || path.join(__dirname, 'rehab_care.db');
+  db = new sqlite3(dbPath);
+
+  // Enable foreign keys
+  db.pragma('foreign_keys = ON');
+
+  return db;
 }
 
-function getMysqlConfig() {
+// 模拟MySQL的query方法，返回 [rows, fields] 格式
+function query(sql, params = []) {
+  const db = getDb();
+
+  // 处理SELECT查询
+  if (sql.trim().toUpperCase().startsWith('SELECT') || sql.trim().toUpperCase().startsWith('SHOW')) {
+    const rows = db.prepare(sql).all(...params);
+    return Promise.resolve([rows, []]);
+  }
+
+  // 处理INSERT/UPDATE/DELETE
+  const info = db.prepare(sql).run(...params);
+  return Promise.resolve([{
+    insertId: info.lastInsertRowid,
+    affectedRows: info.changes
+  }, []]);
+}
+
+// 创建一个类似MySQL pool的对象
+function createPool() {
   return {
-    host: process.env.MYSQL_HOST || '127.0.0.1',
-    port: Number(process.env.MYSQL_PORT || 3306),
-    user: requiredEnv('MYSQL_USER'),
-    password: requiredEnv('MYSQL_PASSWORD'),
-    database: requiredEnv('MYSQL_DATABASE'),
-    connectionLimit: Number(process.env.MYSQL_POOL_SIZE || 10),
-    charset: 'utf8mb4',
+    query: query,
+    end: () => {
+      if (db) {
+        db.close();
+        db = null;
+      }
+      return Promise.resolve();
+    }
   };
 }
 
@@ -22,79 +51,108 @@ let pool = null;
 
 async function getPool() {
   if (pool) return pool;
-  pool = mysql.createPool(getMysqlConfig());
-  await pool.query('SELECT 1');
+
+  // 初始化数据库
+  getDb();
+  pool = createPool();
+
   return pool;
 }
 
 async function migrate() {
-  const p = await getPool();
-  await p.query(`
+  const db = getDb();
+
+  // Cases table
+  db.exec(`
     CREATE TABLE IF NOT EXISTS cases (
-      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-      status VARCHAR(32) NOT NULL DEFAULT 'created',
-      created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-      updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
-      PRIMARY KEY (id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      status TEXT NOT NULL DEFAULT 'created',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
-  await p.query(`
+  // Create trigger for updated_at
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS cases_updated_at
+    AFTER UPDATE ON cases
+    BEGIN
+      UPDATE cases SET updated_at = datetime('now') WHERE id = NEW.id;
+    END;
+  `);
+
+  // Case files table
+  db.exec(`
     CREATE TABLE IF NOT EXISTS case_files (
-      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-      case_id BIGINT UNSIGNED NOT NULL,
-      path VARCHAR(512) NOT NULL,
-      mime VARCHAR(128) NOT NULL,
-      sha256 CHAR(64) NOT NULL,
-      created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-      PRIMARY KEY (id),
-      KEY idx_case_id (case_id),
-      CONSTRAINT fk_case_files_case_id FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      case_id INTEGER NOT NULL,
+      path TEXT NOT NULL,
+      mime TEXT NOT NULL,
+      sha256 TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE
+    );
   `);
 
-  await p.query(`
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_case_files_case_id ON case_files(case_id);
+  `);
+
+  // AI runs table
+  db.exec(`
     CREATE TABLE IF NOT EXISTS ai_runs (
-      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-      case_id BIGINT UNSIGNED NOT NULL,
-      kind VARCHAR(32) NOT NULL,
-      model VARCHAR(64) NOT NULL,
-      request_json JSON NOT NULL,
-      response_json JSON NULL,
-      parsed_json JSON NULL,
-      error_text TEXT NULL,
-      created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-      PRIMARY KEY (id),
-      KEY idx_case_kind (case_id, kind),
-      CONSTRAINT fk_ai_runs_case_id FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      case_id INTEGER NOT NULL,
+      kind TEXT NOT NULL,
+      model TEXT NOT NULL,
+      request_json TEXT NOT NULL,
+      response_json TEXT,
+      parsed_json TEXT,
+      error_text TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE
+    );
   `);
 
-  await p.query(`
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_ai_runs_case_kind ON ai_runs(case_id, kind);
+  `);
+
+  // Patients table
+  db.exec(`
     CREATE TABLE IF NOT EXISTS patients (
-      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-      data JSON NOT NULL,
-      created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-      updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
-      PRIMARY KEY (id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      data TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
-  await p.query(`
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS patients_updated_at
+    AFTER UPDATE ON patients
+    BEGIN
+      UPDATE patients SET updated_at = datetime('now') WHERE id = NEW.id;
+    END;
+  `);
+
+  // Rehab plans table
+  db.exec(`
     CREATE TABLE IF NOT EXISTS rehab_plans (
-      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-      patient_id BIGINT UNSIGNED NOT NULL,
-      case_id BIGINT UNSIGNED NULL,
-      plan_json JSON NOT NULL,
-      confirmed TINYINT(1) NOT NULL DEFAULT 0,
-      created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-      PRIMARY KEY (id),
-      KEY idx_patient (patient_id),
-      CONSTRAINT fk_rehab_plans_patient_id FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
-      CONSTRAINT fk_rehab_plans_case_id FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE SET NULL
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      patient_id INTEGER NOT NULL,
+      case_id INTEGER,
+      plan_json TEXT NOT NULL,
+      confirmed INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
+      FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE SET NULL
+    );
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_rehab_plans_patient ON rehab_plans(patient_id);
   `);
 }
 
 module.exports = { getPool, migrate };
-
