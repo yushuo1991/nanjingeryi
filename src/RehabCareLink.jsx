@@ -8,10 +8,11 @@ import {
   Bell, Settings, LogOut, Eye, EyeOff, Camera, File, ArrowRight,
   Users, Building2, Bed, ClipboardList, Timer, Coffee, Utensils,
   Moon, Sun, Award, Flag, AlertCircle, Info, ThumbsUp, MessageCircle,
-  Share2, Link, ExternalLink, Loader2
+  Share2, Link, ExternalLink, Loader2, Printer, Download
 } from 'lucide-react';
 
 import { api } from './lib/api';
+import { printPatientRecord, printBatchRecords } from './lib/print';
 
 // ==================== 设计系统配色 ====================
 // 基于医院logo的配色方案
@@ -1343,11 +1344,22 @@ export default function RehabCareLink() {
           title="患儿详情"
           showBack
           rightAction={
-            userRole === 'therapist' && (
-              <button className="p-2 hover:bg-slate-100 rounded-xl transition-all duration-200">
-                <Edit3 size={20} className="text-slate-600" />
+            <div className="flex gap-2">
+              {/* 打印按钮 */}
+              <button
+                onClick={() => printPatientRecord(patient)}
+                className="p-2 hover:bg-slate-100 rounded-xl transition-all duration-200"
+                title="打印患者档案"
+              >
+                <Printer size={20} className="text-slate-600" />
               </button>
-            )
+              {/* 编辑按钮 - 仅治疗师可见 */}
+              {userRole === 'therapist' && (
+                <button className="p-2 hover:bg-slate-100 rounded-xl transition-all duration-200">
+                  <Edit3 size={20} className="text-slate-600" />
+                </button>
+              )}
+            </div>
           }
         />
 
@@ -2316,10 +2328,19 @@ export default function RehabCareLink() {
             )}
 
             {allConfirmed && (
-              <div className="mt-4 text-center">
+              <div className="mt-4 space-y-3">
+                {/* 打印全部按钮 */}
+                <button
+                  onClick={() => printBatchRecords(batchPatients)}
+                  className="w-full bg-gradient-to-r from-indigo-600 to-indigo-500 text-white px-6 py-3 rounded-xl font-medium flex items-center justify-center gap-2"
+                >
+                  <Printer size={20} />
+                  打印全部日报
+                </button>
+                {/* 关闭按钮 */}
                 <button
                   onClick={() => setShowBatchGenerate(false)}
-                  className="bg-green-500 text-white px-6 py-3 rounded-xl font-medium"
+                  className="w-full bg-green-500 text-white px-6 py-3 rounded-xl font-medium"
                 >
                   全部完成，关闭
                 </button>
