@@ -1,0 +1,49 @@
+name: 性能和压力测试
+
+on:
+  workflow_dispatch:
+
+jobs:
+  performance-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 性能测试
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 性能测试 =========="
+
+          echo "1. 服务器资源使用"
+          echo "内存使用:"
+          free -h
+          echo ""
+          echo "CPU负载:"
+          uptime
+          echo ""
+          echo "磁盘使用:"
+          df -h | grep "/dev/vda"
+
+          echo ""
+          echo "2. PM2进程资源"
+          pm2 show rehab-care-link-server
+
+          echo ""
+          echo "3. 数据库大小"
+          if [ -f /var/www/rehab-care-link/server/rehab_care.db ]; then
+            ls -lh /var/www/rehab-care-link/server/rehab_care.db
+          fi
+
+          echo ""
+          echo "4. 并发请求测试（10个请求）"
+          for i in {1..10}; do
+            curl -s -o /dev/null -w "请求$i: %{http_code} (耗时: %{time_total}s)\n" http://localhost/ &
+          done
+          wait
+
+          echo ""
+          echo "========== 性能测试完成 =========="
