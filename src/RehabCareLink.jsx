@@ -297,11 +297,14 @@ export default function RehabCareLink() {
   const [showQuickEntry, setShowQuickEntry] = useState(false);
   const [showBatchGenerate, setShowBatchGenerate] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  // 状态管理
   const [showFabMenu, setShowFabMenu] = useState(false);
   const [detailTab, setDetailTab] = useState('today'); // today | logs
   const [showAllPatients, setShowAllPatients] = useState(false); // 显示全部患者弹窗
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // 显示删除确认对话框
   const [isEditingDetail, setIsEditingDetail] = useState(false); // 详情页编辑模式
+  const [showLogConfirm, setShowLogConfirm] = useState(false); // 显示日志确认对话框
+  const [generatedLog, setGeneratedLog] = useState(null); // 生成的日志内容
   const [toast, setToast] = useState(null); // 提示消息
 
   // AI收治状态
@@ -633,7 +636,8 @@ export default function RehabCareLink() {
           precautions: Array.isArray(plan.precautions) ? plan.precautions : prev.treatmentPlan.precautions,
         },
       }));
-      // 移除toast提示，静默更新方案
+      // 生成方案后自动确认建档并跳转
+      await confirmAdmission();
     } catch (e) {
       showToast(e.message || '生成方案失败', 'error');
     } finally {
@@ -673,7 +677,7 @@ export default function RehabCareLink() {
     }));
   };
 
-  // 生成今日治疗日志
+  // 生成今日治疗日志（先显示确认对话框）
   const generateTodayLog = useCallback((patient) => {
     if (!patient) return;
 
@@ -684,27 +688,36 @@ export default function RehabCareLink() {
       .filter(item => item.completed)
       .map(item => item.name);
 
-    // 生成新日志
+    // 生成新日志（待确认）
     const newLog = {
       date: today,
-      items: completedItems.length > 0 ? completedItems : ['无'],
-      highlight: patient.treatmentPlan.highlights[0] || '常规康复训练',
-      notes: '',
+      items: completedItems.length > 0 ? completedItems : patient.treatmentPlan.items.map(i => i.name),
+      highlight: patient.treatmentPlan.focus || '常规康复训练',
+      notes: patient.treatmentPlan.precautions.join('；') || '',
       therapist: '吴大勇'
     };
 
-    // 更新患者的治疗日志
-    const updatedLogs = [newLog, ...(patient.treatmentLogs || [])];
+    setGeneratedLog(newLog);
+    setShowLogConfirm(true);
+  }, []);
 
-    updatePatient(patient.id, {
+  // 确认保存日志
+  const confirmSaveLog = useCallback(() => {
+    if (!generatedLog || !selectedPatient) return;
+
+    // 更新患者的治疗日志
+    const updatedLogs = [generatedLog, ...(selectedPatient.treatmentLogs || [])];
+
+    updatePatient(selectedPatient.id, {
       treatmentLogs: updatedLogs,
       todayTreated: true
     });
 
-    // 切换到日志标签页
+    setShowLogConfirm(false);
+    setGeneratedLog(null);
     setDetailTab('logs');
-    showToast('今日治疗日志已生成', 'success');
-  }, [updatePatient, showToast]);
+    showToast('今日治疗日志已保存', 'success');
+  }, [generatedLog, selectedPatient, updatePatient, showToast]);
 
   // 添加治疗项目
   const addTreatmentItem = () => {
@@ -2494,6 +2507,64 @@ export default function RehabCareLink() {
                 className="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors"
               >
                 确认删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 日志确认对话框 */}
+      {showLogConfirm && generatedLog && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowLogConfirm(false)}>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                <FileText size={24} className="text-emerald-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">确认治疗日志</h3>
+                <p className="text-sm text-gray-500">请核对今日治疗内容</p>
+              </div>
+            </div>
+            <div className="bg-slate-50 rounded-xl p-4 mb-6 space-y-3">
+              <div>
+                <label className="text-xs text-slate-500">治疗日期</label>
+                <p className="text-sm font-medium text-slate-700">{generatedLog.date}</p>
+              </div>
+              <div>
+                <label className="text-xs text-slate-500">治疗重点</label>
+                <p className="text-sm font-medium text-slate-700">{generatedLog.highlight}</p>
+              </div>
+              <div>
+                <label className="text-xs text-slate-500">完成项目</label>
+                <div className="mt-1 space-y-1">
+                  {generatedLog.items.map((item, i) => (
+                    <div key={i} className="text-sm text-slate-700 flex items-center gap-2">
+                      <CheckCircle2 size={14} className="text-emerald-500" />
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {generatedLog.notes && (
+                <div>
+                  <label className="text-xs text-slate-500">注意事项</label>
+                  <p className="text-sm text-slate-700">{generatedLog.notes}</p>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLogConfirm(false)}
+                className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmSaveLog}
+                className="flex-1 px-4 py-2.5 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-colors"
+              >
+                确认保存
               </button>
             </div>
           </div>
