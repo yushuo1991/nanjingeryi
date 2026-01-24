@@ -64,6 +64,100 @@ jobs:
           chmod 600 .env
           echo ".env 文件已创建"
 
+    - name: 配置Nginx
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        command_timeout: 3m
+        script: |
+          echo "===== 安装Nginx ====="
+          apt-get update -qq
+          apt-get install -y nginx
+
+          echo "===== 创建nginx.conf ====="
+          mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled /var/log/nginx
+
+          cat > /etc/nginx/nginx.conf << 'NGINXMAIN'
+          user www-data;
+          worker_processes auto;
+          pid /run/nginx.pid;
+
+          events {
+              worker_connections 1024;
+          }
+
+          http {
+              sendfile on;
+              tcp_nopush on;
+              tcp_nodelay on;
+              keepalive_timeout 65;
+              types_hash_max_size 2048;
+              client_max_body_size 100M;
+
+              include /etc/nginx/mime.types;
+              default_type application/octet-stream;
+
+              access_log /var/log/nginx/access.log;
+              error_log /var/log/nginx/error.log;
+
+              gzip on;
+
+              include /etc/nginx/sites-enabled/*;
+          }
+          NGINXMAIN
+
+          echo "===== 创建站点配置 ====="
+          cat > /etc/nginx/sites-available/ey.yushuo.click << 'NGINXSITE'
+          server {
+              listen 80 default_server;
+              listen [::]:80 default_server;
+              server_name ey.yushuo.click www.ey.yushuo.click _;
+
+              client_max_body_size 100M;
+              client_body_timeout 300s;
+              send_timeout 300s;
+
+              root /var/www/rehab-care-link/dist;
+              index index.html;
+
+              location / {
+                  try_files $uri $uri/ /index.html;
+              }
+
+              location /api/ {
+                  proxy_pass http://127.0.0.1:3201;
+                  proxy_http_version 1.1;
+                  proxy_set_header Connection "";
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_connect_timeout 300s;
+                  proxy_send_timeout 300s;
+                  proxy_read_timeout 300s;
+                  proxy_buffering off;
+                  proxy_request_buffering off;
+              }
+
+              location /uploads/ {
+                  alias /var/www/rehab-care-link/uploads/;
+              }
+          }
+          NGINXSITE
+
+          rm -f /etc/nginx/sites-enabled/*
+          ln -sf /etc/nginx/sites-available/ey.yushuo.click /etc/nginx/sites-enabled/
+
+          echo "===== 测试并启动Nginx ====="
+          nginx -t
+          systemctl daemon-reload
+          systemctl restart nginx
+          systemctl enable nginx
+
+          echo "===== Nginx配置完成 ====="
+
     - name: 重启服务器应用
       uses: appleboy/ssh-action@v1.0.3
       with:
@@ -74,5 +168,25 @@ jobs:
         script: |
           cd /var/www/rehab-care-link/server
           npm install --production
-          pm2 restart rehab-care-link-server || pm2 start index.js --name rehab-care-link-server
+          mkdir -p /var/www/rehab-care-link/uploads
+          pm2 delete rehab-care-link-server 2>/dev/null || true
+          pm2 start index.js --name rehab-care-link-server
+          pm2 save
           echo "部署完成！$(date)"
+
+    - name: 验证部署
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "===== 验证服务 ====="
+          pm2 list
+          ss -tlnp | grep -E ":80|:3201"
+
+          echo ""
+          echo "===== 测试访问 ====="
+          curl -s -w "\nHTTP: %{http_code}\n" http://localhost/ | head -3
+          curl -s -w "\nHTTP: %{http_code}\n" http://localhost/api/patients | head -5
