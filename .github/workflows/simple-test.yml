@@ -1,0 +1,69 @@
+name: 最简单的上传测试
+
+on:
+  workflow_dispatch:
+
+jobs:
+  simple-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 简单上传测试
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 测试1: 检查文件是否存在 =========="
+          ls -la /var/www/rehab-care-link/server/index.js || echo "❌ index.js不存在"
+
+          echo ""
+          echo "========== 测试2: 检查PM2状态 =========="
+          pm2 list | grep rehab-care-link-server
+
+          echo ""
+          echo "========== 测试3: 检查端口监听 =========="
+          netstat -tulpn | grep 3201 || ss -tulpn | grep 3201 || echo "端口3201未监听"
+
+          echo ""
+          echo "========== 测试4: 直接Node.js测试 =========="
+          cd /var/www/rehab-care-link/server
+          timeout 5 node -e "
+          const http = require('http');
+          const req = http.request({
+            hostname: 'localhost',
+            port: 3201,
+            path: '/',
+            method: 'GET'
+          }, (res) => {
+            console.log('状态码:', res.statusCode);
+            res.on('data', () => {});
+            res.on('end', () => console.log('✅ 能连接到3201端口'));
+          });
+          req.on('error', (e) => console.log('❌ 连接失败:', e.message));
+          req.end();
+          setTimeout(() => process.exit(0), 3000);
+          " || echo "Node测试失败"
+
+          echo ""
+          echo "========== 测试5: Nginx配置测试 =========="
+          nginx -t 2>&1 | grep -i "success\|ok" && echo "✅ Nginx配置正确" || echo "❌ Nginx配置错误"
+
+          echo ""
+          echo "========== 测试6: 查看Nginx error log最后10行 =========="
+          tail -10 /var/log/nginx/error.log 2>/dev/null || echo "无法读取nginx错误日志"
+
+          echo ""
+          echo "========== 测试7: 测试文件上传到本地 =========="
+          printf '\x89\x50\x4e\x47\x0d\x0a\x1a\x0a' > /tmp/tiny.png
+
+          curl -v -X POST http://localhost:3201/api/cases \
+            -F "files=@/tmp/tiny.png" \
+            2>&1 | grep -E "HTTP/|Connected|success" | head -20
+
+          echo ""
+          echo "========== 测试8: 检查uploads目录权限 =========="
+          ls -ld /var/www/rehab-care-link/uploads
+          touch /var/www/rehab-care-link/uploads/test-write-$(date +%s).tmp && echo "✅ uploads可写" || echo "❌ uploads不可写"
