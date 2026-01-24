@@ -1,0 +1,125 @@
+name: 彻底根因分析
+
+on:
+  workflow_dispatch:
+
+jobs:
+  root-cause:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 彻底诊断
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        command_timeout: 5m
+        script: |
+          echo "================================================================"
+          echo "彻底根因分析 - $(date)"
+          echo "================================================================"
+
+          echo ""
+          echo "===== 1. Nginx主配置文件检查 ====="
+          if [ -f /etc/nginx/nginx.conf ]; then
+            echo "✅ nginx.conf存在"
+            head -20 /etc/nginx/nginx.conf
+          else
+            echo "❌ nginx.conf不存在 - 这是致命问题!"
+            # 尝试查找nginx配置
+            find /etc -name "nginx.conf" 2>/dev/null
+          fi
+
+          echo ""
+          echo "===== 2. Nginx站点配置检查 ====="
+          ls -la /etc/nginx/sites-enabled/ 2>/dev/null || ls -la /etc/nginx/conf.d/ 2>/dev/null
+
+          if [ -f /etc/nginx/sites-enabled/ey.yushuo.click ]; then
+            echo "站点配置内容:"
+            cat /etc/nginx/sites-enabled/ey.yushuo.click
+          else
+            echo "❌ 站点配置不存在"
+          fi
+
+          echo ""
+          echo "===== 3. Nginx进程状态 ====="
+          ps aux | grep nginx | grep -v grep
+          systemctl status nginx --no-pager 2>/dev/null || service nginx status 2>/dev/null
+
+          echo ""
+          echo "===== 4. Nginx测试 ====="
+          nginx -t 2>&1
+
+          echo ""
+          echo "===== 5. PM2进程状态 ====="
+          pm2 list
+          pm2 show rehab-care-link-server 2>/dev/null | head -30
+
+          echo ""
+          echo "===== 6. 端口监听状态 ====="
+          ss -tlnp | grep -E "80|3201" || netstat -tlnp | grep -E "80|3201"
+
+          echo ""
+          echo "===== 7. 直接测试后端 (绕过Nginx) ====="
+          echo "测试 localhost:3201..."
+          curl -s -w "\nHTTP状态码: %{http_code}\n" http://localhost:3201/ | head -5
+
+          echo ""
+          echo "创建测试图片并上传..."
+          printf '\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x0a\x00\x00\x00\x0a\x08\x02\x00\x00\x00\x02\x50\x58\xea\x00\x00\x00\x17\x49\x44\x41\x54\x08\x99\x63\xf8\xcf\xc0\xc0\xc0\xc0\xf0\x9f\x81\x81\x81\x81\x19\x00\x0c\x10\x03\x01\x9f\x65\x0e\x18\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82' > /tmp/diag.png
+
+          DIRECT_RESULT=$(curl -s -X POST http://localhost:3201/api/cases -F "files=@/tmp/diag.png")
+          echo "直接访问后端结果: $DIRECT_RESULT"
+
+          echo ""
+          echo "===== 8. 通过Nginx测试 ====="
+          echo "测试 localhost (通过Nginx)..."
+          curl -s -w "\nHTTP状态码: %{http_code}\n" http://localhost/ | head -5
+
+          echo ""
+          echo "测试 /api/patients..."
+          curl -s -w "\nHTTP状态码: %{http_code}\n" http://localhost/api/patients 2>&1 | head -10
+
+          echo ""
+          echo "测试 POST /api/cases (通过Nginx)..."
+          NGINX_RESULT=$(curl -s -X POST http://localhost/api/cases -F "files=@/tmp/diag.png" 2>&1)
+          echo "通过Nginx结果: $NGINX_RESULT"
+
+          echo ""
+          echo "===== 9. PM2错误日志 (最新20行) ====="
+          pm2 logs rehab-care-link-server --err --lines 20 --nostream 2>/dev/null
+
+          echo ""
+          echo "===== 10. PM2标准输出日志 (最新10行) ====="
+          pm2 logs rehab-care-link-server --lines 10 --nostream 2>/dev/null
+
+          echo ""
+          echo "===== 11. Nginx错误日志 (最新20行) ====="
+          tail -20 /var/log/nginx/error.log 2>/dev/null || tail -20 /var/log/nginx/ey.yushuo.click-error.log 2>/dev/null
+
+          echo ""
+          echo "===== 12. 外部访问测试 ====="
+          echo "测试 http://ey.yushuo.click/..."
+          curl -s -w "\nHTTP状态码: %{http_code}\n" http://ey.yushuo.click/ 2>&1 | head -5
+
+          echo ""
+          echo "测试 http://ey.yushuo.click/api/patients..."
+          curl -s -w "\nHTTP状态码: %{http_code}\n" http://ey.yushuo.click/api/patients 2>&1 | head -10
+
+          echo ""
+          echo "===== 13. 服务器资源检查 ====="
+          echo "内存:"
+          free -h
+          echo ""
+          echo "磁盘:"
+          df -h | grep -E "/$|/var"
+          echo ""
+          echo "CPU负载:"
+          uptime
+
+          echo ""
+          echo "================================================================"
+          echo "诊断完成"
+          echo "================================================================"
