@@ -1,0 +1,70 @@
+name: 添加诊断端点
+
+on:
+  workflow_dispatch:
+
+jobs:
+  add-diagnostics:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 添加诊断路由
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          cd /var/www/rehab-care-link/server
+
+          # 在index.js添加诊断路由
+          cat >> index.js.tmp << 'DIAG_EOF'
+
+// 诊断端点
+app.get('/api/diagnostics', (req, res) => {
+  const diagnostics = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    node_version: process.version,
+    cwd: process.cwd(),
+    env: {
+      UPLOAD_DIR: process.env.UPLOAD_DIR || 'not set',
+      NODE_ENV: process.env.NODE_ENV || 'not set'
+    },
+    uploads_dir: {
+      path: require('./files').uploadDir,
+      exists: require('fs').existsSync(require('./files').uploadDir),
+      writable: false
+    }
+  };
+
+  try {
+    const testFile = require('path').join(require('./files').uploadDir, '.test-' + Date.now());
+    require('fs').writeFileSync(testFile, 'test');
+    require('fs').unlinkSync(testFile);
+    diagnostics.uploads_dir.writable = true;
+  } catch (e) {
+    diagnostics.uploads_dir.error = e.message;
+  }
+
+  res.json(diagnostics);
+});
+DIAG_EOF
+
+          # 插入到最后启动之前
+          head -n -10 index.js > index.js.tmp2
+          cat index.js.tmp >> index.js.tmp2
+          tail -n 10 index.js >> index.js.tmp2
+          mv index.js.tmp2 index.js
+          rm index.js.tmp
+
+          pm2 restart rehab-care-link-server
+
+          sleep 3
+
+          echo "诊断端点已添加，测试访问:"
+          curl -s http://localhost:3201/api/diagnostics | head -c 500
