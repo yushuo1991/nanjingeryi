@@ -473,17 +473,19 @@ export default function RehabCareLink() {
         setIsOcrProcessing(true);
         setOcrProgress(0);
 
+        let progressInterval = null;
         try {
           const caseId = await createCaseWithFiles(files);
 
           // 模拟进度（模型接口无进度回调）
-          const progressInterval = setInterval(() => {
+          progressInterval = setInterval(() => {
             setOcrProgress(prev => Math.min(prev + 10, 90));
           }, 300);
 
           const { profile } = await extractProfile(caseId);
           const { plan } = await generatePlan(caseId, profile);
           clearInterval(progressInterval);
+          progressInterval = null;
           setOcrProgress(100);
 
           // 初始化表单数据
@@ -530,6 +532,10 @@ export default function RehabCareLink() {
           showToast('AI 已生成康复目标与方案，请核对并确认建档', 'success');
 
         } catch (error) {
+          if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+          }
           console.error('AI识别失败:', error);
           showToast('AI识别失败: ' + error.message, 'error');
           // 即使失败也允许手动填写
@@ -743,9 +749,13 @@ export default function RehabCareLink() {
       return aiResult.gender === '男' ? '👦' : '👧';
     };
 
-    // 计算GAS分数
+    // 计算GAS分数 (防止除以0)
     const gasScore = aiResult.gasGoals.length > 0
-      ? Math.round(aiResult.gasGoals.reduce((sum, g) => sum + (g.current / g.target * 100), 0) / aiResult.gasGoals.length)
+      ? Math.round(aiResult.gasGoals.reduce((sum, g) => {
+          const target = Number(g.target) || 1; // 防止除以0
+          const current = Number(g.current) || 0;
+          return sum + (current / target * 100);
+        }, 0) / aiResult.gasGoals.length)
       : 0;
 
     const newPatient = {
@@ -1861,7 +1871,7 @@ export default function RehabCareLink() {
                 <input
                   type="file"
                   id="medical-record-upload"
-                  accept="image/*"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
                   multiple
                   onChange={handleImageUpload}
                   className="hidden"

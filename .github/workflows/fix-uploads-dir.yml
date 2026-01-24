@@ -1,0 +1,65 @@
+name: 修复uploads目录和关键bug
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-critical-bugs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 修复服务器uploads目录
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 1. 创建uploads目录 =========="
+          mkdir -p /var/www/rehab-care-link/uploads
+          chmod 755 /var/www/rehab-care-link/uploads
+          chown -R root:root /var/www/rehab-care-link/uploads
+          ls -la /var/www/rehab-care-link/ | grep uploads
+
+          echo ""
+          echo "========== 2. 验证目录可写 =========="
+          touch /var/www/rehab-care-link/uploads/test-write.tmp
+          if [ -f /var/www/rehab-care-link/uploads/test-write.tmp ]; then
+            echo "✅ uploads目录可写"
+            rm /var/www/rehab-care-link/uploads/test-write.tmp
+          else
+            echo "❌ uploads目录不可写"
+          fi
+
+          echo ""
+          echo "========== 3. 检查.env配置 =========="
+          cat /var/www/rehab-care-link/server/.env | grep UPLOAD_DIR || echo "UPLOAD_DIR未配置"
+
+          echo ""
+          echo "========== 4. 重启服务 =========="
+          pm2 restart rehab-care-link-server
+
+          sleep 5
+
+          echo ""
+          echo "========== 5. 测试上传功能 =========="
+          # 创建测试图片
+          printf '\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x0a\x00\x00\x00\x0a\x08\x02\x00\x00\x00\x02\x50\x58\xea\x00\x00\x00\x17\x49\x44\x41\x54\x08\x99\x63\xf8\xcf\xc0\xc0\xc0\xc0\xf0\x9f\x81\x81\x81\x81\x19\x00\x0c\x10\x03\x01\x9f\x65\x0e\x18\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82' > /tmp/test-upload.png
+
+          RESPONSE=$(curl -s -X POST http://localhost:3201/api/cases -F "files=@/tmp/test-upload.png")
+          echo "上传响应: $RESPONSE"
+
+          if echo "$RESPONSE" | grep -q '"success":true'; then
+            echo "✅ 上传功能正常"
+          else
+            echo "❌ 上传功能失败"
+            echo "完整响应: $RESPONSE"
+          fi
+
+          echo ""
+          echo "========== 6. 检查PM2错误 =========="
+          pm2 logs rehab-care-link-server --err --lines 10 --nostream
