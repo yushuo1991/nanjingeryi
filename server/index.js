@@ -330,34 +330,53 @@ function createApp() {
   const supportedMimes = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
   app.post('/api/cases', mem.array('files', 10), async (req, res) => {
-    const files = req.files || [];
-    if (!files.length) return jsonError(res, 400, 'No files uploaded');
+    try {
+      const files = req.files || [];
+      if (!files.length) return jsonError(res, 400, 'No files uploaded');
 
-    const pool = await getPool();
-    const [r] = await pool.query('INSERT INTO cases (status) VALUES (?)', ['created']);
-    const caseId = Number(r.insertId);
+      const pool = await getPool();
+      const [r] = await pool.query('INSERT INTO cases (status) VALUES (?)', ['created']);
+      const caseId = Number(r.insertId);
 
-    const saved = [];
-    for (const f of files) {
-      const mime = f.mimetype || 'application/octet-stream';
-      if (!mime.startsWith('image/')) return jsonError(res, 400, 'Only image uploads are supported');
-      if (!supportedMimes.has(mime)) {
-        return jsonError(res, 400, `Unsupported image type: ${mime}. Please convert to JPG/PNG/WebP`);
+      const saved = [];
+      for (const f of files) {
+        const mime = f.mimetype || 'application/octet-stream';
+        if (!mime.startsWith('image/')) return jsonError(res, 400, 'Only image uploads are supported');
+        if (!supportedMimes.has(mime)) {
+          return jsonError(res, 400, `Unsupported image type: ${mime}. Please convert to JPG/PNG/WebP`);
+        }
+
+        const storedPath = buildStoredPath(f.originalname, mime);
+
+        // 确保上传目录存在
+        const uploadDir = path.dirname(storedPath);
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+
+        // 尝试写入文件
+        try {
+          fs.writeFileSync(storedPath, f.buffer);
+        } catch (writeError) {
+          console.error('Failed to write file:', writeError);
+          return jsonError(res, 500, `Failed to save file: ${writeError.message}. Check upload directory permissions.`);
+        }
+
+        const sha = sha256File(storedPath);
+
+        await pool.query(
+          'INSERT INTO case_files (case_id, path, mime, sha256) VALUES (?,?,?,?)',
+          [caseId, storedPath, mime, sha]
+        );
+        saved.push({ path: storedPath, mime, sha256: sha });
       }
 
-      const storedPath = buildStoredPath(f.originalname, mime);
-      fs.writeFileSync(storedPath, f.buffer);
-      const sha = sha256File(storedPath);
-
-      await pool.query(
-        'INSERT INTO case_files (case_id, path, mime, sha256) VALUES (?,?,?,?)',
-        [caseId, storedPath, mime, sha]
-      );
-      saved.push({ path: storedPath, mime, sha256: sha });
+      await pool.query('UPDATE cases SET status=? WHERE id=?', ['uploaded', caseId]);
+      res.status(201).json({ success: true, caseId, files: saved });
+    } catch (error) {
+      console.error('POST /api/cases error:', error);
+      return jsonError(res, 500, `Failed to create case: ${error.message}`);
     }
-
-    await pool.query('UPDATE cases SET status=? WHERE id=?', ['uploaded', caseId]);
-    res.status(201).json({ success: true, caseId, files: saved });
   });
 
   app.get('/api/cases/:id', async (req, res) => {
