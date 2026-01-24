@@ -1,0 +1,107 @@
+name: 彻底修复PM2和依赖
+
+on:
+  workflow_dispatch:
+
+jobs:
+  complete-fix:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 彻底修复
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 1. 停止并删除所有PM2进程 =========="
+          pm2 delete all || true
+          pm2 kill || true
+
+          echo ""
+          echo "========== 2. 检查文件是否存在 =========="
+          ls -la /var/www/rehab-care-link/server/index.js || echo "❌ index.js不存在"
+          ls -la /var/www/rehab-care-link/server/package.json || echo "❌ package.json不存在"
+
+          echo ""
+          echo "========== 3. 进入正确目录 =========="
+          cd /var/www/rehab-care-link/server
+          pwd
+          ls -la | head -20
+
+          echo ""
+          echo "========== 4. 完全删除node_modules =========="
+          rm -rf node_modules package-lock.json
+
+          echo ""
+          echo "========== 5. 全新安装依赖 =========="
+          npm install --production 2>&1 | tail -50
+
+          echo ""
+          echo "========== 6. 验证关键模块 =========="
+          node -e "console.log('dotenv:', require('dotenv').config())" || echo "❌ dotenv加载失败"
+          node -e "console.log('express:', require('express'))" || echo "❌ express加载失败"
+          node -e "console.log('better-sqlite3:', require('better-sqlite3'))" || echo "❌ sqlite加载失败"
+
+          echo ""
+          echo "========== 7. 验证index.js可加载 =========="
+          node -e "console.log('Testing index.js load...')" || echo "❌ Node无法运行"
+
+          echo ""
+          echo "========== 8. 创建.env =========="
+          cat > .env << 'ENV_EOF'
+          ${{ secrets.SERVER_ENV }}
+          ENV_EOF
+          chmod 600 .env
+          echo ".env已创建"
+
+          echo ""
+          echo "========== 9. 创建PM2配置文件 =========="
+          cat > ecosystem.config.js << 'PM2_EOF'
+          module.exports = {
+            apps: [{
+              name: 'rehab-care-link-server',
+              script: './index.js',
+              cwd: '/var/www/rehab-care-link/server',
+              instances: 1,
+              autorestart: true,
+              watch: false,
+              max_memory_restart: '500M',
+              env: {
+                NODE_ENV: 'production'
+              },
+              error_file: '/var/www/rehab-care-link/server/pm2-error.log',
+              out_file: '/var/www/rehab-care-link/server/pm2-out.log',
+              log_date_format: 'YYYY-MM-DD HH:mm:ss'
+            }]
+          };
+          PM2_EOF
+
+          echo ""
+          echo "========== 10. 使用PM2配置启动 =========="
+          pm2 start ecosystem.config.js
+
+          echo ""
+          echo "========== 11. 保存PM2配置 =========="
+          pm2 save
+
+          echo ""
+          echo "========== 12. 等待启动 =========="
+          sleep 5
+
+          echo ""
+          echo "========== 13. 检查PM2状态 =========="
+          pm2 list
+
+          echo ""
+          echo "========== 14. 查看最新日志 =========="
+          pm2 logs rehab-care-link-server --lines 20 --nostream
+
+          echo ""
+          echo "========== 15. 测试API =========="
+          curl -I http://localhost:3201/ || echo "API无响应"
+
+          echo ""
+          echo "完成！"
