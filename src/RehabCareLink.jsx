@@ -554,7 +554,7 @@ export default function RehabCareLink() {
           });
 
           setAiStep(2); // 进入表单填写步骤
-          showToast('AI 已生成康复目标与方案，请核对并确认建档', 'success');
+          // 移除toast提示，静默进入编辑模式
 
         } catch (error) {
           if (progressInterval) {
@@ -632,7 +632,7 @@ export default function RehabCareLink() {
           precautions: Array.isArray(plan.precautions) ? plan.precautions : prev.treatmentPlan.precautions,
         },
       }));
-      showToast('方案已生成，可编辑后确认建档', 'success');
+      // 移除toast提示，静默更新方案
     } catch (e) {
       showToast(e.message || '生成方案失败', 'error');
     } finally {
@@ -822,18 +822,25 @@ export default function RehabCareLink() {
         const list = Array.isArray(listRes?.items) ? listRes.items : [];
         setPatients(list);
         const created = list.find((p) => p.id === res.patientId) || list[list.length - 1];
-        if (created) setSelectedPatient(created);
+
+        // 关闭弹窗并重置状态
+        setShowAIModal(false);
+        setAiStep(0);
+        setAiResult(null);
+        setUploadedImage(null);
+
+        // 跳转到患儿详情页
+        if (created) {
+          setSelectedPatient(created);
+          navigateTo('patientDetail', created);
+        }
+
+        showToast('建档成功', 'success');
       } catch (e) {
         showToast(e.message || '保存失败', 'error');
         return;
       }
     })();
-
-    // 关闭弹窗并重置状态
-    setShowAIModal(false);
-    setAiStep(0);
-    setAiResult(null);
-    setUploadedImage(null);
     setOcrText('');
     setOcrProgress(0);
 
