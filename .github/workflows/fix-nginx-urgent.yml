@@ -8,108 +8,133 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 修复Nginx配置和超时设置
+    - name: 创建完整Nginx配置
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USER }}
         password: ${{ secrets.SERVER_PASSWORD }}
         port: ${{ secrets.SERVER_PORT || 22 }}
+        command_timeout: 5m
         script: |
-          echo "========== 1. 查看当前Nginx配置 =========="
-          cat /etc/nginx/sites-enabled/ey.yushuo.click
+          echo "========== 1. 停止所有进程 =========="
+          killall nginx 2>/dev/null || true
+          sleep 1
 
           echo ""
-          echo "========== 2. 备份当前配置 =========="
-          sudo cp /etc/nginx/sites-enabled/ey.yushuo.click /etc/nginx/sites-enabled/ey.yushuo.click.backup-$(date +%Y%m%d%H%M%S)
+          echo "========== 2. 安装/更新Nginx =========="
+          apt-get update -qq
+          apt-get install -y nginx
 
           echo ""
-          echo "========== 3. 创建新的优化配置 =========="
-          sudo tee /etc/nginx/sites-available/ey.yushuo.click > /dev/null <<'NGINX_CONF'
-          server {
-              listen 80;
-              listen [::]:80;
-              server_name ey.yushuo.click www.ey.yushuo.click;
+          echo "========== 3. 创建nginx.conf =========="
+          mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled /var/log/nginx
 
-              # 增加超时设置
-              client_max_body_size 100M;
-              client_body_timeout 300s;
-              send_timeout 300s;
-              keepalive_timeout 65;
+          cat > /etc/nginx/nginx.conf << 'MAIN_CONF'
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
 
-              # 前端静态文件
-              root /var/www/rehab-care-link/dist;
-              index index.html;
+events {
+    worker_connections 1024;
+}
 
-              # Gzip压缩
-              gzip on;
-              gzip_vary on;
-              gzip_min_length 1024;
-              gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/json application/javascript;
+http {
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+    client_max_body_size 100M;
 
-              # 前端路由
-              location / {
-                  try_files $uri $uri/ /index.html;
-              }
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
 
-              # 后端API代理 - 关键修复
-              location /api/ {
-                  proxy_pass http://127.0.0.1:3201;
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
 
-                  # 增加超时设置
-                  proxy_connect_timeout 300s;
-                  proxy_send_timeout 300s;
-                  proxy_read_timeout 300s;
+    gzip on;
 
-                  # HTTP版本和连接设置
-                  proxy_http_version 1.1;
-                  proxy_set_header Connection "";
+    include /etc/nginx/sites-enabled/*;
+}
+MAIN_CONF
 
-                  # 禁用缓冲 - 修复CHUNKED_ENCODING错误
-                  proxy_buffering off;
-                  proxy_request_buffering off;
-
-                  # 标准代理头
-                  proxy_set_header Host $host;
-                  proxy_set_header X-Real-IP $remote_addr;
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                  proxy_set_header X-Forwarded-Proto $scheme;
-
-                  # 允许大文件上传
-                  client_max_body_size 100M;
-              }
-
-              # 上传文件访问
-              location /uploads/ {
-                  alias /var/www/rehab-care-link/uploads/;
-              }
-
-              # 日志
-              access_log /var/log/nginx/ey.yushuo.click-access.log;
-              error_log /var/log/nginx/ey.yushuo.click-error.log;
-          }
-          NGINX_CONF
+          echo "nginx.conf已创建"
 
           echo ""
-          echo "========== 4. 启用新配置 =========="
-          sudo ln -sf /etc/nginx/sites-available/ey.yushuo.click /etc/nginx/sites-enabled/ey.yushuo.click
+          echo "========== 4. 创建站点配置 =========="
+          cat > /etc/nginx/sites-available/ey.yushuo.click << 'SITE_CONF'
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name ey.yushuo.click www.ey.yushuo.click _;
+
+    client_max_body_size 100M;
+    client_body_timeout 300s;
+    send_timeout 300s;
+
+    root /var/www/rehab-care-link/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:3201;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+        proxy_buffering off;
+        proxy_request_buffering off;
+    }
+
+    location /uploads/ {
+        alias /var/www/rehab-care-link/uploads/;
+    }
+
+    access_log /var/log/nginx/ey.yushuo.click.access.log;
+    error_log /var/log/nginx/ey.yushuo.click.error.log;
+}
+SITE_CONF
+
+          echo "站点配置已创建"
 
           echo ""
-          echo "========== 5. 测试Nginx配置 =========="
-          sudo nginx -t
+          echo "========== 5. 启用站点 =========="
+          rm -f /etc/nginx/sites-enabled/*
+          ln -sf /etc/nginx/sites-available/ey.yushuo.click /etc/nginx/sites-enabled/
 
           echo ""
-          echo "========== 6. 重载Nginx =========="
-          sudo systemctl reload nginx
+          echo "========== 6. 测试配置 =========="
+          nginx -t
 
           echo ""
-          echo "========== 7. 验证服务 =========="
-          sleep 2
-          curl -I http://localhost/
+          echo "========== 7. 启动Nginx =========="
+          systemctl daemon-reload
+          systemctl start nginx
+          systemctl enable nginx
 
           echo ""
-          echo "========== 8. 测试API代理 =========="
-          curl -I http://localhost/api/
+          echo "========== 8. 检查状态 =========="
+          systemctl status nginx --no-pager | head -15
 
           echo ""
-          echo "完成！Nginx已优化"
+          echo "========== 9. 检查端口 =========="
+          ss -tlnp | grep :80
+
+          echo ""
+          echo "========== 10. 测试访问 =========="
+          curl -s -w "\nHTTP: %{http_code}\n" http://localhost/ | head -5
+
+          echo ""
+          echo "测试API..."
+          curl -s -w "\nHTTP: %{http_code}\n" http://localhost/api/patients | head -10
+
+          echo ""
+          echo "完成！"
