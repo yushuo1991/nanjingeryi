@@ -1451,16 +1451,6 @@ export default function RehabCareLink() {
           }
         />
 
-        {/* 安全警示横幅 */}
-        {patient.safetyAlerts.length > 0 && (
-          <div className="mx-4 mt-2 bg-gradient-to-r from-red-500 to-rose-500 text-white px-4 py-3 rounded-xl flex items-center gap-2 shadow-lg">
-            <AlertTriangle size={18} />
-            <span className="text-sm font-medium">
-              {patient.safetyAlerts.join(' · ')}
-            </span>
-          </div>
-        )}
-
         <div className="px-4 py-4">
           {/* 基础信息卡片 */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
@@ -1475,30 +1465,6 @@ export default function RehabCareLink() {
                 </div>
                 <p className="text-sm text-slate-500 mb-1">床号：{patient.bedNo} · {patient.department}</p>
                 <p className="text-indigo-600 font-medium">{patient.diagnosis}</p>
-              </div>
-            </div>
-
-            {/* 康复目标 - 重新排版 */}
-            <div className="mt-5 pt-5 border-t border-gray-100">
-              <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-3">
-                <Target size={16} className="text-rose-500" />
-                康复目标
-              </h4>
-              <div className="space-y-2.5">
-                {patient.gasGoals.map((goal, i) => (
-                  <div key={i} className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-700">{goal.name}</span>
-                      <span className="text-xs text-slate-500">{goal.current}/{goal.target}</span>
-                    </div>
-                    <div className="mt-2 w-full bg-white/60 rounded-full h-1.5">
-                      <div
-                        className="bg-gradient-to-r from-indigo-400 to-indigo-500 h-1.5 rounded-full transition-all duration-300"
-                        style={{ width: `${(goal.current / goal.target) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           </div>
@@ -2087,57 +2053,6 @@ export default function RehabCareLink() {
                   </div>
                 </div>
 
-                {/* 康复目标 GAS */}
-                <div className="bg-white border border-slate-200 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h5 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                      <Target size={16} className="text-amber-500" />
-                      康复目标 (GAS)
-                    </h5>
-                    <button
-                      onClick={addGasGoal}
-                      className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
-                    >
-                      + 添加目标
-                    </button>
-                  </div>
-                  <div className="space-y-2">
-                    {aiResult.gasGoals.map((goal, i) => (
-                      <div key={i} className="flex items-center gap-2 bg-slate-50 rounded-lg p-2">
-                        <input
-                          type="text"
-                          value={goal.name}
-                          onChange={(e) => updateGasGoal(i, 'name', e.target.value)}
-                          placeholder="目标名称"
-                          className="flex-1 border border-slate-200 rounded px-2 py-1 text-sm"
-                        />
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs text-slate-500">当前</span>
-                          <input
-                            type="number"
-                            value={goal.current}
-                            onChange={(e) => updateGasGoal(i, 'current', parseInt(e.target.value) || 0)}
-                            className="w-14 border border-slate-200 rounded px-2 py-1 text-sm text-center"
-                          />
-                          <span className="text-xs text-slate-500">/</span>
-                          <input
-                            type="number"
-                            value={goal.target}
-                            onChange={(e) => updateGasGoal(i, 'target', parseInt(e.target.value) || 100)}
-                            className="w-14 border border-slate-200 rounded px-2 py-1 text-sm text-center"
-                          />
-                        </div>
-                        <button
-                          onClick={() => removeGasGoal(i)}
-                          className="p-1 text-slate-400 hover:text-red-500"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
                 {/* 治疗计划 */}
                 <div className="bg-white border border-slate-200 rounded-xl p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -2160,7 +2075,7 @@ export default function RehabCareLink() {
                         ...prev,
                         treatmentPlan: { ...prev.treatmentPlan, focus: e.target.value }
                       }))}
-                      placeholder="治疗重点，如：改善呼吸功能，增强运动耐力"
+                      placeholder="治疗重点，如：改善呼吸功能，增强运动耐力（总时长20分钟）"
                       className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-rose-400 outline-none"
                     />
                   </div>
