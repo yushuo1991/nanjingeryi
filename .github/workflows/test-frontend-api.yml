@@ -1,0 +1,73 @@
+name: 前端AI测试 - 通过浏览器模拟
+
+on:
+  workflow_dispatch:
+
+jobs:
+  browser-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 通过curl模拟浏览器请求
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 模拟前端请求测试 =========="
+
+          # 创建测试图片
+          printf '\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x64\x00\x00\x00\x64\x08\x02\x00\x00\x00\xff\x80\x02\x03\x00\x00\x00\x0c\x49\x44\x41\x54\x08\xd7\x63\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb4\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82' > /tmp/browser-test.png
+
+          echo "1. 从外部访问 (通过Nginx)"
+          HTTP_CODE=$(curl -s -o /tmp/frontend-resp -w "%{http_code}" http://ey.yushuo.click/ 2>&1)
+          echo "前端HTTP状态码: $HTTP_CODE"
+
+          echo ""
+          echo "2. 测试API代理 (通过Nginx /api/)"
+          CREATE_RESP=$(curl -s -X POST http://ey.yushuo.click/api/cases \
+            -F "files=@/tmp/browser-test.png")
+
+          echo "创建病例响应:"
+          echo "$CREATE_RESP" | head -c 200
+
+          if echo "$CREATE_RESP" | grep -q '"caseId"'; then
+            CASE_ID=$(echo "$CREATE_RESP" | grep -o '"caseId":[0-9]*' | grep -o '[0-9]*')
+            echo ""
+            echo "✅ 通过Nginx创建病例成功 (ID: $CASE_ID)"
+
+            echo ""
+            echo "3. 测试AI识别 (通过Nginx)"
+            AI_RESP=$(curl -s -X POST "http://ey.yushuo.click/api/cases/$CASE_ID/extract" \
+              -H "Content-Type: application/json" \
+              -d '{}')
+
+            echo "AI识别响应:"
+            echo "$AI_RESP" | head -c 300
+
+            if echo "$AI_RESP" | grep -q '"success":true'; then
+              echo ""
+              echo "✅ 通过Nginx的AI识别成功！"
+            else
+              echo ""
+              echo "❌ AI识别失败"
+              echo "完整响应: $AI_RESP"
+            fi
+          else
+            echo ""
+            echo "❌ 创建病例失败"
+            echo "响应: $CREATE_RESP"
+          fi
+
+          echo ""
+          echo "4. 检查Nginx配置"
+          cat /etc/nginx/sites-enabled/ey.yushuo.click | grep -A 5 "location /api"
+
+          echo ""
+          echo "5. 检查Nginx错误日志"
+          tail -5 /var/log/nginx/ey.yushuo.click-error.log
+
+          echo ""
+          echo "完成！"

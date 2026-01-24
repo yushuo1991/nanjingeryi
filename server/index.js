@@ -1059,8 +1059,55 @@ async function main() {
   await migrate();
   await seedIfEmpty();
   const app = createApp();
-  app.listen(port, '0.0.0.0', () => {
+
+  // Graceful shutdown handler
+  const server = app.listen(port, '0.0.0.0', () => {
     console.log(`AI server listening on http://0.0.0.0:${port}`);
+  });
+
+  // Handle uncaught exceptions
+  process.on('uncaughtException', (err) => {
+    console.error('[FATAL] Uncaught Exception:', err);
+    console.error(err.stack);
+    // Log to file or monitoring service here
+    process.exit(1);
+  });
+
+  // Handle unhandled promise rejections
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('[FATAL] Unhandled Promise Rejection at:', promise);
+    console.error('Reason:', reason);
+    // Log to file or monitoring service here
+  });
+
+  // Graceful shutdown on SIGTERM (e.g., from PM2)
+  process.on('SIGTERM', () => {
+    console.log('[INFO] SIGTERM received, starting graceful shutdown...');
+    server.close(() => {
+      console.log('[INFO] HTTP server closed');
+      // Close database connections, etc.
+      process.exit(0);
+    });
+
+    // Force shutdown after 30 seconds
+    setTimeout(() => {
+      console.error('[ERROR] Forced shutdown after timeout');
+      process.exit(1);
+    }, 30000);
+  });
+
+  // Graceful shutdown on SIGINT (Ctrl+C)
+  process.on('SIGINT', () => {
+    console.log('[INFO] SIGINT received, starting graceful shutdown...');
+    server.close(() => {
+      console.log('[INFO] HTTP server closed');
+      process.exit(0);
+    });
+
+    setTimeout(() => {
+      console.error('[ERROR] Forced shutdown after timeout');
+      process.exit(1);
+    }, 30000);
   });
 }
 

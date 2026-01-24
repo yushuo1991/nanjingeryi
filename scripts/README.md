@@ -1,6 +1,6 @@
 # 监控脚本使用指南
 
-康复云查房助手提供了三个监控脚本，用于实时监控服务器状态。
+康复云查房助手提供了完整的监控工具集，用于实时监控服务器状态、记录历史数据和生成报告。
 
 ## 可用的监控脚本
 
@@ -85,6 +85,61 @@ bash /www/wwwroot/rehab-care-link/scripts/monitor-once.sh > /tmp/monitor-report.
 
 ---
 
+### 4. `monitor-history.sh` - 监控历史记录管理
+
+**功能:**
+- 保存监控快照到历史记录
+- 查看历史监控数据
+- 错误记录筛选
+- 按日期查询
+- 实时跟踪新记录
+
+**使用方法:**
+```bash
+# 保存当前监控状态
+bash /www/wwwroot/rehab-care-link/scripts/monitor-history.sh -s
+
+# 查看最近10条记录
+bash /www/wwwroot/rehab-care-link/scripts/monitor-history.sh
+
+# 查看最近50条记录
+bash /www/wwwroot/rehab-care-link/scripts/monitor-history.sh -l 50
+
+# 只看错误记录
+bash /www/wwwroot/rehab-care-link/scripts/monitor-history.sh -e
+
+# 实时跟踪新记录
+bash /www/wwwroot/rehab-care-link/scripts/monitor-history.sh -t
+
+# 查看指定日期的记录
+bash /www/wwwroot/rehab-care-link/scripts/monitor-history.sh -d 2026-01-24
+
+# 清除历史记录
+bash /www/wwwroot/rehab-care-link/scripts/monitor-history.sh -c
+```
+
+---
+
+### 5. `setup-cron.sh` - 设置定时监控任务
+
+**功能:**
+- 自动设置定时监控任务
+- 每5分钟保存监控快照
+- 每6小时生成完整报告
+- 自动备份现有crontab
+
+**使用方法:**
+```bash
+# 需要root权限
+sudo bash /www/wwwroot/rehab-care-link/scripts/setup-cron.sh
+```
+
+**定时任务说明:**
+- 每5分钟: 保存监控快照到 `/var/log/rehab-care-link/monitor-history.log`
+- 每6小时: 生成完整报告到 `/var/log/rehab-care-link/report-*.log`
+
+---
+
 ## 快速部署
 
 ### 通过 GitHub Actions 部署
@@ -149,6 +204,32 @@ monitor-once > /tmp/diagnosis-$(date +%Y%m%d_%H%M%S).txt
 - name: 生成监控报告
   run: |
     ssh user@server "bash /www/wwwroot/rehab-care-link/scripts/monitor-once.sh"
+```
+
+### 5. 监控历史追踪
+保存和查看历史监控数据:
+```bash
+# 定期保存快照
+bash /www/wwwroot/rehab-care-link/scripts/monitor-history.sh -s
+
+# 查看历史趋势
+bash /www/wwwroot/rehab-care-link/scripts/monitor-history.sh -l 100
+
+# 分析错误模式
+bash /www/wwwroot/rehab-care-link/scripts/monitor-history.sh -e
+```
+
+### 6. 自动化监控
+使用定时任务自动监控:
+```bash
+# 设置定时任务
+sudo bash /www/wwwroot/rehab-care-link/scripts/setup-cron.sh
+
+# 查看监控历史
+tail -f /var/log/rehab-care-link/monitor-history.log
+
+# 查看报告
+ls -lh /var/log/rehab-care-link/report-*.log
 ```
 
 ---
@@ -251,11 +332,29 @@ monitor-enhanced
 
 ### 定时生成报告
 ```bash
-# 添加到 crontab
+# 自动设置（推荐）
+sudo bash /www/wwwroot/rehab-care-link/scripts/setup-cron.sh
+
+# 或手动添加到 crontab
 crontab -e
 
-# 每小时生成一次报告
-0 * * * * bash /www/wwwroot/rehab-care-link/scripts/monitor-once.sh >> /var/log/monitor-$(date +\%Y\%m\%d).log 2>&1
+# 每5分钟保存监控快照
+*/5 * * * * bash /www/wwwroot/rehab-care-link/scripts/monitor-history.sh -s >> /var/log/rehab-care-link/cron.log 2>&1
+
+# 每6小时生成完整报告
+0 */6 * * * bash /www/wwwroot/rehab-care-link/scripts/monitor-once.sh > /var/log/rehab-care-link/report-$(date +\%Y\%m\%d-\%H\%M).log 2>&1
+```
+
+### 查看监控历史
+```bash
+# 查看最近记录
+bash /www/wwwroot/rehab-care-link/scripts/monitor-history.sh -l 20
+
+# 实时查看
+bash /www/wwwroot/rehab-care-link/scripts/monitor-history.sh -t
+
+# 查看今天的记录
+bash /www/wwwroot/rehab-care-link/scripts/monitor-history.sh -d $(date +%Y-%m-%d)
 ```
 
 ---

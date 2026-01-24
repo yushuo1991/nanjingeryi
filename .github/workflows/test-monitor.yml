@@ -1,0 +1,80 @@
+name: 测试监控脚本
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v3
+
+      - name: 验证脚本语法
+        run: |
+          echo "========== 检查脚本语法 =========="
+
+          for script in scripts/monitor*.sh; do
+            echo "检查: $script"
+            bash -n "$script" && echo "  ✓ 语法正确" || echo "  ✗ 语法错误"
+          done
+
+      - name: 运行本地测试（模拟环境）
+        run: |
+          echo "========== 安装 PM2 =========="
+          npm install -g pm2
+
+          echo ""
+          echo "========== 创建测试应用 =========="
+          cat > test-app.js << 'EOF'
+          const http = require('http');
+          const server = http.createServer((req, res) => {
+            res.writeHead(200);
+            res.end('Test App');
+          });
+          server.listen(3201);
+          console.log('Test server running on port 3201');
+          EOF
+
+          echo ""
+          echo "========== 启动测试应用 =========="
+          pm2 start test-app.js --name rehab-care-link-server
+          pm2 list
+
+          echo ""
+          echo "========== 等待应用启动 =========="
+          sleep 3
+
+          echo ""
+          echo "========== 测试 monitor-once.sh =========="
+          bash scripts/monitor-once.sh || echo "部分检查失败（正常，因为某些文件不存在）"
+
+          echo ""
+          echo "========== 清理测试环境 =========="
+          pm2 delete rehab-care-link-server
+          pm2 kill
+
+      - name: 检查脚本权限标记
+        run: |
+          echo "========== 检查可执行权限 =========="
+          ls -l scripts/monitor*.sh
+
+          echo ""
+          echo "========== 验证 shebang =========="
+          head -n 1 scripts/monitor*.sh
+
+      - name: 测试总结
+        run: |
+          echo "=========================================="
+          echo "监控脚本测试完成"
+          echo "=========================================="
+          echo ""
+          echo "创建的脚本："
+          ls -lh scripts/monitor*.sh
+          echo ""
+          echo "部署方式："
+          echo "1. 手动触发 '部署监控脚本' workflow"
+          echo "2. 推送对 scripts/monitor*.sh 的修改"
+          echo ""
+          echo "使用文档："
+          echo "查看 scripts/README.md"
