@@ -1,0 +1,76 @@
+name: 修复损坏的mime-db包
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-mime-db:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 修复损坏的mime-db
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          cd /var/www/rehab-care-link/server
+
+          echo "========== 1. 停止服务 =========="
+          pm2 delete rehab-care-link-server || true
+
+          echo ""
+          echo "========== 2. 删除损坏的mime-db =========="
+          find node_modules -name "mime-db" -type d -exec rm -rf {} + 2>/dev/null || true
+
+          echo ""
+          echo "========== 3. 删除multer相关包 =========="
+          rm -rf node_modules/multer node_modules/mime-types
+
+          echo ""
+          echo "========== 4. 清理npm缓存中的mime-db =========="
+          npm cache clean --force 2>/dev/null || true
+          rm -rf ~/.npm/_cacache 2>/dev/null || true
+
+          echo ""
+          echo "========== 5. 重新安装关键依赖 =========="
+          npm install mime-db@latest --save --production
+          npm install mime-types@latest --save --production
+          npm install multer@latest --save --production
+
+          echo ""
+          echo "========== 6. 验证mime-db文件 =========="
+          MIME_DB=$(find node_modules -name "db.json" -path "*/mime-db/*" | head -1)
+          if [ -f "$MIME_DB" ]; then
+            echo "✓ mime-db文件存在: $MIME_DB"
+            FILE_SIZE=$(stat -c%s "$MIME_DB" 2>/dev/null || stat -f%z "$MIME_DB" 2>/dev/null)
+            echo "  文件大小: $FILE_SIZE bytes"
+            if [ "$FILE_SIZE" -gt 1000 ]; then
+              echo "✓ 文件大小正常"
+              # 测试JSON是否有效
+              node -e "const data = require('$MIME_DB'); console.log('✓ JSON格式有效，条目数:', Object.keys(data).length)" || echo "✗ JSON格式无效"
+            else
+              echo "✗ 文件太小，可能损坏"
+            fi
+          else
+            echo "✗ mime-db文件不存在"
+          fi
+
+          echo ""
+          echo "========== 7. 测试require mime-types =========="
+          node -e "const mime = require('mime-types'); console.log('✓ mime-types加载成功:', mime.lookup('file.jpg'))" || echo "✗ mime-types加载失败"
+
+          echo ""
+          echo "========== 8. 重启服务 =========="
+          pm2 start index.js --name rehab-care-link-server
+
+          sleep 5
+
+          echo ""
+          echo "========== 9. 查看日志 =========="
+          pm2 logs rehab-care-link-server --lines 30 --nostream
+
+          echo ""
+          echo "完成！"
