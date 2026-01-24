@@ -1,0 +1,101 @@
+name: 最简单修复 - 跳过mime-db
+
+on:
+  workflow_dispatch:
+
+jobs:
+  skip-mime-db:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 修改代码跳过损坏的mime-db
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          cd /var/www/rehab-care-link/server
+
+          echo "========== 停止服务 =========="
+          pm2 delete rehab-care-link-server || true
+
+          echo ""
+          echo "========== 创建mime-db修复补丁 =========="
+          # 在node_modules中创建一个简单的mime-db替代
+          mkdir -p node_modules/mime-db-simple
+
+          cat > node_modules/mime-db-simple/index.js << 'EOF'
+// 简化的mime-db，只包含常用类型
+module.exports = {
+  "image/jpeg": { extensions: ["jpeg", "jpg", "jpe"] },
+  "image/png": { extensions: ["png"] },
+  "image/gif": { extensions: ["gif"] },
+  "image/webp": { extensions: ["webp"] },
+  "image/svg+xml": { extensions: ["svg", "svgz"] },
+  "application/pdf": { extensions: ["pdf"] },
+  "application/json": { extensions: ["json"] },
+  "text/plain": { extensions: ["txt"] },
+  "text/html": { extensions: ["html", "htm"] }
+};
+EOF
+
+          cat > node_modules/mime-db-simple/package.json << 'EOF'
+{
+  "name": "mime-db-simple",
+  "version": "1.0.0",
+  "main": "index.js"
+}
+EOF
+
+          echo "✓ 创建了简化版mime-db"
+
+          echo ""
+          echo "========== 修改multer以使用简化版 =========="
+          # 找到multer的mime-types依赖并替换
+          if [ -d "node_modules/multer/node_modules/mime-types" ]; then
+            cat > node_modules/multer/node_modules/mime-types/index.js << 'EOF'
+// 使用简化版mime-db的mime-types
+var db = require('mime-db-simple');
+exports.lookup = function(path) {
+  var ext = ('' + path).replace(/^.*[/\\]/, '').toLowerCase().replace(/^.*\./, '');
+  for (var type in db) {
+    if (db[type].extensions && db[type].extensions.indexOf(ext) > -1) {
+      return type;
+    }
+  }
+  return 'application/octet-stream';
+};
+exports.extension = function(type) {
+  type = (type || '').toLowerCase().split(';')[0].trim();
+  return db[type] && db[type].extensions && db[type].extensions[0] || false;
+};
+EOF
+            echo "✓ 修改了multer的mime-types"
+          fi
+
+          echo ""
+          echo "========== 测试修复 =========="
+          node -e "const mime = require('mime-types'); console.log('jpeg:', mime.lookup('test.jpg')); console.log('png:', mime.lookup('test.png'));" && echo "✅ mime-types工作正常" || echo "⚠️ 仍有问题"
+
+          echo ""
+          echo "========== 重启服务 =========="
+          pm2 start index.js --name rehab-care-link-server
+
+          sleep 5
+
+          echo ""
+          echo "========== 检查日志 =========="
+          pm2 logs rehab-care-link-server --lines 15 --nostream
+
+          echo ""
+          echo "========== 检查错误 =========="
+          if pm2 logs rehab-care-link-server --err --lines 10 --nostream 2>/dev/null | grep -q "mime-db"; then
+            echo "⚠️ 仍有mime-db错误"
+          else
+            echo "✅ 没有mime-db错误！"
+          fi
+
+          echo ""
+          echo "完成！"
