@@ -1,5 +1,5 @@
-// Version: 2.0.1 - SQLite migration fix
-import React, { useState, useEffect } from 'react';
+// Version: 2.0.2 - Performance optimization
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Home, Calendar, MessageSquare, User, Plus, ChevronRight, ChevronLeft,
   AlertTriangle, Shield, Baby, Stethoscope, Brain, Bone, Heart,
@@ -338,10 +338,10 @@ export default function RehabCareLink() {
   }, []);
 
   // 显示Toast提示
-  const showToast = (message, type = 'success') => {
+  const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
-  };
+  }, []);
 
   // 生成分享链接
   const generateShareLink = (deptId) => {
@@ -366,15 +366,24 @@ export default function RehabCareLink() {
     });
   };
 
+  // 浅比较辅助函数（性能优化）
+  const hasPatientChanged = useCallback((p1, p2) => {
+    if (!p1 || !p2) return p1 !== p2;
+    // 只比较关键字段，避免深度比较
+    return p1.id !== p2.id ||
+           p1.name !== p2.name ||
+           p1.updatedAt !== p2.updatedAt;
+  }, []);
+
   // 保持selectedPatient与patients数组同步
   useEffect(() => {
     if (selectedPatient) {
       const updatedPatient = patients.find(p => p.id === selectedPatient.id);
-      if (updatedPatient && JSON.stringify(updatedPatient) !== JSON.stringify(selectedPatient)) {
+      if (updatedPatient && hasPatientChanged(updatedPatient, selectedPatient)) {
         setSelectedPatient(updatedPatient);
       }
     }
-  }, [patients]);
+  }, [patients, selectedPatient, hasPatientChanged]);
 
   // 导航函数
   const navigateTo = (page, data = null) => {
@@ -414,7 +423,7 @@ export default function RehabCareLink() {
   };
 
   // 完成治疗项目
-  const toggleTreatmentItem = (patientId, itemId) => {
+  const toggleTreatmentItem = useCallback((patientId, itemId) => {
     if (userRole !== 'therapist') return;
     setPatients(prev => prev.map(p => {
       if (p.id === patientId) {
@@ -425,7 +434,7 @@ export default function RehabCareLink() {
       }
       return p;
     }));
-  };
+  }, [userRole]);
 
   // 更新患者信息
   const updatePatient = (patientId, updates) => {
@@ -989,7 +998,7 @@ export default function RehabCareLink() {
     </div>
   );
 
-  const NavItem = ({ icon, label, active, onClick, badge }) => (
+  const NavItem = React.memo(({ icon, label, active, onClick, badge }) => (
     <button
       onClick={onClick}
       className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all duration-200 ${
@@ -1006,7 +1015,7 @@ export default function RehabCareLink() {
       </div>
       <span className={`text-[10px] font-medium ${active ? 'text-rose-500' : ''}`}>{label}</span>
     </button>
-  );
+  ));
 
   const FabMenuItem = ({ icon, label, color, onClick }) => (
     <button
@@ -1019,7 +1028,21 @@ export default function RehabCareLink() {
   );
 
   // 首页 - Apple风格重新设计
-  const HomePage = () => (
+  const HomePage = () => {
+    // 使用useMemo缓存计算结果，避免重复过滤
+    const activePatients = useMemo(() =>
+      patients.filter(p => p.status === 'active'), [patients]);
+
+    const todayPending = useMemo(() =>
+      patients.filter(p => p.status === 'active' && !p.todayTreated), [patients]);
+
+    const todayTreated = useMemo(() =>
+      patients.filter(p => p.todayTreated), [patients]);
+
+    const recentPatients = useMemo(() =>
+      activePatients.slice(-3).reverse(), [activePatients]);
+
+    return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-rose-50/30 pb-24">
       <Header
         title="南京儿童医院"
@@ -1059,7 +1082,7 @@ export default function RehabCareLink() {
               </div>
             </div>
             <div className="text-right">
-              <p className="text-3xl font-bold text-white">{patients.filter(p => p.status === 'active' && !p.todayTreated).length}</p>
+              <p className="text-3xl font-bold text-white">{todayPending.length}</p>
               <p className="text-xs text-white/60">今日待治疗</p>
             </div>
           </div>
@@ -1076,35 +1099,35 @@ export default function RehabCareLink() {
             <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center mx-auto mb-2">
               <Users size={20} className="text-indigo-500" />
             </div>
-            <div className="text-2xl font-bold text-slate-800">{patients.filter(p => p.status === 'active').length}</div>
+            <div className="text-2xl font-bold text-slate-800">{activePatients.length}</div>
             <div className="text-xs text-slate-500 mt-0.5">在治患儿</div>
           </button>
           <div className="bg-white rounded-2xl p-4 text-center shadow-sm border border-gray-100">
             <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center mx-auto mb-2">
               <CheckCircle2 size={20} className="text-emerald-500" />
             </div>
-            <div className="text-2xl font-bold text-slate-800">{patients.filter(p => p.todayTreated).length}</div>
+            <div className="text-2xl font-bold text-slate-800">{todayTreated.length}</div>
             <div className="text-xs text-slate-500 mt-0.5">今日已治疗</div>
           </div>
           <div className="bg-white rounded-2xl p-4 text-center shadow-sm border border-gray-100">
             <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center mx-auto mb-2">
               <Clock size={20} className="text-amber-500" />
             </div>
-            <div className="text-2xl font-bold text-slate-800">{patients.filter(p => p.status === 'active' && !p.todayTreated).length}</div>
+            <div className="text-2xl font-bold text-slate-800">{todayPending.length}</div>
             <div className="text-xs text-slate-500 mt-0.5">待治疗</div>
           </div>
         </div>
       </div>
 
       {/* 最近建档患者 */}
-      {patients.filter(p => p.status === 'active').slice(-3).reverse().length > 0 && (
+      {recentPatients.length > 0 && (
         <div className="px-4 mt-6">
           <h3 className="text-base font-semibold text-slate-800 mb-3 flex items-center gap-2">
             <div className="w-1 h-4 bg-rose-500 rounded-full" />
             最近建档
           </h3>
           <div className="space-y-2.5">
-            {patients.filter(p => p.status === 'active').slice(-3).reverse().map(patient => (
+            {recentPatients.map(patient => (
               <button
                 key={patient.id}
                 onClick={() => {
@@ -1231,7 +1254,8 @@ export default function RehabCareLink() {
         </div>
       )}
     </div>
-  );
+    );
+  };
 
   const StatCard = ({ icon, value, label, color }) => (
     <div className={`${color} rounded-xl p-3 text-center`}>
@@ -1295,7 +1319,7 @@ export default function RehabCareLink() {
     );
   };
 
-  const PatientCard = ({ patient, onClick }) => (
+  const PatientCard = React.memo(({ patient, onClick }) => (
     <button
       onClick={onClick}
       className="w-full bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md hover:border-rose-100 transition-all duration-200 active:scale-[0.99]"
@@ -1336,7 +1360,7 @@ export default function RehabCareLink() {
         <ChevronRight size={18} className="text-slate-300 mt-2" />
       </div>
     </button>
-  );
+  ));
 
   // 患儿详情页 - Apple风格
   const PatientDetailPage = () => {
