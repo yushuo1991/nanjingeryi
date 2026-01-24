@@ -404,16 +404,11 @@ export default function RehabCareLink() {
 
   const goBack = () => {
     if (currentPage === 'patientDetail') {
-      // 如果有选中的科室，返回该科室的患者列表
-      if (selectedDepartment) {
-        setCurrentPage('patients');
-      } else if (!sharedDeptId) {
-        // 非分享模式才能返回首页
-        setCurrentPage('home');
-      }
+      // 从患者详情页返回：优先返回首页（最常见场景）
+      setCurrentPage('home');
       setSelectedPatient(null);
     } else if (currentPage === 'patients') {
-      // 分享模式下不能返回首页
+      // 从患者列表返回首页
       if (!sharedDeptId) {
         setCurrentPage('home');
         setSelectedDepartment(null);
@@ -681,19 +676,41 @@ export default function RehabCareLink() {
   const generateTodayLog = useCallback((patient) => {
     if (!patient) return;
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
 
     // 收集已完成的治疗项目
     const completedItems = patient.treatmentPlan.items
       .filter(item => item.completed)
-      .map(item => item.name);
+      .map(item => ({
+        name: item.name,
+        duration: item.duration || '5分钟'
+      }));
+
+    // 如果没有完成项目，使用全部计划项目
+    const items = completedItems.length > 0
+      ? completedItems
+      : patient.treatmentPlan.items.map(item => ({
+          name: item.name,
+          duration: item.duration || '5分钟'
+        }));
+
+    // 生成个性化的今日重点
+    const highlights = patient.treatmentPlan.focus || '术后早期功能维持与舒适度管理';
+
+    // 生成详细记录
+    const itemNames = items.map(i => i.name).join('、');
+    const detailRecord = `今日康复训练记录（${dateStr}）训练重点：${highlights} 完成项目：${itemNames} 配合度：良好；耐受：良好 安全提醒：${patient.treatmentPlan.precautions[0] || '注意观察患儿反应'}`;
 
     // 生成新日志（待确认）
     const newLog = {
-      date: today,
-      items: completedItems.length > 0 ? completedItems : patient.treatmentPlan.items.map(i => i.name),
-      highlight: patient.treatmentPlan.focus || '常规康复训练',
-      notes: patient.treatmentPlan.precautions.join('；') || '',
+      date: dateStr,
+      highlight: highlights,
+      items: items,
+      cooperation: '良好',
+      tolerance: '良好',
+      safety: patient.treatmentPlan.precautions[0] || '注意观察患儿反应',
+      detailRecord: detailRecord,
       therapist: '吴大勇'
     };
 
@@ -2516,43 +2533,48 @@ export default function RehabCareLink() {
       {/* 日志确认对话框 */}
       {showLogConfirm && generatedLog && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowLogConfirm(false)}>
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
                 <FileText size={24} className="text-emerald-500" />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-800">确认治疗日志</h3>
-                <p className="text-sm text-gray-500">请核对今日治疗内容</p>
+                <p className="text-sm text-gray-500">{generatedLog.date}</p>
               </div>
             </div>
-            <div className="bg-slate-50 rounded-xl p-4 mb-6 space-y-3">
-              <div>
-                <label className="text-xs text-slate-500">治疗日期</label>
-                <p className="text-sm font-medium text-slate-700">{generatedLog.date}</p>
-              </div>
-              <div>
-                <label className="text-xs text-slate-500">治疗重点</label>
-                <p className="text-sm font-medium text-slate-700">{generatedLog.highlight}</p>
-              </div>
-              <div>
-                <label className="text-xs text-slate-500">完成项目</label>
-                <div className="mt-1 space-y-1">
-                  {generatedLog.items.map((item, i) => (
-                    <div key={i} className="text-sm text-slate-700 flex items-center gap-2">
-                      <CheckCircle2 size={14} className="text-emerald-500" />
-                      {item}
-                    </div>
-                  ))}
+
+            {/* 今日重点 - 黄色卡片 */}
+            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-4 mb-4">
+              <div className="flex items-start gap-2">
+                <Star size={16} className="text-amber-500 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-amber-900 leading-relaxed">
+                    {generatedLog.highlight}
+                  </p>
                 </div>
               </div>
-              {generatedLog.notes && (
-                <div>
-                  <label className="text-xs text-slate-500">注意事项</label>
-                  <p className="text-sm text-slate-700">{generatedLog.notes}</p>
-                </div>
-              )}
             </div>
+
+            {/* 训练项目 - 蓝色标签 */}
+            <div className="mb-4">
+              <label className="text-xs text-slate-500 mb-2 block">完成项目</label>
+              <div className="flex flex-wrap gap-2">
+                {generatedLog.items.map((item, i) => (
+                  <span key={i} className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-sm font-medium">
+                    {item.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* 详细记录 */}
+            <div className="bg-slate-50 rounded-xl p-4 mb-6">
+              <p className="text-sm text-slate-700 leading-relaxed">
+                {generatedLog.detailRecord}
+              </p>
+            </div>
+
             <div className="flex gap-3">
               <button
                 onClick={() => setShowLogConfirm(false)}
