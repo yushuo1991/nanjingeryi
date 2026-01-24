@@ -1,0 +1,81 @@
+name: 部署监控脚本
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/monitor*.sh'
+
+jobs:
+  deploy-monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v3
+
+      - name: 部署所有监控脚本到服务器
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          source: "scripts/monitor*.sh"
+          target: "/www/wwwroot/rehab-care-link"
+          strip_components: 0
+
+      - name: 设置脚本权限并创建快捷命令
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          script: |
+            cd /www/wwwroot/rehab-care-link
+
+            echo "========== 设置监控脚本权限 =========="
+            chmod +x scripts/monitor*.sh
+
+            echo ""
+            echo "========== 验证脚本文件 =========="
+            ls -lh scripts/monitor*.sh
+
+            echo ""
+            echo "========== 创建快速启动别名 =========="
+            # 备份现有的 .bashrc
+            cp ~/.bashrc ~/.bashrc.backup.$(date +%Y%m%d_%H%M%S) 2>/dev/null || true
+
+            # 添加或更新别名
+            grep -v "alias monitor" ~/.bashrc > ~/.bashrc.tmp 2>/dev/null || touch ~/.bashrc.tmp
+            cat >> ~/.bashrc.tmp << 'ALIASES'
+
+# 康复云查房助手 - 监控脚本快捷命令
+alias monitor='cd /www/wwwroot/rehab-care-link && bash scripts/monitor.sh'
+alias monitor-enhanced='cd /www/wwwroot/rehab-care-link && bash scripts/monitor-enhanced.sh'
+alias monitor-once='cd /www/wwwroot/rehab-care-link && bash scripts/monitor-once.sh'
+alias monitor-report='cd /www/wwwroot/rehab-care-link && bash scripts/monitor-once.sh'
+ALIASES
+
+            mv ~/.bashrc.tmp ~/.bashrc
+
+            echo ""
+            echo "========== 验证别名设置 =========="
+            grep "alias monitor" ~/.bashrc
+
+            echo ""
+            echo "========== 测试一次性监控脚本 =========="
+            bash scripts/monitor-once.sh
+
+            echo ""
+            echo "========== 部署成功 =========="
+            echo "可用的监控命令："
+            echo "  monitor            - 基础实时监控 (每5秒刷新)"
+            echo "  monitor-enhanced   - 增强版监控 (更多指标)"
+            echo "  monitor-once       - 一次性监控报告 (不循环)"
+            echo "  monitor-report     - 同 monitor-once"
+            echo ""
+            echo "或直接运行:"
+            echo "  bash /www/wwwroot/rehab-care-link/scripts/monitor.sh"
+            echo "  bash /www/wwwroot/rehab-care-link/scripts/monitor-enhanced.sh"
+            echo "  bash /www/wwwroot/rehab-care-link/scripts/monitor-once.sh"
+            echo ""
+            echo "退出实时监控: 按 Ctrl+C"

@@ -982,6 +982,74 @@ function createApp() {
     next();
   });
 
+  // Global error handler - must be last middleware
+  app.use((err, req, res, next) => {
+    // Log error details
+    const timestamp = new Date().toISOString();
+    const errorId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+
+    console.error(`[ERROR] ${timestamp} [ID: ${errorId}]`);
+    console.error(`Path: ${req.method} ${req.path}`);
+    console.error(`Message: ${err.message}`);
+    console.error(`Stack: ${err.stack}`);
+
+    // Different error types
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: err.message,
+        errorId
+      });
+    }
+
+    if (err.name === 'UnauthorizedError') {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized',
+        details: err.message,
+        errorId
+      });
+    }
+
+    if (err.name === 'NotFoundError') {
+      return res.status(404).json({
+        success: false,
+        error: 'Resource not found',
+        details: err.message,
+        errorId
+      });
+    }
+
+    if (err.code === 'ECONNREFUSED') {
+      return res.status(503).json({
+        success: false,
+        error: 'Service unavailable',
+        details: 'Database connection failed',
+        errorId
+      });
+    }
+
+    // Default server error
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'production' ? 'An error occurred' : err.message,
+      errorId,
+      stack: process.env.NODE_ENV === 'production' ? undefined : err.stack
+    });
+  });
+
+  // 404 handler - must be after all routes
+  app.use((req, res) => {
+    res.status(404).json({
+      success: false,
+      error: 'Not found',
+      path: req.path,
+      method: req.method
+    });
+  });
+
   return app;
 }
 

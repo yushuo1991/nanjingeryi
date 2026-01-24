@@ -1,0 +1,57 @@
+name: 快速诊断工具
+
+on:
+  workflow_dispatch:
+
+jobs:
+  quick-diagnosis:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 一键快速诊断
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "🔍 快速诊断 - $(date)"
+          echo "================================"
+
+          # PM2状态
+          echo "📊 PM2进程:"
+          if pm2 list | grep -q "rehab-care-link-server.*online"; then
+            echo "✅ PM2运行中"
+          else
+            echo "❌ PM2未运行"
+          fi
+
+          # API测试
+          echo ""
+          echo "🌐 API响应:"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3201/ 2>&1)
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "404" ]; then
+            echo "✅ 后端响应正常 ($HTTP_CODE)"
+          else
+            echo "❌ 后端无响应 ($HTTP_CODE)"
+          fi
+
+          # 最新错误
+          echo ""
+          echo "⚠️  最新3个错误:"
+          pm2 logs rehab-care-link-server --err --lines 3 --nostream 2>/dev/null | tail -3
+
+          # 磁盘
+          echo ""
+          echo "💾 磁盘使用:"
+          df -h | grep "/dev/vda" | awk '{print $5 " used"}'
+
+          # 内存
+          echo ""
+          echo "🧠 内存使用:"
+          free -h | grep Mem | awk '{print $3 "/" $2}'
+
+          echo ""
+          echo "================================"
+          echo "诊断完成"

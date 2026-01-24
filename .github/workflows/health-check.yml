@@ -1,0 +1,157 @@
+name: Health Check
+
+on:
+  schedule:
+    # 每5分钟运行一次健康检查
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      force_check:
+        description: '强制执行健康检查'
+        required: false
+        default: 'false'
+
+jobs:
+  health-check:
+    name: 服务健康状态检查
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: 获取最后一次成功的提交
+        id: last-success
+        run: |
+          echo "commit=$(git rev-parse HEAD^)" >> $GITHUB_OUTPUT
+          echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+
+      - name: 检查API健康状态
+        id: health
+        run: |
+          echo "开始健康检查..."
+
+          # 检查后端API健康端点
+          HEALTH_URL="https://${{ secrets.DOMAIN }}/api/health"
+          echo "检查 API 健康状态: $HEALTH_URL"
+
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$HEALTH_URL" || echo "000")
+          echo "health_status=$RESPONSE" >> $GITHUB_OUTPUT
+
+          if [ "$RESPONSE" = "200" ]; then
+            echo "✅ API 健康状态: 正常 (HTTP $RESPONSE)"
+            echo "status=healthy" >> $GITHUB_OUTPUT
+
+            # 获取详细健康信息
+            HEALTH_DATA=$(curl -s --max-time 10 "$HEALTH_URL" || echo "{}")
+            echo "健康数据: $HEALTH_DATA"
+            echo "health_data=$HEALTH_DATA" >> $GITHUB_OUTPUT
+          else
+            echo "❌ API 健康状态: 异常 (HTTP $RESPONSE)"
+            echo "status=unhealthy" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: 检查数据库连接
+        if: steps.health.outputs.status == 'healthy'
+        id: db
+        run: |
+          echo "检查数据库连接..."
+
+          DB_CHECK=$(echo '${{ steps.health.outputs.health_data }}' | jq -r '.db // "unknown"')
+          echo "db_status=$DB_CHECK" >> $GITHUB_OUTPUT
+
+          if [ "$DB_CHECK" = "ok" ]; then
+            echo "✅ 数据库连接: 正常"
+          else
+            echo "❌ 数据库连接: 异常"
+            exit 1
+          fi
+
+      - name: 检查前端可访问性
+        if: steps.health.outputs.status == 'healthy'
+        id: frontend
+        run: |
+          echo "检查前端可访问性..."
+
+          FRONTEND_URL="https://${{ secrets.DOMAIN }}"
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$FRONTEND_URL" || echo "000")
+          echo "frontend_status=$RESPONSE" >> $GITHUB_OUTPUT
+
+          if [ "$RESPONSE" = "200" ]; then
+            echo "✅ 前端页面: 正常 (HTTP $RESPONSE)"
+          else
+            echo "❌ 前端页面: 异常 (HTTP $RESPONSE)"
+            exit 1
+          fi
+
+      - name: 检查PM2进程状态
+        if: steps.health.outputs.status == 'healthy'
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "检查 PM2 进程状态..."
+
+            # 检查 rehab-server 进程
+            if pm2 list | grep -q "rehab-server.*online"; then
+              echo "✅ rehab-server 进程运行正常"
+            else
+              echo "❌ rehab-server 进程异常"
+              pm2 list
+              exit 1
+            fi
+
+            # 显示进程详细信息
+            pm2 describe rehab-server || true
+
+      - name: 记录成功检查
+        if: success()
+        run: |
+          echo "健康检查通过时间: ${{ steps.last-success.outputs.timestamp }}" >> health-log.txt
+          echo "提交哈希: ${{ github.sha }}" >> health-log.txt
+          echo "---" >> health-log.txt
+
+      - name: 触发自动回滚
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log('健康检查失败，触发自动回滚工作流...');
+
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'auto-rollback.yml',
+              ref: 'main',
+              inputs: {
+                reason: '健康检查失败',
+                failed_commit: '${{ github.sha }}',
+                last_success_commit: '${{ steps.last-success.outputs.commit }}'
+              }
+            });
+
+      - name: 发送失败通知
+        if: failure()
+        run: |
+          echo "⚠️ 健康检查失败通知"
+          echo "时间: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "API状态: ${{ steps.health.outputs.health_status }}"
+          echo "数据库状态: ${{ steps.db.outputs.db_status }}"
+          echo "前端状态: ${{ steps.frontend.outputs.frontend_status }}"
+          echo ""
+          echo "已触发自动回滚流程"
+
+      - name: 清理旧日志
+        if: always()
+        run: |
+          # 保留最近100条健康检查记录
+          if [ -f health-log.txt ]; then
+            tail -n 300 health-log.txt > health-log.tmp
+            mv health-log.tmp health-log.txt
+          fi

@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "server": "node server/index.js"
+    "server": "node server/index.js",
+    "test:e2e": "node tests/e2e-test.js",
+    "test:e2e:headless": "cross-env HEADLESS=true node tests/e2e-test.js"
   },
   "dependencies": {
     "axios": "^1.13.2",
@@ -23,6 +25,8 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
+    "cross-env": "^7.0.3",
+    "playwright": "^1.40.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "vite": "^6.0.5"
