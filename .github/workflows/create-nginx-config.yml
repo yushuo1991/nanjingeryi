@@ -1,0 +1,153 @@
+name: 创建Nginx配置文件并启动
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-nginx-config:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 创建Nginx配置
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        command_timeout: 5m
+        script: |
+          echo "===== 1. 停止所有Nginx和Node进程 ====="
+          killall nginx 2>/dev/null || true
+          pm2 delete all 2>/dev/null || true
+          fuser -k 80/tcp 2>/dev/null || true
+          fuser -k 3201/tcp 2>/dev/null || true
+          sleep 2
+
+          echo ""
+          echo "===== 2. 确保Nginx已安装 ====="
+          apt-get update -qq
+          apt-get install -y nginx
+
+          echo ""
+          echo "===== 3. 创建nginx.conf ====="
+          mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled /var/log/nginx
+
+          cat > /etc/nginx/nginx.conf << 'EOF'
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+    client_max_body_size 100M;
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
+
+    gzip on;
+
+    include /etc/nginx/sites-enabled/*;
+}
+EOF
+
+          echo ""
+          echo "===== 4. 创建站点配置 ====="
+          cat > /etc/nginx/sites-available/ey.yushuo.click << 'EOF'
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name ey.yushuo.click www.ey.yushuo.click _;
+
+    client_max_body_size 100M;
+
+    root /var/www/rehab-care-link/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:3201;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+        proxy_buffering off;
+        proxy_request_buffering off;
+    }
+
+    location /uploads/ {
+        alias /var/www/rehab-care-link/uploads/;
+    }
+}
+EOF
+
+          echo ""
+          echo "===== 5. 启用站点 ====="
+          rm -f /etc/nginx/sites-enabled/*
+          ln -sf /etc/nginx/sites-available/ey.yushuo.click /etc/nginx/sites-enabled/
+
+          echo ""
+          echo "===== 6. 检查配置 ====="
+          ls -la /etc/nginx/
+          cat /etc/nginx/nginx.conf
+
+          echo ""
+          echo "===== 7. 测试Nginx配置 ====="
+          nginx -t
+
+          echo ""
+          echo "===== 8. 启动Nginx ====="
+          systemctl daemon-reload
+          systemctl start nginx
+          systemctl enable nginx
+
+          echo ""
+          echo "===== 9. 检查Nginx状态 ====="
+          systemctl status nginx --no-pager
+
+          echo ""
+          echo "===== 10. 启动PM2 ====="
+          cd /var/www/rehab-care-link/server
+          pm2 start index.js --name rehab-care-link-server
+          pm2 save
+          sleep 3
+
+          echo ""
+          echo "===== 11. 检查服务 ====="
+          pm2 list
+          ss -tlnp | grep -E ":80|:3201"
+
+          echo ""
+          echo "===== 12. 测试 ====="
+          echo "前端:"
+          curl -s -w "\nHTTP: %{http_code}\n" http://localhost/ | head -5
+
+          echo ""
+          echo "API:"
+          curl -s -w "\nHTTP: %{http_code}\n" http://localhost/api/patients | head -10
+
+          echo ""
+          printf '\x89\x50\x4e\x47' > /tmp/t.png
+          echo "上传:"
+          curl -s -X POST http://localhost/api/cases -F "files=@/tmp/t.png" | head -c 200
+
+          echo ""
+          echo "===== 完成 ====="
