@@ -300,6 +300,7 @@ export default function RehabCareLink() {
   const [showFabMenu, setShowFabMenu] = useState(false);
   const [detailTab, setDetailTab] = useState('today'); // today | logs
   const [showAllPatients, setShowAllPatients] = useState(false); // 显示全部患者弹窗
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // 显示删除确认对话框
   const [toast, setToast] = useState(null); // 提示消息
 
   // AI收治状态
@@ -433,6 +434,21 @@ export default function RehabCareLink() {
     ));
     if (selectedPatient?.id === patientId) {
       setSelectedPatient(prev => ({ ...prev, ...updates }));
+    }
+  };
+
+  // 删除患者
+  const deletePatient = async (patientId) => {
+    try {
+      const res = await api(`/api/patients/${patientId}`, { method: 'DELETE' });
+      // 删除成功（204状态码不返回JSON）
+      setPatients(prev => prev.filter(p => p.id !== patientId));
+      setSelectedPatient(null);
+      setShowDeleteConfirm(false);
+      navigateTo('home');
+      showToast('患者已删除', 'success');
+    } catch (err) {
+      showToast(err.message || '删除失败', 'error');
     }
   };
 
@@ -820,26 +836,6 @@ export default function RehabCareLink() {
     setDetailTab('today');
   };
 
-  // 删除患者
-  const deletePatient = (patientId) => {
-    if (!window.confirm('确定要删除此患者档案吗？此操作不可恢复。')) return;
-    (async () => {
-      try {
-        await api(`/api/patients/${patientId}`, { method: 'DELETE' });
-        const listRes = await api('/api/patients');
-        const list = Array.isArray(listRes?.items) ? listRes.items : [];
-        setPatients(list);
-        if (selectedPatient?.id === patientId) {
-          setSelectedPatient(null);
-          goBack();
-        }
-        showToast('患者档案已删除');
-      } catch (e) {
-        showToast(e.message || '删除失败', 'error');
-      }
-    })();
-  };
-
   // 清除所有示例数据
   const clearDemoData = () => {
     if (window.confirm('确定要清除所有示例数据吗？这将删除ID小于1000的所有患者。')) {
@@ -959,7 +955,6 @@ export default function RehabCareLink() {
       <div className="absolute inset-0 bg-white/90 backdrop-blur-xl border-t border-gray-200/60" />
       <div className="relative px-2 py-2 flex items-center justify-around safe-area-bottom">
         <NavItem icon={<Home size={22} />} label="首页" active={currentPage === 'home'} onClick={() => navigateTo('home')} />
-        <NavItem icon={<Calendar size={22} />} label="排班" active={currentPage === 'schedule'} onClick={() => navigateTo('schedule')} />
 
         {/* 中间悬浮按钮 - 渐变设计 */}
         {userRole === 'therapist' && (
@@ -989,7 +984,6 @@ export default function RehabCareLink() {
         )}
         {userRole === 'doctor' && <div className="w-14" />}
 
-        <NavItem icon={<MessageSquare size={22} />} label="沟通" active={currentPage === 'messages'} onClick={() => navigateTo('messages')} badge={2} />
         <NavItem icon={<User size={22} />} label="我的" active={currentPage === 'profile'} onClick={() => navigateTo('profile')} />
       </div>
     </div>
@@ -1370,6 +1364,16 @@ export default function RehabCareLink() {
                   <Edit3 size={20} className="text-slate-600" />
                 </button>
               )}
+              {/* 删除按钮 - 仅治疗师可见 */}
+              {userRole === 'therapist' && (
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="p-2 hover:bg-red-50 rounded-xl transition-all duration-200"
+                  title="删除患者"
+                >
+                  <Trash2 size={20} className="text-red-500" />
+                </button>
+              )}
             </div>
           }
         />
@@ -1648,96 +1652,6 @@ export default function RehabCareLink() {
     >
       {children}
     </button>
-  );
-
-  // 排班页面
-  const SchedulePage = () => (
-    <div className="min-h-screen bg-gray-50 pb-24">
-      <Header title="今日排班" />
-
-      <div className="px-4 py-4">
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-800">2026年1月11日 周六</h3>
-            <span className="text-sm text-blue-600">{scheduleData.filter(s => s.type === 'treatment').length} 项治疗</span>
-          </div>
-
-          <div className="relative">
-            {/* 时间线 */}
-            <div className="absolute left-12 top-0 bottom-0 w-0.5 bg-gray-200" />
-
-            <div className="space-y-4">
-              {scheduleData.map((item, i) => (
-                <div key={i} className="flex items-start gap-4">
-                  <span className="text-sm text-gray-500 w-12 pt-2">{item.time}</span>
-                  <div className={`flex-1 p-3 rounded-xl border ${
-                    item.type === 'treatment' ? 'bg-blue-50 border-blue-200' :
-                    item.type === 'meeting' ? 'bg-blue-50 border-blue-200' :
-                    item.type === 'consultation' ? 'bg-purple-50 border-purple-200' :
-                    'bg-gray-50 border-gray-200'
-                  }`}>
-                    <div className="flex items-center gap-2 mb-1">
-                      {item.type === 'treatment' && <Stethoscope size={16} className="text-blue-600" />}
-                      {item.type === 'meeting' && <Users size={16} className="text-blue-600" />}
-                      {item.type === 'consultation' && <MessageSquare size={16} className="text-purple-600" />}
-                      {item.type === 'break' && <Coffee size={16} className="text-gray-500" />}
-                      <span className="font-medium text-gray-800">{item.title}</span>
-                    </div>
-                    {item.location && (
-                      <p className="text-xs text-gray-500">{item.location}</p>
-                    )}
-                    {item.patients && (
-                      <p className="text-xs text-blue-600 mt-1">{item.patients} 位患儿</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // 消息页面
-  const MessagesPage = () => (
-    <div className="min-h-screen bg-gray-50 pb-24">
-      <Header title="医嘱沟通" />
-
-      <div className="px-4 py-4">
-        <div className="space-y-3">
-          {messagesData.map(msg => (
-            <div key={msg.id} className={`bg-white rounded-2xl p-4 shadow-sm border ${msg.unread ? 'border-blue-200' : 'border-gray-100'}`}>
-              <div className="flex items-start gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${
-                  msg.type === 'alert' ? 'bg-red-100' :
-                  msg.type === 'system' ? 'bg-gray-100' : 'bg-blue-100'
-                }`}>
-                  {msg.avatar}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-800">{msg.from}</span>
-                      {msg.department && (
-                        <span className="text-xs text-gray-500">{msg.department}</span>
-                      )}
-                      {msg.unread && (
-                        <span className="w-2 h-2 bg-blue-500 rounded-full" />
-                      )}
-                    </div>
-                    <span className="text-xs text-gray-400">{msg.time}</span>
-                  </div>
-                  <p className={`text-sm ${msg.type === 'alert' ? 'text-red-600' : 'text-gray-600'}`}>
-                    {msg.content}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
   );
 
   // 我的页面
@@ -2496,8 +2410,6 @@ export default function RehabCareLink() {
       {currentPage === 'home' && <HomePage />}
       {currentPage === 'patients' && <PatientsPage />}
       {currentPage === 'patientDetail' && <PatientDetailPage />}
-      {currentPage === 'schedule' && <SchedulePage />}
-      {currentPage === 'messages' && <MessagesPage />}
       {currentPage === 'profile' && <ProfilePage />}
 
       {/* 底部导航 */}
@@ -2545,6 +2457,40 @@ export default function RehabCareLink() {
                   <ChevronRight size={18} className="text-gray-400" />
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 删除确认对话框 */}
+      {showDeleteConfirm && selectedPatient && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertTriangle size={24} className="text-red-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">确认删除</h3>
+                <p className="text-sm text-gray-500">此操作无法撤销</p>
+              </div>
+            </div>
+            <p className="text-gray-600 mb-6">
+              确定要删除患者 <span className="font-semibold text-gray-800">{selectedPatient.name}</span> 的所有信息吗？
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => deletePatient(selectedPatient.id)}
+                className="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors"
+              >
+                确认删除
+              </button>
             </div>
           </div>
         </div>

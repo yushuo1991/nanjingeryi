@@ -25,6 +25,10 @@ npm run build
 
 # Preview production build
 npm run preview
+
+# Run E2E tests (Playwright)
+npm run test:e2e
+npm run test:e2e:headless
 ```
 
 ### Server Operations (via GitHub Actions)
@@ -81,6 +85,14 @@ The backend was migrated from MySQL to SQLite. `db.js` provides a MySQL-compatib
 - `query()` returns `[rows, fields]` format to match mysql2
 - better-sqlite3 requires spreading params: `stmt.all(...params)`
 - Uses CommonJS (`require`) while frontend uses ES modules (`import`)
+- Database automatically creates tables on first run via `migrate()` function
+
+### PDF Report Generation
+Uses Playwright Chromium to generate A4 black-and-white treatment reports:
+- Route: `GET /api/patients/:id/report.pdf`
+- Browser instance reused across requests for performance
+- Template function: `buildFormalReportHtml()` in `server/index.js`
+- Includes patient info, GAS goals, treatment plan, execution log, and signature lines
 
 ### Frontend Cache Busting
 Vite config adds timestamp to ALL built files to prevent browser caching issues:
@@ -92,8 +104,14 @@ This is critical because users experienced stale JS after deployments.
 ### AI API Integration
 Uses Alibaba Cloud Qwen-VL (qwen-vl-max-latest) for OCR on medical records:
 - API endpoint configured via `DASHSCOPE_API_KEY` in `.env`
-- Prompts in `server/qwen.js`: `buildExtractPrompt()`, `buildPlanPrompt()`
+- Prompts in `server/qwen.js`: `buildExtractPrompt()`, `buildPlanPrompt()`, `buildAnalyzePrompt()`
 - Returns JSON parsed from markdown code blocks
+- **Key endpoints**:
+  - `POST /api/cases/:id/extract` - Extract patient info from medical records (multi-attempt with retry)
+  - `POST /api/cases/:id/analyze` - One-shot extract + plan generation (faster)
+  - `POST /api/cases/:id/plan` - Generate rehab plan from extracted profile
+- Uses JSON5 library for lenient parsing of malformed model JSON output
+- Implements image resizing (max 768px) and quality reduction (55%) via sharp to reduce API payload size
 
 ### Deployment Flow
 1. Push to main → GitHub Actions triggers
@@ -121,7 +139,15 @@ Uses Alibaba Cloud Qwen-VL (qwen-vl-max-latest) for OCR on medical records:
 Required:
 - `DASHSCOPE_API_KEY` - Alibaba Cloud API key for Qwen Vision
 - `PORT` - Backend port (default 3201)
-- `SQLITE_DB_PATH` - Database location (optional, defaults to ./rehab_care.db)
+
+Optional:
+- `SQLITE_DB_PATH` - Database location (defaults to ./rehab_care.db)
+- `QWEN_MODEL` - Model name (defaults to qwen3-vl-plus)
+- `QWEN_TIMEOUT_MS` - API timeout (defaults to 45000ms)
+- `MAX_AI_IMAGES` - Max images per API call (defaults to 3)
+- `MAX_AI_IMAGE_DIM` - Max image dimension in pixels (defaults to 768)
+- `AI_JPEG_QUALITY` - JPEG quality for compression (defaults to 55)
+- `CORS_ORIGIN` - CORS allowed origin (defaults to allow all)
 
 Managed via GitHub Secrets as `SERVER_ENV` (multi-line secret).
 
@@ -144,11 +170,13 @@ See DEPLOYMENT.md for complete checklist covering:
 
 ## Nginx Configuration
 
-Pure Nginx (no control panel) at `/etc/nginx/sites-available/ey.yushuo.click`:
+Pure Nginx (no control panel) configured in deploy workflow:
 - Serves `dist/` for frontend
 - Proxies `/api/*` to `http://localhost:3201/api/`
 - Serves `/uploads/` from server filesystem
 - HTTP only (HTTPS setup blocked by certbot dependency conflicts)
+- Config location: `/etc/nginx/sites-available/default`
+- Creates custom `mime.types` in workflow to prevent MIME type issues
 
 ## Known Constraints
 
