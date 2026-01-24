@@ -1,0 +1,72 @@
+name: 终极dotenv修复
+
+on:
+  workflow_dispatch:
+
+jobs:
+  install-dotenv:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 强制安装dotenv
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          cd /var/www/rehab-care-link/server
+
+          echo "========== 1. 停止服务 =========="
+          pm2 delete rehab-care-link-server || true
+
+          echo ""
+          echo "========== 2. 检查当前依赖 =========="
+          ls -la node_modules/ | grep dotenv || echo "dotenv不存在"
+
+          echo ""
+          echo "========== 3. 强制安装dotenv =========="
+          npm install dotenv@latest --save --production --force
+
+          echo ""
+          echo "========== 4. 验证安装 =========="
+          ls -la node_modules/dotenv || echo "安装失败"
+          node -e "const dotenv = require('dotenv'); console.log('✅ dotenv版本:', require('dotenv/package.json').version)" || echo "❌ 加载失败"
+
+          echo ""
+          echo "========== 5. 检查package.json =========="
+          cat package.json | grep dotenv
+
+          echo ""
+          echo "========== 6. 重新安装所有依赖 =========="
+          npm install --production
+
+          echo ""
+          echo "========== 7. 再次验证dotenv =========="
+          node -e "require('dotenv').config(); console.log('✅ dotenv可用')" || echo "❌ 仍然失败"
+
+          echo ""
+          echo "========== 8. 启动服务 =========="
+          pm2 start index.js --name rehab-care-link-server
+
+          sleep 5
+
+          echo ""
+          echo "========== 9. 检查错误 =========="
+          if pm2 logs rehab-care-link-server --err --lines 10 --nostream 2>/dev/null | grep -i "dotenv"; then
+            echo "❌ 仍有dotenv错误"
+          else
+            echo "✅ 没有dotenv错误"
+          fi
+
+          echo ""
+          echo "========== 10. 测试API =========="
+          sleep 2
+          printf '\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x0a\x00\x00\x00\x0a\x08\x02\x00\x00\x00\x02\x50\x58\xea\x00\x00\x00\x17\x49\x44\x41\x54\x08\x99\x63\xf8\xcf\xc0\xc0\xc0\xc0\xf0\x9f\x81\x81\x81\x81\x19\x00\x0c\x10\x03\x01\x9f\x65\x0e\x18\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82' > /tmp/final-test.png
+
+          curl -s -X POST http://localhost:3201/api/cases -F "files=@/tmp/final-test.png" | head -c 200
+          echo ""
+
+          echo ""
+          echo "完成！"
