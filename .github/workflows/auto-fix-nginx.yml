@@ -8,53 +8,140 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 自动修复和启动Nginx
+    - name: 创建完整Nginx配置并启动
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USER }}
         password: ${{ secrets.SERVER_PASSWORD }}
         port: ${{ secrets.SERVER_PORT || 22 }}
+        command_timeout: 5m
         script: |
           echo "========== 1. 停止所有Nginx进程 =========="
-          sudo systemctl stop nginx
-          sudo pkill -9 nginx || true
-          sleep 2
+          killall nginx 2>/dev/null || true
+          systemctl stop nginx 2>/dev/null || true
+          sleep 1
 
           echo ""
-          echo "========== 2. 删除其他项目配置 =========="
-          sudo rm -f /etc/nginx/sites-enabled/children-hospital
-          sudo rm -f /etc/nginx/sites-available/children-hospital
-          sudo rm -f /etc/nginx/sites-enabled/children-hospital.backup
+          echo "========== 2. 安装Nginx =========="
+          apt-get update -qq
+          apt-get install -y nginx
 
           echo ""
-          echo "========== 3. 检查Nginx配置 =========="
-          sudo nginx -t
+          echo "========== 3. 创建/etc/nginx/nginx.conf =========="
+          mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled /var/log/nginx
+
+          cat > /etc/nginx/nginx.conf << 'MAINCONF'
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+    client_max_body_size 100M;
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
+
+    gzip on;
+
+    include /etc/nginx/sites-enabled/*;
+}
+MAINCONF
+
+          echo "✅ nginx.conf已创建"
+          cat /etc/nginx/nginx.conf
 
           echo ""
-          echo "========== 4. 启动Nginx =========="
-          sudo systemctl start nginx
-          sleep 2
+          echo "========== 4. 创建站点配置 =========="
+          cat > /etc/nginx/sites-available/ey.yushuo.click << 'SITECONF'
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name ey.yushuo.click www.ey.yushuo.click _;
+
+    client_max_body_size 100M;
+    client_body_timeout 300s;
+    send_timeout 300s;
+
+    root /var/www/rehab-care-link/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:3201;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+        proxy_buffering off;
+        proxy_request_buffering off;
+    }
+
+    location /uploads/ {
+        alias /var/www/rehab-care-link/uploads/;
+    }
+
+    access_log /var/log/nginx/ey.yushuo.click.access.log;
+    error_log /var/log/nginx/ey.yushuo.click.error.log;
+}
+SITECONF
+
+          echo "✅ 站点配置已创建"
 
           echo ""
-          echo "========== 5. 检查Nginx状态 =========="
-          sudo systemctl status nginx --no-pager
+          echo "========== 5. 启用站点 =========="
+          rm -f /etc/nginx/sites-enabled/*
+          ln -sf /etc/nginx/sites-available/ey.yushuo.click /etc/nginx/sites-enabled/
 
           echo ""
-          echo "========== 6. 检查Nginx进程 =========="
-          ps aux | grep nginx | grep -v grep
+          echo "========== 6. 测试Nginx配置 =========="
+          nginx -t
 
           echo ""
-          echo "========== 7. 检查80端口 =========="
-          sudo netstat -tlnp | grep :80 || sudo ss -tlnp | grep :80
+          echo "========== 7. 启动Nginx =========="
+          systemctl daemon-reload
+          systemctl start nginx
+          systemctl enable nginx
 
           echo ""
-          echo "========== 8. 测试访问 =========="
-          curl -I http://localhost/
+          echo "========== 8. 检查Nginx状态 =========="
+          systemctl status nginx --no-pager | head -15
 
           echo ""
-          echo "========== 9. 验证返回的文件版本 =========="
-          curl -s http://localhost/ | grep "index-"
+          echo "========== 9. 检查80端口 =========="
+          ss -tlnp | grep :80
 
           echo ""
-          echo "修复完成！"
+          echo "========== 10. 测试访问 =========="
+          curl -s -w "\nHTTP: %{http_code}\n" http://localhost/ | head -5
+
+          echo ""
+          echo "测试API..."
+          curl -s -w "\nHTTP: %{http_code}\n" http://localhost/api/patients | head -10
+
+          echo ""
+          echo "测试上传..."
+          printf '\x89\x50\x4e\x47' > /tmp/test.png
+          curl -s -X POST http://localhost/api/cases -F "files=@/tmp/test.png" | head -c 200
+
+          echo ""
+          echo "========== 完成 =========="
