@@ -915,13 +915,23 @@ function createApp() {
 
   // ---------------- Patients (JSON blob) ----------------
   app.get('/api/patients', async (_req, res) => {
-    const pool = await getPool();
-    const [rows] = await pool.query('SELECT id, data, created_at, updated_at FROM patients ORDER BY id ASC');
-    const items = rows.map((r) => {
-      const data = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
-      return { ...data, id: Number(r.id), createdAt: r.created_at, updatedAt: r.updated_at };
-    });
-    res.json({ success: true, items });
+    try {
+      const pool = await getPool();
+      const [rows] = await pool.query('SELECT id, data, created_at, updated_at FROM patients ORDER BY id ASC');
+      const items = rows.map((r) => {
+        try {
+          const data = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
+          return { ...data, id: Number(r.id), createdAt: r.created_at, updatedAt: r.updated_at };
+        } catch (parseError) {
+          console.error(`Failed to parse patient ${r.id}:`, parseError);
+          return { id: Number(r.id), name: 'Error', error: 'Invalid data', createdAt: r.created_at, updatedAt: r.updated_at };
+        }
+      });
+      res.json({ success: true, items });
+    } catch (error) {
+      console.error('GET /api/patients error:', error);
+      return jsonError(res, 500, 'Failed to fetch patients: ' + error.message);
+    }
   });
 
   app.post('/api/patients', async (req, res) => {
