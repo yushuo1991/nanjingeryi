@@ -1,0 +1,194 @@
+name: 彻底清除宝塔并安装标准Nginx
+
+on:
+  workflow_dispatch:
+
+jobs:
+  clean-install-nginx:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 彻底清除宝塔并安装标准Nginx
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        command_timeout: 10m
+        script: |
+          echo "=========================================="
+          echo "彻底清除宝塔并安装标准Nginx"
+          echo "=========================================="
+
+          echo ""
+          echo "===== 1. 停止宝塔Nginx ====="
+          /www/server/nginx/sbin/nginx -s stop 2>/dev/null || true
+          killall nginx 2>/dev/null || true
+          sleep 2
+
+          echo ""
+          echo "===== 2. 删除宝塔Nginx ====="
+          rm -rf /www/server/nginx
+          rm -rf /www/server/panel
+          rm -rf /www/wwwlogs
+          rm -rf /www/backup
+          rm -rf /www/wwwroot
+          # 保留/www/server目录但清空
+          find /www -type f -delete 2>/dev/null || true
+
+          echo ""
+          echo "===== 3. 清除宝塔相关服务 ====="
+          systemctl stop bt 2>/dev/null || true
+          systemctl disable bt 2>/dev/null || true
+          rm -f /etc/init.d/bt
+          rm -f /usr/bin/bt
+          rm -f /etc/systemd/system/bt.service
+
+          echo ""
+          echo "===== 4. 安装标准Nginx ====="
+          apt-get update
+          apt-get install -y nginx
+
+          echo ""
+          echo "===== 5. 创建必要目录 ====="
+          mkdir -p /etc/nginx/sites-available
+          mkdir -p /etc/nginx/sites-enabled
+          mkdir -p /var/log/nginx
+
+          echo ""
+          echo "===== 6. 创建nginx.conf ====="
+          cat > /etc/nginx/nginx.conf << 'NGINX_MAIN'
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+    worker_connections 1024;
+    multi_accept on;
+}
+
+http {
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+    client_max_body_size 100M;
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
+
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_types text/plain text/css text/xml application/json application/javascript application/xml+rss application/atom+xml image/svg+xml;
+
+    include /etc/nginx/conf.d/*.conf;
+    include /etc/nginx/sites-enabled/*;
+}
+NGINX_MAIN
+
+          echo ""
+          echo "===== 7. 创建站点配置 ====="
+          cat > /etc/nginx/sites-available/ey.yushuo.click << 'NGINX_SITE'
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ey.yushuo.click www.ey.yushuo.click;
+
+    # 上传限制
+    client_max_body_size 100M;
+    client_body_timeout 300s;
+    send_timeout 300s;
+
+    # 前端静态文件
+    root /var/www/rehab-care-link/dist;
+    index index.html;
+
+    # 前端路由
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # 后端API代理
+    location /api/ {
+        proxy_pass http://127.0.0.1:3201;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # 超时设置
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+
+        # 禁用缓冲 - 修复ERR_INCOMPLETE_CHUNKED_ENCODING
+        proxy_buffering off;
+        proxy_request_buffering off;
+    }
+
+    # 上传文件访问
+    location /uploads/ {
+        alias /var/www/rehab-care-link/uploads/;
+    }
+
+    # 日志
+    access_log /var/log/nginx/ey.yushuo.click.access.log;
+    error_log /var/log/nginx/ey.yushuo.click.error.log;
+}
+NGINX_SITE
+
+          echo ""
+          echo "===== 8. 启用站点 ====="
+          rm -f /etc/nginx/sites-enabled/default
+          ln -sf /etc/nginx/sites-available/ey.yushuo.click /etc/nginx/sites-enabled/
+
+          echo ""
+          echo "===== 9. 测试Nginx配置 ====="
+          nginx -t
+
+          echo ""
+          echo "===== 10. 启动Nginx ====="
+          systemctl daemon-reload
+          systemctl enable nginx
+          systemctl restart nginx
+
+          echo ""
+          echo "===== 11. 检查Nginx状态 ====="
+          systemctl status nginx --no-pager
+
+          echo ""
+          echo "===== 12. 检查端口监听 ====="
+          ss -tlnp | grep -E ":80|:3201"
+
+          echo ""
+          echo "===== 13. 测试访问 ====="
+          echo "测试前端..."
+          curl -s -w "\nHTTP: %{http_code}\n" http://localhost/ | head -5
+
+          echo ""
+          echo "测试后端API..."
+          curl -s -w "\nHTTP: %{http_code}\n" http://localhost/api/patients | head -10
+
+          echo ""
+          echo "测试上传..."
+          printf '\x89\x50\x4e\x47\x0d\x0a\x1a\x0a' > /tmp/final-test.png
+          curl -s -X POST http://localhost/api/cases -F "files=@/tmp/final-test.png" | head -c 200
+
+          echo ""
+          echo ""
+          echo "=========================================="
+          echo "完成！宝塔已清除，标准Nginx已安装"
+          echo "=========================================="
