@@ -1,0 +1,51 @@
+name: 诊断并修复patients API
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-patients-api:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 诊断patients API问题
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 1. 直接测试后端API =========="
+          curl -v http://localhost:3201/api/patients 2>&1 | head -50
+
+          echo ""
+          echo "========== 2. 通过Nginx测试 =========="
+          curl -v http://localhost/api/patients 2>&1 | head -50
+
+          echo ""
+          echo "========== 3. 查看PM2错误日志 =========="
+          pm2 logs rehab-care-link-server --err --lines 20 --nostream
+
+          echo ""
+          echo "========== 4. 检查数据库中的患者数据 =========="
+          cd /var/www/rehab-care-link/server
+          node -e "
+          const sqlite3 = require('better-sqlite3');
+          const db = new sqlite3('rehab_care.db');
+          const patients = db.prepare('SELECT * FROM patients LIMIT 5').all();
+          console.log('患者数量:', patients.length);
+          patients.forEach(p => {
+            console.log('ID:', p.id, '数据长度:', p.data ? p.data.length : 0);
+          });
+          db.close();
+          "
+
+          echo ""
+          echo "========== 5. 测试创建患者 =========="
+          curl -X POST http://localhost:3201/api/patients \
+            -H "Content-Type: application/json" \
+            -d '{"name":"测试","age":10,"gender":"male"}' 2>&1
+
+          echo ""
+          echo "完成诊断"
