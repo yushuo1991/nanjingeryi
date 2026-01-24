@@ -1,0 +1,114 @@
+name: 终极修复 - 手动下载正确的mime-db
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ultimate-fix:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 彻底修复mime-db
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          cd /var/www/rehab-care-link/server
+
+          echo "========== 1. 停止服务 =========="
+          pm2 delete rehab-care-link-server || true
+
+          echo ""
+          echo "========== 2. 找到所有损坏的mime-db =========="
+          find node_modules -name "db.json" -path "*/mime-db/*" -exec ls -lh {} \;
+
+          echo ""
+          echo "========== 3. 删除所有mime-db目录 =========="
+          find node_modules -type d -name "mime-db" -exec rm -rf {} + 2>/dev/null || true
+
+          echo ""
+          echo "========== 4. 删除依赖mime-db的包 =========="
+          rm -rf node_modules/mime-types
+          rm -rf node_modules/multer
+          rm -rf node_modules/form-data
+
+          echo ""
+          echo "========== 5. 清理npm缓存 =========="
+          npm cache clean --force 2>/dev/null || true
+
+          echo ""
+          echo "========== 6. 手动下载正确的mime-db =========="
+          mkdir -p /tmp/mime-db-fix
+          cd /tmp/mime-db-fix
+          npm pack mime-db@latest
+          tar -xzf mime-db-*.tgz
+
+          echo ""
+          echo "========== 7. 验证下载的db.json =========="
+          if [ -f package/db.json ]; then
+            SIZE=$(stat -c%s package/db.json)
+            echo "✓ db.json大小: $SIZE bytes"
+            if [ "$SIZE" -gt 100000 ]; then
+              echo "✓ 文件大小正常"
+              node -e "const data = require('./package/db.json'); console.log('✓ JSON有效，条目:', Object.keys(data).length)"
+            else
+              echo "✗ 文件太小"
+              exit 1
+            fi
+          else
+            echo "✗ 下载失败"
+            exit 1
+          fi
+
+          echo ""
+          echo "========== 8. 重新安装依赖 =========="
+          cd /var/www/rehab-care-link/server
+          npm install mime-db@latest mime-types@latest multer@latest --production
+
+          echo ""
+          echo "========== 9. 再次验证安装后的mime-db =========="
+          MIME_DB=$(find node_modules -name "db.json" -path "*/mime-db/*" | head -1)
+          if [ -f "$MIME_DB" ]; then
+            echo "✓ 找到mime-db: $MIME_DB"
+            SIZE=$(stat -c%s "$MIME_DB")
+            echo "  大小: $SIZE bytes"
+            if [ "$SIZE" -gt 100000 ]; then
+              echo "✓ 大小正常"
+            else
+              echo "✗ 文件仍然太小，使用手动下载的版本"
+              cp /tmp/mime-db-fix/package/db.json "$MIME_DB"
+            fi
+          fi
+
+          echo ""
+          echo "========== 10. 清理临时文件 =========="
+          rm -rf /tmp/mime-db-fix
+
+          echo ""
+          echo "========== 11. 测试能否加载 =========="
+          node -e "const mime = require('mime-types'); console.log('✓ mime-types:', mime.lookup('test.jpg'))" || echo "✗ 加载失败"
+
+          echo ""
+          echo "========== 12. 启动服务 =========="
+          pm2 start index.js --name rehab-care-link-server
+
+          sleep 5
+
+          echo ""
+          echo "========== 13. 查看启动日志 =========="
+          pm2 logs rehab-care-link-server --lines 20 --nostream
+
+          echo ""
+          echo "========== 14. 检查是否有错误 =========="
+          ERROR_COUNT=$(pm2 logs rehab-care-link-server --err --lines 20 --nostream 2>/dev/null | grep -i "mime-db\|json" | wc -l)
+          if [ "$ERROR_COUNT" -eq 0 ]; then
+            echo "✅ 没有mime-db错误！"
+          else
+            echo "⚠️ 仍有 $ERROR_COUNT 个mime-db相关错误"
+          fi
+
+          echo ""
+          echo "完成！"
