@@ -1,0 +1,57 @@
+name: 捕获实时崩溃日志
+
+on:
+  workflow_dispatch:
+
+jobs:
+  capture-crash:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 实时监控崩溃
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        command_timeout: 60m
+        script: |
+          cd /var/www/rehab-care-link/server
+
+          echo "========== 清空日志 =========="
+          pm2 flush
+
+          echo ""
+          echo "========== 重启服务 =========="
+          pm2 restart rehab-care-link-server
+
+          sleep 3
+
+          echo ""
+          echo "========== 发送测试请求 =========="
+          printf '\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x0a\x00\x00\x00\x0a\x08\x02\x00\x00\x00\x02\x50\x58\xea\x00\x00\x00\x17\x49\x44\x41\x54\x08\x99\x63\xf8\xcf\xc0\xc0\xc0\xc0\xf0\x9f\x81\x81\x81\x81\x19\x00\x0c\x10\x03\x01\x9f\x65\x0e\x18\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82' > /tmp/crash-test.png
+
+          echo "发送POST请求..."
+          curl -X POST http://localhost:3201/api/cases -F "files=@/tmp/crash-test.png" 2>&1 &
+          CURL_PID=$!
+
+          sleep 2
+
+          echo ""
+          echo "========== 捕获崩溃日志 =========="
+          tail -100 pm2-error.log 2>/dev/null || pm2 logs rehab-care-link-server --err --lines 100 --nostream
+
+          echo ""
+          echo "========== 标准输出日志 =========="
+          tail -50 pm2-out.log 2>/dev/null || pm2 logs rehab-care-link-server --lines 50 --nostream
+
+          wait $CURL_PID || true
+
+          echo ""
+          echo "========== PM2状态 =========="
+          pm2 list
+
+          echo ""
+          echo "========== 进程是否还在运行 =========="
+          ps aux | grep "index.js" | grep -v grep || echo "进程已死"
