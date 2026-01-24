@@ -389,24 +389,43 @@ export default function RehabCareLink() {
     }
   }, [patients, selectedPatient, hasPatientChanged]);
 
-  // 导航函数
+  // 导航函数 - 增强版：自动清理无关状态
   const navigateTo = (page, data = null) => {
     setCurrentPage(page);
-    if (page === 'patients' && data) {
-      setSelectedDepartment(data);
+
+    // 清理旧状态，防止状态残留
+    if (page === 'home') {
+      setSelectedDepartment(null);
+      setSelectedPatient(null);
+      setDetailTab('today');
     }
+
+    if (page === 'patients') {
+      setSelectedPatient(null); // 清理患者选择
+      setDetailTab('today'); // 重置tab
+      if (data) {
+        setSelectedDepartment(data);
+      }
+    }
+
     if (page === 'patientDetail' && data) {
       setSelectedPatient(data);
       setDetailTab('today');
     }
+
     setShowFabMenu(false);
   };
 
   const goBack = () => {
     if (currentPage === 'patientDetail') {
-      // 从患者详情页返回：优先返回首页（最常见场景）
-      setCurrentPage('home');
+      // 智能返回：有选中科室时返回患者列表，否则返回首页
+      if (selectedDepartment) {
+        setCurrentPage('patients');
+      } else {
+        setCurrentPage('home');
+      }
       setSelectedPatient(null);
+      setDetailTab('today'); // 重置tab状态
     } else if (currentPage === 'patients') {
       // 从患者列表返回首页
       if (!sharedDeptId) {
@@ -893,9 +912,8 @@ export default function RehabCareLink() {
         setAiResult(null);
         setUploadedImage(null);
 
-        // 跳转到患儿详情页
+        // 跳转到患儿详情页（navigateTo会自动设置selectedPatient）
         if (created) {
-          setSelectedPatient(created);
           navigateTo('patientDetail', created);
         }
 
@@ -907,13 +925,6 @@ export default function RehabCareLink() {
     })();
     setOcrText('');
     setOcrProgress(0);
-
-    // 显示成功提示
-    showToast(`患者「${newPatient.name}」建档成功！`);
-
-    // 跳转到详情页
-    setCurrentPage('patientDetail');
-    setDetailTab('today');
   };
 
   // 清除所有示例数据
@@ -1034,7 +1045,12 @@ export default function RehabCareLink() {
       {/* 毛玻璃背景 */}
       <div className="absolute inset-0 bg-white/90 backdrop-blur-xl border-t border-gray-200/60" />
       <div className="relative px-2 py-2 flex items-center justify-around safe-area-bottom">
-        <NavItem icon={<Home size={22} />} label="首页" active={currentPage === 'home'} onClick={() => navigateTo('home')} />
+        <NavItem
+          icon={<Home size={22} />}
+          label="首页"
+          active={['home', 'patients', 'patientDetail'].includes(currentPage)}
+          onClick={() => navigateTo('home')}
+        />
 
         {/* 中间悬浮按钮 - 渐变设计 */}
         {userRole === 'therapist' && (
@@ -1201,11 +1217,7 @@ export default function RehabCareLink() {
             {recentPatients.map(patient => (
               <button
                 key={patient.id}
-                onClick={() => {
-                  setSelectedPatient(patient);
-                  setCurrentPage('patientDetail');
-                  setDetailTab('today');
-                }}
+                onClick={() => navigateTo('patientDetail', patient)}
                 className="w-full bg-white rounded-2xl p-4 flex items-center gap-3 shadow-sm border border-gray-100 hover:shadow-md hover:border-rose-100 transition-all duration-200 active:scale-[0.99]"
               >
                 <div className="w-12 h-12 bg-gradient-to-br from-rose-100 to-pink-50 rounded-xl flex items-center justify-center text-xl">
@@ -2471,9 +2483,7 @@ export default function RehabCareLink() {
                   key={patient.id}
                   onClick={() => {
                     setShowAllPatients(false);
-                    setSelectedPatient(patient);
-                    setCurrentPage('patientDetail');
-                    setDetailTab('today');
+                    navigateTo('patientDetail', patient);
                   }}
                   className="w-full bg-gray-50 rounded-xl p-3 flex items-center gap-3 hover:bg-gray-100 transition"
                 >
