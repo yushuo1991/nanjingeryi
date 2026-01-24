@@ -1,0 +1,107 @@
+name: 全面API功能测试
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-all-apis:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 全面测试所有API端点
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========================================="
+          echo "全面API功能测试"
+          echo "========================================="
+
+          # 创建测试用的PNG图片
+          printf '\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x64\x00\x00\x00\x64\x08\x02\x00\x00\x00\xff\x80\x02\x03\x00\x00\x00\x0c\x49\x44\x41\x54\x08\xd7\x63\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb4\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82' > /tmp/test-image.png
+
+          echo ""
+          echo "========== 测试1: PM2进程状态 =========="
+          PM2_STATUS=$(pm2 list | grep rehab-care-link-server | grep -c "online" || echo "0")
+          if [ "$PM2_STATUS" -gt 0 ]; then
+            echo "✅ PM2进程运行中"
+          else
+            echo "❌ PM2进程未运行"
+            pm2 list
+            exit 1
+          fi
+
+          echo ""
+          echo "========== 测试2: 后端根路径 =========="
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3201/ 2>&1)
+          echo "HTTP状态码: $HTTP_CODE"
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "404" ]; then
+            echo "✅ 后端服务响应正常"
+          else
+            echo "❌ 后端服务无响应"
+          fi
+
+          echo ""
+          echo "========== 测试3: 创建病例（POST /api/cases） =========="
+          RESPONSE=$(curl -s -X POST http://localhost:3201/api/cases \
+            -F "files=@/tmp/test-image.png" 2>&1)
+
+          echo "响应: $RESPONSE"
+
+          if echo "$RESPONSE" | grep -q '"success":true'; then
+            CASE_ID=$(echo "$RESPONSE" | grep -o '"caseId":[0-9]*' | grep -o '[0-9]*')
+            echo "✅ 创建病例成功 (caseId: $CASE_ID)"
+
+            echo ""
+            echo "========== 测试4: AI识别（POST /api/cases/$CASE_ID/extract） =========="
+            EXTRACT_RESPONSE=$(curl -s -X POST "http://localhost:3201/api/cases/$CASE_ID/extract" \
+              -H "Content-Type: application/json" \
+              -d '{}' 2>&1)
+
+            echo "AI响应前100字符: ${EXTRACT_RESPONSE:0:100}"
+
+            if echo "$EXTRACT_RESPONSE" | grep -q '"success"'; then
+              echo "✅ AI识别API成功"
+            elif echo "$EXTRACT_RESPONSE" | grep -q '500'; then
+              echo "❌ AI识别返回500错误"
+              echo "完整响应: $EXTRACT_RESPONSE"
+            else
+              echo "⚠️  AI识别响应异常"
+              echo "完整响应: $EXTRACT_RESPONSE"
+            fi
+
+            echo ""
+            echo "========== 测试5: 获取病例数据 =========="
+            GET_RESPONSE=$(curl -s "http://localhost:3201/api/cases/$CASE_ID" 2>&1)
+            if echo "$GET_RESPONSE" | grep -q "$CASE_ID"; then
+              echo "✅ 获取病例数据成功"
+            else
+              echo "⚠️  获取病例数据响应: ${GET_RESPONSE:0:100}"
+            fi
+
+          else
+            echo "❌ 创建病例失败"
+            echo "完整响应: $RESPONSE"
+          fi
+
+          echo ""
+          echo "========== 测试6: 数据库文件 =========="
+          if [ -f /var/www/rehab-care-link/server/rehab_care.db ]; then
+            DB_SIZE=$(stat -c%s /var/www/rehab-care-link/server/rehab_care.db 2>/dev/null)
+            echo "✅ 数据库存在 (大小: $DB_SIZE bytes)"
+          else
+            echo "❌ 数据库文件不存在"
+          fi
+
+          echo ""
+          echo "========== 测试7: 最新PM2日志 =========="
+          echo "最近10行日志:"
+          pm2 logs rehab-care-link-server --lines 10 --nostream
+
+          echo ""
+          echo "========================================="
+          echo "测试完成"
+          echo "========================================="
