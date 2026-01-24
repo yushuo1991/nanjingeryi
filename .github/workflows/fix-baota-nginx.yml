@@ -1,0 +1,191 @@
+name: 修复宝塔遗留的Nginx配置
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-baota-nginx:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 修复Nginx
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        command_timeout: 5m
+        script: |
+          echo "========== 1. 检查Nginx版本和配置位置 =========="
+          which nginx
+          nginx -V 2>&1 | head -5
+
+          echo ""
+          echo "========== 2. 查找实际的Nginx配置 =========="
+          ls -la /www/server/nginx/conf/ 2>/dev/null | head -10 || echo "/www/server/nginx/conf不存在"
+          ls -la /etc/nginx/ 2>/dev/null | head -10 || echo "/etc/nginx不存在"
+
+          echo ""
+          echo "========== 3. 查看当前Nginx进程使用的配置 =========="
+          ps aux | grep nginx | grep master | head -1
+
+          echo ""
+          echo "========== 4. 在宝塔Nginx配置中添加站点 =========="
+          BT_NGINX_CONF="/www/server/nginx/conf"
+          if [ -d "$BT_NGINX_CONF" ]; then
+            echo "使用宝塔Nginx配置目录"
+
+            # 创建站点配置
+            cat > $BT_NGINX_CONF/vhost/ey.yushuo.click.conf << 'NGINX_SITE'
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ey.yushuo.click www.ey.yushuo.click;
+
+    client_max_body_size 100M;
+    client_body_timeout 300s;
+    send_timeout 300s;
+
+    root /var/www/rehab-care-link/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:3201;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+        proxy_buffering off;
+        proxy_request_buffering off;
+    }
+
+    location /uploads/ {
+        alias /var/www/rehab-care-link/uploads/;
+    }
+
+    access_log /www/wwwlogs/ey.yushuo.click.log;
+    error_log /www/wwwlogs/ey.yushuo.click.error.log;
+}
+NGINX_SITE
+
+            echo "站点配置已创建"
+            cat $BT_NGINX_CONF/vhost/ey.yushuo.click.conf
+
+            # 确保vhost目录被包含
+            if ! grep -q "include.*vhost" $BT_NGINX_CONF/nginx.conf 2>/dev/null; then
+              echo "在主配置中添加vhost包含"
+              # 在http块末尾添加include
+              sed -i '/^http {/,/^}/{
+                /^}/i\    include /www/server/nginx/conf/vhost/*.conf;
+              }' $BT_NGINX_CONF/nginx.conf 2>/dev/null || echo "无法修改主配置"
+            fi
+
+          else
+            echo "宝塔目录不存在，使用标准目录"
+
+            # 创建标准nginx.conf
+            mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+
+            cat > /etc/nginx/nginx.conf << 'NGINX_MAIN'
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+
+events {
+    worker_connections 768;
+}
+
+http {
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
+
+    gzip on;
+
+    include /etc/nginx/sites-enabled/*;
+}
+NGINX_MAIN
+
+            cat > /etc/nginx/sites-available/ey.yushuo.click << 'NGINX_SITE'
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ey.yushuo.click www.ey.yushuo.click;
+
+    client_max_body_size 100M;
+
+    root /var/www/rehab-care-link/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:3201;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+        proxy_buffering off;
+    }
+
+    location /uploads/ {
+        alias /var/www/rehab-care-link/uploads/;
+    }
+}
+NGINX_SITE
+
+            ln -sf /etc/nginx/sites-available/ey.yushuo.click /etc/nginx/sites-enabled/
+          fi
+
+          echo ""
+          echo "========== 5. 测试Nginx配置 =========="
+          /www/server/nginx/sbin/nginx -t 2>&1 || nginx -t 2>&1
+
+          echo ""
+          echo "========== 6. 重新加载Nginx =========="
+          /www/server/nginx/sbin/nginx -s reload 2>&1 || systemctl reload nginx 2>&1 || service nginx reload 2>&1
+
+          echo ""
+          echo "========== 7. 检查Nginx状态 =========="
+          ps aux | grep nginx | grep -v grep
+
+          echo ""
+          echo "========== 8. 测试API代理 =========="
+          echo "测试 localhost/api/patients..."
+          curl -s -w "\nHTTP: %{http_code}\n" http://localhost/api/patients 2>&1 | head -10
+
+          echo ""
+          echo "测试 ey.yushuo.click/api/patients..."
+          curl -s -w "\nHTTP: %{http_code}\n" http://ey.yushuo.click/api/patients 2>&1 | head -10
+
+          echo ""
+          echo "测试 POST /api/cases..."
+          printf '\x89\x50\x4e\x47\x0d\x0a\x1a\x0a' > /tmp/fix.png
+          curl -s -X POST http://localhost/api/cases -F "files=@/tmp/fix.png" | head -c 200
+
+          echo ""
+          echo "完成！"
