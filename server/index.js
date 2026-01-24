@@ -330,16 +330,22 @@ function createApp() {
   const supportedMimes = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
   app.post('/api/cases', mem.array('files', 10), async (req, res) => {
+    console.log('[POST /api/cases] Request received, files count:', req.files?.length || 0);
     try {
       const files = req.files || [];
+      console.log('[POST /api/cases] Files parsed:', files.length);
       if (!files.length) return jsonError(res, 400, 'No files uploaded');
 
+      console.log('[POST /api/cases] Getting DB pool...');
       const pool = await getPool();
+      console.log('[POST /api/cases] Inserting case into DB...');
       const [r] = await pool.query('INSERT INTO cases (status) VALUES (?)', ['created']);
       const caseId = Number(r.insertId);
+      console.log('[POST /api/cases] Case created, ID:', caseId);
 
       const saved = [];
       for (const f of files) {
+        console.log('[POST /api/cases] Processing file:', f.originalname, 'mime:', f.mimetype);
         const mime = f.mimetype || 'application/octet-stream';
         if (!mime.startsWith('image/')) return jsonError(res, 400, 'Only image uploads are supported');
         if (!supportedMimes.has(mime)) {
@@ -347,23 +353,30 @@ function createApp() {
         }
 
         const storedPath = buildStoredPath(f.originalname, mime);
+        console.log('[POST /api/cases] Stored path:', storedPath);
 
         // 确保上传目录存在
         const uploadDir = path.dirname(storedPath);
         if (!fs.existsSync(uploadDir)) {
+          console.log('[POST /api/cases] Creating upload dir:', uploadDir);
           fs.mkdirSync(uploadDir, { recursive: true });
         }
 
         // 尝试写入文件
         try {
+          console.log('[POST /api/cases] Writing file, size:', f.buffer?.length || 0, 'bytes');
           fs.writeFileSync(storedPath, f.buffer);
+          console.log('[POST /api/cases] File written successfully');
         } catch (writeError) {
-          console.error('Failed to write file:', writeError);
+          console.error('[POST /api/cases] Failed to write file:', writeError);
           return jsonError(res, 500, `Failed to save file: ${writeError.message}. Check upload directory permissions.`);
         }
 
+        console.log('[POST /api/cases] Calculating SHA256...');
         const sha = sha256File(storedPath);
+        console.log('[POST /api/cases] SHA256:', sha);
 
+        console.log('[POST /api/cases] Inserting file record into DB...');
         await pool.query(
           'INSERT INTO case_files (case_id, path, mime, sha256) VALUES (?,?,?,?)',
           [caseId, storedPath, mime, sha]
@@ -371,10 +384,13 @@ function createApp() {
         saved.push({ path: storedPath, mime, sha256: sha });
       }
 
+      console.log('[POST /api/cases] Updating case status...');
       await pool.query('UPDATE cases SET status=? WHERE id=?', ['uploaded', caseId]);
+      console.log('[POST /api/cases] Success! Sending response...');
       res.status(201).json({ success: true, caseId, files: saved });
     } catch (error) {
-      console.error('POST /api/cases error:', error);
+      console.error('[POST /api/cases] FATAL ERROR:', error);
+      console.error('[POST /api/cases] Error stack:', error.stack);
       return jsonError(res, 500, `Failed to create case: ${error.message}`);
     }
   });
