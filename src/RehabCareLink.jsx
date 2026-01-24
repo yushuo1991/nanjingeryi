@@ -301,6 +301,7 @@ export default function RehabCareLink() {
   const [detailTab, setDetailTab] = useState('today'); // today | logs
   const [showAllPatients, setShowAllPatients] = useState(false); // 显示全部患者弹窗
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // 显示删除确认对话框
+  const [isEditingDetail, setIsEditingDetail] = useState(false); // 详情页编辑模式
   const [toast, setToast] = useState(null); // 提示消息
 
   // AI收治状态
@@ -671,6 +672,39 @@ export default function RehabCareLink() {
       gasGoals: prev.gasGoals.filter((_, i) => i !== index)
     }));
   };
+
+  // 生成今日治疗日志
+  const generateTodayLog = useCallback((patient) => {
+    if (!patient) return;
+
+    const today = new Date().toISOString().split('T')[0];
+
+    // 收集已完成的治疗项目
+    const completedItems = patient.treatmentPlan.items
+      .filter(item => item.completed)
+      .map(item => item.name);
+
+    // 生成新日志
+    const newLog = {
+      date: today,
+      items: completedItems.length > 0 ? completedItems : ['无'],
+      highlight: patient.treatmentPlan.highlights[0] || '常规康复训练',
+      notes: '',
+      therapist: '吴大勇'
+    };
+
+    // 更新患者的治疗日志
+    const updatedLogs = [newLog, ...(patient.treatmentLogs || [])];
+
+    updatePatient(patient.id, {
+      treatmentLogs: updatedLogs,
+      todayTreated: true
+    });
+
+    // 切换到日志标签页
+    setDetailTab('logs');
+    showToast('今日治疗日志已生成', 'success');
+  }, [updatePatient, showToast]);
 
   // 添加治疗项目
   const addTreatmentItem = () => {
@@ -1391,8 +1425,16 @@ export default function RehabCareLink() {
               </button>
               {/* 编辑按钮 - 仅治疗师可见 */}
               {userRole === 'therapist' && (
-                <button className="p-2 hover:bg-slate-100 rounded-xl transition-all duration-200">
-                  <Edit3 size={20} className="text-slate-600" />
+                <button
+                  onClick={() => setIsEditingDetail(!isEditingDetail)}
+                  className={`p-2 rounded-xl transition-all duration-200 ${
+                    isEditingDetail
+                      ? 'bg-blue-100 text-blue-600'
+                      : 'hover:bg-slate-100 text-slate-600'
+                  }`}
+                  title={isEditingDetail ? '退出编辑' : '编辑详情'}
+                >
+                  <Edit3 size={20} />
                 </button>
               )}
               {/* 删除按钮 - 仅治疗师可见 */}
@@ -1436,32 +1478,25 @@ export default function RehabCareLink() {
               </div>
             </div>
 
-            {/* GAS目标进度 */}
+            {/* 康复目标 - 重新排版 */}
             <div className="mt-5 pt-5 border-t border-gray-100">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <Target size={16} className="text-rose-500" />
-                  GAS目标达成度
-                </h4>
-                <span className="text-lg font-bold text-rose-500">{patient.gasScore}%</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2.5 mb-4">
-                <div
-                  className="bg-gradient-to-r from-rose-400 to-rose-500 h-2.5 rounded-full transition-all duration-500"
-                  style={{ width: `${patient.gasScore}%` }}
-                />
-              </div>
+              <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-3">
+                <Target size={16} className="text-rose-500" />
+                康复目标
+              </h4>
               <div className="space-y-2.5">
                 {patient.gasGoals.map((goal, i) => (
-                  <div key={i} className="flex items-center gap-3 text-xs">
-                    <span className="text-slate-600 w-20 font-medium">{goal.name}</span>
-                    <div className="flex-1 bg-slate-100 rounded-full h-1.5">
+                  <div key={i} className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-slate-700">{goal.name}</span>
+                      <span className="text-xs text-slate-500">{goal.current}/{goal.target}</span>
+                    </div>
+                    <div className="mt-2 w-full bg-white/60 rounded-full h-1.5">
                       <div
-                        className="bg-indigo-400 h-1.5 rounded-full transition-all duration-300"
+                        className="bg-gradient-to-r from-indigo-400 to-indigo-500 h-1.5 rounded-full transition-all duration-300"
                         style={{ width: `${(goal.current / goal.target) * 100}%` }}
                       />
                     </div>
-                    <span className="text-slate-500 w-14 text-right font-medium">{goal.current}/{goal.target}</span>
                   </div>
                 ))}
               </div>
@@ -1505,42 +1540,65 @@ export default function RehabCareLink() {
           {/* 今日治疗 */}
           {detailTab === 'today' && (
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              {/* 治疗目标 - 优化排版 */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-4">
+                <h5 className="text-sm font-semibold text-indigo-700 flex items-center gap-2 mb-2">
+                  <Target size={16} className="text-indigo-500" />
+                  治疗目标
+                </h5>
+                <p className="text-sm text-indigo-900 leading-relaxed">{patient.treatmentPlan.focus}</p>
+              </div>
+
               {/* 个性化重点 */}
               {patient.treatmentPlan.highlights.length > 0 && (
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-3 mb-4">
-                  <h5 className="text-sm font-medium text-amber-700 flex items-center gap-2 mb-2">
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 mb-4">
+                  <h5 className="text-sm font-semibold text-amber-700 flex items-center gap-2 mb-2">
                     <Star size={16} className="text-amber-500" />
                     今日个性化重点
                   </h5>
-                  {patient.treatmentPlan.highlights.map((h, i) => (
-                    <p key={i} className="text-sm text-amber-800">{h}</p>
-                  ))}
+                  <ul className="text-sm text-amber-800 space-y-1.5">
+                    {patient.treatmentPlan.highlights.map((h, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="text-amber-500 mt-0.5">•</span>
+                        <span className="flex-1">{h}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
 
-              {/* 治疗目标 */}
-              <div className="mb-4">
-                <h5 className="text-sm font-medium text-gray-700 mb-1">治疗目标</h5>
-                <p className="text-sm text-gray-600">{patient.treatmentPlan.focus}</p>
-              </div>
-
-              {/* 注意事项 */}
+              {/* 注意事项 - 优化排版 */}
               {patient.treatmentPlan.precautions.length > 0 && (
-                <div className="bg-red-50 border border-red-100 rounded-xl p-3 mb-4">
-                  <h5 className="text-sm font-medium text-red-700 flex items-center gap-2 mb-2">
-                    <AlertCircle size={16} />
+                <div className="bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 rounded-xl p-4 mb-4">
+                  <h5 className="text-sm font-semibold text-red-700 flex items-center gap-2 mb-2">
+                    <AlertCircle size={16} className="text-red-500" />
                     注意事项
                   </h5>
-                  <ul className="text-sm text-red-600 space-y-1">
+                  <ul className="text-sm text-red-700 space-y-1.5">
                     {patient.treatmentPlan.precautions.map((p, i) => (
-                      <li key={i}>• {p}</li>
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="text-red-500 mt-0.5">⚠</span>
+                        <span className="flex-1">{p}</span>
+                      </li>
                     ))}
                   </ul>
                 </div>
               )}
 
               {/* 治疗项目列表 */}
-              <h5 className="text-sm font-medium text-gray-700 mb-3">治疗项目</h5>
+              <div className="flex items-center justify-between mb-3">
+                <h5 className="text-sm font-semibold text-gray-700">治疗项目</h5>
+                {/* 治疗师视角显示生成日志按钮 */}
+                {userRole === 'therapist' && (
+                  <button
+                    onClick={() => generateTodayLog(patient)}
+                    className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm hover:shadow-md transition-all active:scale-95"
+                  >
+                    <FileText size={14} />
+                    生成今日日志
+                  </button>
+                )}
+              </div>
               {patient.treatmentPlan.items.length > 0 ? (
                 <div className="space-y-2">
                   {patient.treatmentPlan.items.map(item => (
