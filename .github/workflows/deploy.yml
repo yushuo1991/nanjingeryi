@@ -77,75 +77,99 @@ jobs:
           apt-get update -qq
           apt-get install -y nginx
 
+          echo "===== 创建mime.types (如果不存在) ====="
+          if [ ! -f /etc/nginx/mime.types ]; then
+            cat > /etc/nginx/mime.types << 'MIMETYPES'
+types {
+    text/html                             html htm shtml;
+    text/css                              css;
+    text/xml                              xml;
+    image/gif                             gif;
+    image/jpeg                            jpeg jpg;
+    application/javascript                js;
+    application/json                      json;
+    image/png                             png;
+    image/svg+xml                         svg svgz;
+    image/webp                            webp;
+    application/font-woff                 woff;
+    application/font-woff2                woff2;
+    application/octet-stream              bin exe dll;
+    application/pdf                       pdf;
+    application/zip                       zip;
+}
+MIMETYPES
+            echo "mime.types已创建"
+          fi
+
           echo "===== 创建nginx.conf ====="
           mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled /var/log/nginx
 
           cat > /etc/nginx/nginx.conf << 'NGINXMAIN'
-          user www-data;
-          worker_processes auto;
-          pid /run/nginx.pid;
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
 
-          events {
-              worker_connections 1024;
-          }
+events {
+    worker_connections 1024;
+}
 
-          http {
-              sendfile on;
-              tcp_nopush on;
-              tcp_nodelay on;
-              keepalive_timeout 65;
-              types_hash_max_size 2048;
-              client_max_body_size 100M;
+http {
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+    client_max_body_size 100M;
 
-              include /etc/nginx/mime.types;
-              default_type application/octet-stream;
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
 
-              access_log /var/log/nginx/access.log;
-              error_log /var/log/nginx/error.log;
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
 
-              gzip on;
+    gzip on;
 
-              include /etc/nginx/sites-enabled/*;
-          }
-          NGINXMAIN
+    include /etc/nginx/sites-enabled/*;
+}
+NGINXMAIN
 
           echo "===== 创建站点配置 ====="
           cat > /etc/nginx/sites-available/ey.yushuo.click << 'NGINXSITE'
-          server {
-              listen 80 default_server;
-              listen [::]:80 default_server;
-              server_name ey.yushuo.click www.ey.yushuo.click _;
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name ey.yushuo.click www.ey.yushuo.click _;
 
-              client_max_body_size 100M;
-              client_body_timeout 300s;
-              send_timeout 300s;
+    client_max_body_size 100M;
+    client_body_timeout 300s;
+    send_timeout 300s;
 
-              root /var/www/rehab-care-link/dist;
-              index index.html;
+    root /var/www/rehab-care-link/dist;
+    index index.html;
 
-              location / {
-                  try_files $uri $uri/ /index.html;
-              }
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
 
-              location /api/ {
-                  proxy_pass http://127.0.0.1:3201;
-                  proxy_http_version 1.1;
-                  proxy_set_header Connection "";
-                  proxy_set_header Host $host;
-                  proxy_set_header X-Real-IP $remote_addr;
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                  proxy_connect_timeout 300s;
-                  proxy_send_timeout 300s;
-                  proxy_read_timeout 300s;
-                  proxy_buffering off;
-                  proxy_request_buffering off;
-              }
+    location /api/ {
+        proxy_pass http://127.0.0.1:3201;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+        proxy_buffering off;
+        proxy_request_buffering off;
+    }
 
-              location /uploads/ {
-                  alias /var/www/rehab-care-link/uploads/;
-              }
-          }
-          NGINXSITE
+    location /uploads/ {
+        alias /var/www/rehab-care-link/uploads/;
+    }
+}
+NGINXSITE
 
           rm -f /etc/nginx/sites-enabled/*
           ln -sf /etc/nginx/sites-available/ey.yushuo.click /etc/nginx/sites-enabled/
