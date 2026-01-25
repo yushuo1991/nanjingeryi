@@ -176,7 +176,7 @@ async function callQwenVision({ imageDataUrls, prompt, requestTag, timeoutMs }) 
   };
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), Number(timeoutMs || process.env.QWEN_TIMEOUT_MS || 120000));
+  const timeout = setTimeout(() => controller.abort(), Number(timeoutMs || process.env.QWEN_TIMEOUT_MS || 180000)); // 增加到3分钟
   let response;
   try {
     response = await fetch(url, {

@@ -526,8 +526,27 @@ export default function RehabCareLink() {
             setOcrProgress(prev => Math.min(prev + 10, 90));
           }, 500); // 降低更新频率从300ms到500ms
 
-          const { profile } = await extractProfile(caseId);
-          const { plan } = await generatePlan(caseId, profile);
+          let profile = null;
+          let plan = null;
+
+          try {
+            // 第一步：提取患者信息（必须成功）
+            const extractResult = await extractProfile(caseId);
+            profile = extractResult.profile;
+            setOcrProgress(70);
+
+            // 第二步：生成方案（可选，失败不影响建档）
+            try {
+              const planResult = await generatePlan(caseId, profile);
+              plan = planResult.plan;
+            } catch (planError) {
+              console.warn('生成方案超时，允许手动填写:', planError);
+              showToast('AI生成方案超时，请手动填写治疗方案', 'warning');
+              // 继续，使用空方案
+            }
+          } catch (extractError) {
+            throw new Error('识别患者信息失败: ' + extractError.message);
+          }
 
           if (progressIntervalRef.current) {
             clearInterval(progressIntervalRef.current);
