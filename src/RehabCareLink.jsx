@@ -317,6 +317,7 @@ export default function RehabCareLink() {
   const [ocrProgress, setOcrProgress] = useState(0);
   const [ocrText, setOcrText] = useState('');
   const [isOcrProcessing, setIsOcrProcessing] = useState(false);
+  const [isSavingPatient, setIsSavingPatient] = useState(false); // 建档按钮独立loading状态
   const progressIntervalRef = useRef(null);
 
   // 批量生成状态
@@ -922,7 +923,7 @@ export default function RehabCareLink() {
     };
 
     // 写入后端（MySQL）并刷新列表
-    setIsOcrProcessing(true); // 显示loading状态
+    setIsSavingPatient(true); // 只更新按钮状态，不触发整个Modal重渲染
 
     // 使用async/await确保所有状态更新在一起
     const savePatient = async () => {
@@ -947,7 +948,6 @@ export default function RehabCareLink() {
         setUploadedImage(null);
         setOcrText('');
         setOcrProgress(0);
-        setIsOcrProcessing(false);
 
         // 跳转到患儿详情页
         navigateTo('patientDetail', created);
@@ -955,7 +955,8 @@ export default function RehabCareLink() {
       } catch (e) {
         console.error('建档失败:', e);
         showToast(e.message || '保存失败，请重试', 'error');
-        setIsOcrProcessing(false);
+      } finally {
+        setIsSavingPatient(false);
       }
     };
 
@@ -2214,13 +2215,13 @@ export default function RehabCareLink() {
                   </button>
                   <button
                     onClick={confirmAdmission}
-                    disabled={isOcrProcessing}
+                    disabled={isSavingPatient || isOcrProcessing}
                     className={`flex-1 bg-gradient-to-r from-rose-500 to-rose-600 text-white py-3 rounded-xl font-medium flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-98 ${
-                      isOcrProcessing ? 'opacity-50 cursor-not-allowed' : ''
+                      isSavingPatient ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                     style={{ boxShadow: '0 4px 14px -2px rgba(233, 30, 99, 0.4)' }}
                   >
-                    {isOcrProcessing ? (
+                    {isSavingPatient ? (
                       <>
                         <Loader2 size={20} className="animate-spin" />
                         建档中...
