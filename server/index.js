@@ -992,7 +992,9 @@ function createApp() {
         1,
       ]);
     }
-    res.status(201).json({ success: true, patientId });
+    // 返回完整的患者数据，避免前端额外请求
+    const createdPatient = { ...payload, id: patientId };
+    res.status(201).json({ success: true, patientId, patient: createdPatient });
   });
 
   app.put('/api/patients/:id', async (req, res) => {

@@ -923,7 +923,9 @@ export default function RehabCareLink() {
 
     // 写入后端（MySQL）并刷新列表
     setIsOcrProcessing(true); // 显示loading状态
-    (async () => {
+
+    // 使用async/await确保所有状态更新在一起
+    const savePatient = async () => {
       try {
         const res = await api('/api/patients', {
           method: 'POST',
@@ -931,32 +933,33 @@ export default function RehabCareLink() {
           body: JSON.stringify({ patient: newPatient, plan: newPatient.treatmentPlan, caseId: aiResult._caseId || null }),
         });
         if (!res?.success) throw new Error(res?.error || '保存失败');
-        const listRes = await api('/api/patients');
-        const list = Array.isArray(listRes?.items) ? listRes.items : [];
-        setPatients(list);
-        const created = list.find((p) => p.id === res.patientId) || list[list.length - 1];
 
-        // 关闭弹窗并重置状态
+        // 直接使用返回的患者数据，避免额外的列表请求
+        const created = res.patient || { ...newPatient, id: res.patientId };
+
+        // 更新本地列表（不再请求服务器）
+        setPatients(prev => [...prev, created]);
+
+        // 一次性关闭弹窗并重置所有状态
         setShowAIModal(false);
         setAiStep(0);
         setAiResult(null);
         setUploadedImage(null);
+        setOcrText('');
+        setOcrProgress(0);
+        setIsOcrProcessing(false);
 
-        // 跳转到患儿详情页（navigateTo会自动设置selectedPatient）
-        if (created) {
-          navigateTo('patientDetail', created);
-        }
-
+        // 跳转到患儿详情页
+        navigateTo('patientDetail', created);
         showToast('建档成功', 'success');
       } catch (e) {
         console.error('建档失败:', e);
         showToast(e.message || '保存失败，请重试', 'error');
-      } finally {
-        setIsOcrProcessing(false); // 隐藏loading状态
+        setIsOcrProcessing(false);
       }
-    })();
-    setOcrText('');
-    setOcrProgress(0);
+    };
+
+    savePatient();
   };
 
   // 清除所有示例数据
