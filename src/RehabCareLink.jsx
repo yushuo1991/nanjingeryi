@@ -303,6 +303,7 @@ export default function RehabCareLink() {
   const [showAllPatients, setShowAllPatients] = useState(false); // 显示全部患者弹窗
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // 显示删除确认对话框
   const [isEditingDetail, setIsEditingDetail] = useState(false); // 详情页编辑模式
+  const [editedPatient, setEditedPatient] = useState(null); // 编辑中的患者数据
   const [showLogConfirm, setShowLogConfirm] = useState(false); // 显示日志确认对话框
   const [generatedLog, setGeneratedLog] = useState(null); // 生成的日志内容
   const [toast, setToast] = useState(null); // 提示消息
@@ -312,10 +313,11 @@ export default function RehabCareLink() {
   const [aiResult, setAiResult] = useState(null);
   const [uploadedImage, setUploadedImage] = useState(null); // 上传的图片预览
 
-  // 识别状态（沿用变量名，不影响功能）
+  // 识别状态（使用useRef避免重新渲染）
   const [ocrProgress, setOcrProgress] = useState(0);
   const [ocrText, setOcrText] = useState('');
   const [isOcrProcessing, setIsOcrProcessing] = useState(false);
+  const progressIntervalRef = useRef(null);
 
   // 批量生成状态
   const [batchPatients, setBatchPatients] = useState([]);
@@ -516,19 +518,21 @@ export default function RehabCareLink() {
         setIsOcrProcessing(true);
         setOcrProgress(0);
 
-        let progressInterval = null;
         try {
           const caseId = await createCaseWithFiles(files);
 
-          // 模拟进度（模型接口无进度回调）
-          progressInterval = setInterval(() => {
+          // 模拟进度（使用ref避免重新渲染Modal）
+          progressIntervalRef.current = setInterval(() => {
             setOcrProgress(prev => Math.min(prev + 10, 90));
-          }, 300);
+          }, 500); // 降低更新频率从300ms到500ms
 
           const { profile } = await extractProfile(caseId);
           const { plan } = await generatePlan(caseId, profile);
-          clearInterval(progressInterval);
-          progressInterval = null;
+
+          if (progressIntervalRef.current) {
+            clearInterval(progressIntervalRef.current);
+            progressIntervalRef.current = null;
+          }
           setOcrProgress(100);
 
           // 初始化表单数据
@@ -575,9 +579,9 @@ export default function RehabCareLink() {
           // 移除toast提示，静默进入编辑模式
 
         } catch (error) {
-          if (progressInterval) {
-            clearInterval(progressInterval);
-            progressInterval = null;
+          if (progressIntervalRef.current) {
+            clearInterval(progressIntervalRef.current);
+            progressIntervalRef.current = null;
           }
           console.error('AI识别失败:', error);
           showToast('AI识别失败: ' + error.message, 'error');
@@ -651,7 +655,7 @@ export default function RehabCareLink() {
         },
       }));
       // 生成方案后自动确认建档并跳转
-      await confirmAdmission();
+      setTimeout(() => confirmAdmission(), 300); // 延迟确保状态更新完成
     } catch (e) {
       showToast(e.message || '生成方案失败', 'error');
     } finally {
@@ -754,6 +758,29 @@ export default function RehabCareLink() {
     setDetailTab('logs');
     showToast('今日治疗日志已保存', 'success');
   }, [generatedLog, selectedPatient, updatePatient, showToast]);
+
+  // 切换编辑模式
+  const toggleEditMode = useCallback(() => {
+    if (!isEditingDetail) {
+      // 进入编辑模式，复制患者数据
+      setEditedPatient({ ...selectedPatient });
+      setIsEditingDetail(true);
+    } else {
+      // 退出编辑模式，放弃更改
+      setEditedPatient(null);
+      setIsEditingDetail(false);
+    }
+  }, [isEditingDetail, selectedPatient]);
+
+  // 保存编辑
+  const savePatientEdit = useCallback(() => {
+    if (!editedPatient) return;
+
+    updatePatient(editedPatient.id, editedPatient);
+    setIsEditingDetail(false);
+    setEditedPatient(null);
+    showToast('保存成功', 'success');
+  }, [editedPatient, updatePatient, showToast]);
 
   // 添加治疗项目
   const addTreatmentItem = () => {
@@ -1467,17 +1494,28 @@ export default function RehabCareLink() {
               </button>
               {/* 编辑按钮 - 仅治疗师可见 */}
               {userRole === 'therapist' && (
-                <button
-                  onClick={() => setIsEditingDetail(!isEditingDetail)}
-                  className={`p-2 rounded-xl transition-all duration-200 ${
-                    isEditingDetail
-                      ? 'bg-blue-100 text-blue-600'
-                      : 'hover:bg-slate-100 text-slate-600'
-                  }`}
-                  title={isEditingDetail ? '退出编辑' : '编辑详情'}
-                >
-                  <Edit3 size={20} />
-                </button>
+                <>
+                  {isEditingDetail && (
+                    <button
+                      onClick={savePatientEdit}
+                      className="p-2 bg-emerald-100 text-emerald-600 rounded-xl transition-all duration-200 hover:bg-emerald-200"
+                      title="保存"
+                    >
+                      <Check size={20} />
+                    </button>
+                  )}
+                  <button
+                    onClick={toggleEditMode}
+                    className={`p-2 rounded-xl transition-all duration-200 ${
+                      isEditingDetail
+                        ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        : 'hover:bg-slate-100 text-slate-600'
+                    }`}
+                    title={isEditingDetail ? '取消编辑' : '编辑详情'}
+                  >
+                    {isEditingDetail ? <X size={20} /> : <Edit3 size={20} />}
+                  </button>
+                </>
               )}
               {/* 删除按钮 - 仅治疗师可见 */}
               {userRole === 'therapist' && (
@@ -2168,11 +2206,23 @@ export default function RehabCareLink() {
                   </button>
                   <button
                     onClick={confirmAdmission}
-                    className="flex-1 bg-gradient-to-r from-rose-500 to-rose-600 text-white py-3 rounded-xl font-medium flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-98"
+                    disabled={isOcrProcessing}
+                    className={`flex-1 bg-gradient-to-r from-rose-500 to-rose-600 text-white py-3 rounded-xl font-medium flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-98 ${
+                      isOcrProcessing ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                     style={{ boxShadow: '0 4px 14px -2px rgba(233, 30, 99, 0.4)' }}
                   >
-                    <Check size={20} />
-                    确认建档
+                    {isOcrProcessing ? (
+                      <>
+                        <Loader2 size={20} className="animate-spin" />
+                        建档中...
+                      </>
+                    ) : (
+                      <>
+                        <Check size={20} />
+                        确认建档
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -2554,14 +2604,17 @@ export default function RehabCareLink() {
               </div>
             </div>
 
-            {/* 今日重点 - 黄色卡片 */}
+            {/* 今日重点 - 可编辑 */}
             <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-4 mb-4">
               <div className="flex items-start gap-2">
                 <Star size={16} className="text-amber-500 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-amber-900 leading-relaxed">
-                    {generatedLog.highlight}
-                  </p>
+                  <textarea
+                    value={generatedLog.highlight}
+                    onChange={(e) => setGeneratedLog({ ...generatedLog, highlight: e.target.value })}
+                    className="w-full text-sm font-medium text-amber-900 leading-relaxed bg-transparent border-none outline-none resize-none"
+                    rows={2}
+                  />
                 </div>
               </div>
             </div>
@@ -2578,11 +2631,15 @@ export default function RehabCareLink() {
               </div>
             </div>
 
-            {/* 详细记录 */}
-            <div className="bg-slate-50 rounded-xl p-4 mb-6">
-              <p className="text-sm text-slate-700 leading-relaxed">
-                {generatedLog.detailRecord}
-              </p>
+            {/* 详细记录 - 可编辑 */}
+            <div className="mb-6">
+              <label className="text-xs text-slate-500 mb-2 block">详细记录</label>
+              <textarea
+                value={generatedLog.detailRecord}
+                onChange={(e) => setGeneratedLog({ ...generatedLog, detailRecord: e.target.value })}
+                className="w-full bg-slate-50 rounded-xl p-4 text-sm text-slate-700 leading-relaxed border border-slate-200 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none resize-none"
+                rows={5}
+              />
             </div>
 
             <div className="flex gap-3">
