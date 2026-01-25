@@ -130,8 +130,19 @@ jobs:
           cd /var/www/rehab-care-link/server
           npm install --production
           mkdir -p /var/www/rehab-care-link/uploads
+
+          # 停止旧进程
           pm2 delete rehab-care-link-server 2>/dev/null || true
-          pm2 start index.js --name rehab-care-link-server
+
+          # 启动新进程（设置环境变量）
+          PORT=3201 pm2 start index.js --name rehab-care-link-server --log /var/log/rehab-api.log --error /var/log/rehab-error.log
           pm2 save
+
+          # 等待服务启动
+          sleep 3
+
+          # 检查服务状态
+          pm2 status
+          curl -f http://127.0.0.1:3201/api/health || echo "警告：API健康检查失败"
 
           echo "部署完成"
