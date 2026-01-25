@@ -516,15 +516,9 @@ export default function RehabCareLink() {
         setUploadedImage(reader.result);
         setAiStep(1); // 进入AI识别步骤
         setIsOcrProcessing(true);
-        setOcrProgress(0);
 
         try {
           const caseId = await createCaseWithFiles(files);
-
-          // 模拟进度（使用ref避免重新渲染Modal）
-          progressIntervalRef.current = setInterval(() => {
-            setOcrProgress(prev => Math.min(prev + 10, 90));
-          }, 500); // 降低更新频率从300ms到500ms
 
           let profile = null;
           let plan = null;
@@ -533,7 +527,6 @@ export default function RehabCareLink() {
             // 第一步：提取患者信息（必须成功）
             const extractResult = await extractProfile(caseId);
             profile = extractResult.profile;
-            setOcrProgress(70);
 
             // 第二步：生成方案（可选，失败不影响建档）
             try {
@@ -547,12 +540,6 @@ export default function RehabCareLink() {
           } catch (extractError) {
             throw new Error('识别患者信息失败: ' + extractError.message);
           }
-
-          if (progressIntervalRef.current) {
-            clearInterval(progressIntervalRef.current);
-            progressIntervalRef.current = null;
-          }
-          setOcrProgress(100);
 
           // 初始化表单数据
           const safeGender = ['男', '女', '未知'].includes(profile?.patient?.gender) ? profile.patient.gender : '未知';
@@ -598,10 +585,6 @@ export default function RehabCareLink() {
           // 移除toast提示，静默进入编辑模式
 
         } catch (error) {
-          if (progressIntervalRef.current) {
-            clearInterval(progressIntervalRef.current);
-            progressIntervalRef.current = null;
-          }
           console.error('AI识别失败:', error);
           showToast('AI识别失败: ' + error.message, 'error');
           // 即使失败也允许手动填写
@@ -939,6 +922,7 @@ export default function RehabCareLink() {
     };
 
     // 写入后端（MySQL）并刷新列表
+    setIsOcrProcessing(true); // 显示loading状态
     (async () => {
       try {
         const res = await api('/api/patients', {
@@ -965,8 +949,10 @@ export default function RehabCareLink() {
 
         showToast('建档成功', 'success');
       } catch (e) {
-        showToast(e.message || '保存失败', 'error');
-        return;
+        console.error('建档失败:', e);
+        showToast(e.message || '保存失败，请重试', 'error');
+      } finally {
+        setIsOcrProcessing(false); // 隐藏loading状态
       }
     })();
     setOcrText('');
@@ -1977,21 +1963,21 @@ export default function RehabCareLink() {
                 </div>
 
                 <h4 className="text-lg font-semibold text-slate-800 mb-2">AI识别中...</h4>
-                <p className="text-sm text-slate-500 mb-4">通义千问3-VL-Plus 正在识别病例图片，请稍候</p>
+                <p className="text-sm text-slate-500 mb-4">正在识别病例图片，请稍候</p>
 
-                {/* 进度条 */}
+                {/* 进度条 - 使用CSS动画代替JS更新 */}
                 <div className="max-w-xs mx-auto">
-                  <div className="w-full bg-slate-200 rounded-full h-2.5 mb-2">
+                  <div className="w-full bg-slate-200 rounded-full h-2.5 mb-2 overflow-hidden">
                     <div
-                      className="bg-gradient-to-r from-indigo-500 to-blue-600 h-2.5 rounded-full transition-all duration-300"
-                      style={{ width: `${ocrProgress}%` }}
+                      className="bg-gradient-to-r from-indigo-500 to-blue-600 h-2.5 rounded-full animate-pulse"
+                      style={{ width: '100%', opacity: 0.8 }}
                     />
                   </div>
-                  <p className="text-xs text-slate-500">{ocrProgress}% 完成</p>
+                  <p className="text-xs text-slate-500">识别中，请耐心等待...</p>
                 </div>
 
                 <p className="text-xs text-slate-400 mt-6">
-                  通义千问3-VL-Plus · 图片理解
+                  AI智能识别 · 图片理解
                 </p>
               </div>
             )}
