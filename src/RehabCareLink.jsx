@@ -799,8 +799,8 @@ export default function RehabCareLink() {
   // 切换编辑模式
   const toggleEditMode = useCallback(() => {
     if (!isEditingDetail) {
-      // 进入编辑模式，复制患者数据
-      setEditedPatient({ ...selectedPatient });
+      // 进入编辑模式，深拷贝患者数据（包含treatmentLogs）
+      setEditedPatient(JSON.parse(JSON.stringify(selectedPatient)));
       setIsEditingDetail(true);
     } else {
       // 退出编辑模式，放弃更改
@@ -1582,12 +1582,68 @@ export default function RehabCareLink() {
                 {patient.avatar}
               </div>
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-xl font-bold text-slate-800">{patient.name}</h2>
-                  <span className="text-sm text-slate-500">{patient.age} · {patient.gender}</span>
-                </div>
-                <p className="text-sm text-slate-500 mb-1">床号：{patient.bedNo} · {patient.department}</p>
-                <p className="text-indigo-600 font-medium">{patient.diagnosis}</p>
+                {isEditingDetail && editedPatient ? (
+                  <>
+                    <div className="flex items-center gap-2 mb-2">
+                      <input
+                        type="text"
+                        value={editedPatient.name}
+                        onChange={(e) => setEditedPatient({ ...editedPatient, name: e.target.value })}
+                        className="text-xl font-bold text-slate-800 border-b border-indigo-300 focus:border-indigo-500 outline-none bg-transparent w-24"
+                        placeholder="姓名"
+                      />
+                      <input
+                        type="text"
+                        value={editedPatient.age}
+                        onChange={(e) => setEditedPatient({ ...editedPatient, age: e.target.value })}
+                        className="text-sm text-slate-500 border-b border-indigo-300 focus:border-indigo-500 outline-none bg-transparent w-16"
+                        placeholder="年龄"
+                      />
+                      <select
+                        value={editedPatient.gender}
+                        onChange={(e) => setEditedPatient({ ...editedPatient, gender: e.target.value })}
+                        className="text-sm text-slate-500 border-b border-indigo-300 focus:border-indigo-500 outline-none bg-transparent"
+                      >
+                        <option value="男">男</option>
+                        <option value="女">女</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm text-slate-500">床号：</span>
+                      <input
+                        type="text"
+                        value={editedPatient.bedNo}
+                        onChange={(e) => setEditedPatient({ ...editedPatient, bedNo: e.target.value })}
+                        className="text-sm text-slate-700 border-b border-indigo-300 focus:border-indigo-500 outline-none bg-transparent w-16"
+                        placeholder="床号"
+                      />
+                      <span className="text-slate-400">·</span>
+                      <input
+                        type="text"
+                        value={editedPatient.department}
+                        onChange={(e) => setEditedPatient({ ...editedPatient, department: e.target.value })}
+                        className="text-sm text-slate-700 border-b border-indigo-300 focus:border-indigo-500 outline-none bg-transparent w-24"
+                        placeholder="科室"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      value={editedPatient.diagnosis}
+                      onChange={(e) => setEditedPatient({ ...editedPatient, diagnosis: e.target.value })}
+                      className="text-indigo-600 font-medium border-b border-indigo-300 focus:border-indigo-500 outline-none bg-transparent w-full"
+                      placeholder="诊断"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h2 className="text-xl font-bold text-slate-800">{patient.name}</h2>
+                      <span className="text-sm text-slate-500">{patient.age} · {patient.gender}</span>
+                    </div>
+                    <p className="text-sm text-slate-500 mb-1">床号：{patient.bedNo} · {patient.department}</p>
+                    <p className="text-indigo-600 font-medium">{patient.diagnosis}</p>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -1635,7 +1691,20 @@ export default function RehabCareLink() {
                   <Target size={16} className="text-indigo-500" />
                   治疗目标
                 </h5>
-                <p className="text-sm text-indigo-900 leading-relaxed">{patient.treatmentPlan.focus}</p>
+                {isEditingDetail && editedPatient ? (
+                  <textarea
+                    value={editedPatient.treatmentPlan?.focus || ''}
+                    onChange={(e) => setEditedPatient({
+                      ...editedPatient,
+                      treatmentPlan: { ...editedPatient.treatmentPlan, focus: e.target.value }
+                    })}
+                    className="text-sm text-indigo-900 leading-relaxed w-full bg-white/50 border border-indigo-200 rounded-lg p-2 focus:border-indigo-400 outline-none resize-none"
+                    rows={2}
+                    placeholder="治疗目标"
+                  />
+                ) : (
+                  <p className="text-sm text-indigo-900 leading-relaxed">{patient.treatmentPlan.focus}</p>
+                )}
               </div>
 
               {/* 个性化重点 */}
@@ -1787,10 +1856,24 @@ export default function RehabCareLink() {
 
                           {/* 亮点标注 */}
                           <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-2">
-                            <p className="text-sm text-amber-800 flex items-center gap-1">
-                              <Star size={14} className="text-amber-500" />
-                              {log.highlight}
-                            </p>
+                            {isEditingDetail && editedPatient ? (
+                              <textarea
+                                value={editedPatient.treatmentLogs?.[i]?.highlight || log.highlight}
+                                onChange={(e) => {
+                                  const newLogs = [...(editedPatient.treatmentLogs || [])];
+                                  if (!newLogs[i]) newLogs[i] = { ...log };
+                                  newLogs[i].highlight = e.target.value;
+                                  setEditedPatient({ ...editedPatient, treatmentLogs: newLogs });
+                                }}
+                                className="text-sm text-amber-800 w-full bg-transparent border-none outline-none resize-none"
+                                rows={2}
+                              />
+                            ) : (
+                              <p className="text-sm text-amber-800 flex items-center gap-1">
+                                <Star size={14} className="text-amber-500" />
+                                {log.highlight}
+                              </p>
+                            )}
                           </div>
 
                           <div className="flex flex-wrap gap-1 mb-2">
@@ -1800,7 +1883,45 @@ export default function RehabCareLink() {
                               </span>
                             ))}
                           </div>
-                          <p className="text-xs text-gray-600">{log.notes}</p>
+
+                          {/* 详细记录 */}
+                          {(log.detailRecord || isEditingDetail) && (
+                            <div className="bg-slate-100 rounded-lg p-2 mb-2">
+                              {isEditingDetail && editedPatient ? (
+                                <textarea
+                                  value={editedPatient.treatmentLogs?.[i]?.detailRecord || log.detailRecord || ''}
+                                  onChange={(e) => {
+                                    const newLogs = [...(editedPatient.treatmentLogs || [])];
+                                    if (!newLogs[i]) newLogs[i] = { ...log };
+                                    newLogs[i].detailRecord = e.target.value;
+                                    setEditedPatient({ ...editedPatient, treatmentLogs: newLogs });
+                                  }}
+                                  className="text-xs text-slate-700 leading-relaxed w-full bg-transparent border-none outline-none resize-none"
+                                  rows={3}
+                                  placeholder="详细记录"
+                                />
+                              ) : (
+                                <p className="text-xs text-slate-700 leading-relaxed">{log.detailRecord}</p>
+                              )}
+                            </div>
+                          )}
+
+                          {isEditingDetail && editedPatient ? (
+                            <textarea
+                              value={editedPatient.treatmentLogs?.[i]?.notes || log.notes || ''}
+                              onChange={(e) => {
+                                const newLogs = [...(editedPatient.treatmentLogs || [])];
+                                if (!newLogs[i]) newLogs[i] = { ...log };
+                                newLogs[i].notes = e.target.value;
+                                setEditedPatient({ ...editedPatient, treatmentLogs: newLogs });
+                              }}
+                              className="text-xs text-gray-600 w-full bg-white border border-gray-200 rounded p-1 outline-none resize-none"
+                              rows={2}
+                              placeholder="备注"
+                            />
+                          ) : (
+                            <p className="text-xs text-gray-600">{log.notes}</p>
+                          )}
                         </div>
                       </div>
                     ))}
