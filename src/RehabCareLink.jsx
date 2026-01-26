@@ -1796,7 +1796,7 @@ export default function RehabCareLink() {
                           <div className="flex flex-wrap gap-1 mb-2">
                             {log.items.map((item, j) => (
                               <span key={j} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                                {item}
+                                {typeof item === 'string' ? item : item.name}
                               </span>
                             ))}
                           </div>
