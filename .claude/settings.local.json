@@ -10,7 +10,8 @@
       "Bash(gh run view:*)",
       "Bash(npm run build)",
       "Bash(npm install)",
-      "Bash(gh workflow list:*)"
+      "Bash(gh workflow list:*)",
+      "Bash(git push:*)"
     ]
   }
 }

@@ -446,6 +446,8 @@ export default function RehabCareLink() {
   // 完成治疗项目
   const toggleTreatmentItem = useCallback((patientId, itemId) => {
     if (userRole !== 'therapist') return;
+
+    // 更新patients列表
     setPatients(prev => prev.map(p => {
       if (p.id === patientId) {
         const newItems = p.treatmentPlan.items.map(item =>
@@ -455,7 +457,18 @@ export default function RehabCareLink() {
       }
       return p;
     }));
-  }, [userRole]);
+
+    // 同时更新selectedPatient（修复详情页不能选择的问题）
+    if (selectedPatient?.id === patientId) {
+      setSelectedPatient(prev => {
+        if (!prev) return prev;
+        const newItems = prev.treatmentPlan.items.map(item =>
+          item.id === itemId ? { ...item, completed: !item.completed } : item
+        );
+        return { ...prev, treatmentPlan: { ...prev.treatmentPlan, items: newItems } };
+      });
+    }
+  }, [userRole, selectedPatient?.id]);
 
   // 更新患者信息
   const updatePatient = (patientId, updates) => {
@@ -506,6 +519,13 @@ export default function RehabCareLink() {
     return { runId: res.runId, plan: res.plan };
   }
 
+  // 一次性分析：提取信息+生成方案（更快）
+  async function analyzeCase(caseId) {
+    const res = await api(`/api/cases/${caseId}/analyze`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    if (!res?.success) throw new Error(res?.error || '分析失败');
+    return { profile: res.profile, plan: res.plan };
+  }
+
   // AI分析 - 处理图片上传并调用通义千问3-VL-Plus（无需 OCR）
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files || []).filter(Boolean);
@@ -525,21 +545,26 @@ export default function RehabCareLink() {
           let plan = null;
 
           try {
-            // 第一步：提取患者信息（必须成功）
-            const extractResult = await extractProfile(caseId);
-            profile = extractResult.profile;
-
-            // 第二步：生成方案（可选，失败不影响建档）
+            // 使用一次性分析接口（更快：合并提取+生成方案）
+            const result = await analyzeCase(caseId);
+            profile = result.profile;
+            plan = result.plan;
+          } catch (analyzeError) {
+            console.warn('一次性分析失败，尝试分步处理:', analyzeError);
+            // 降级：分步处理
             try {
-              const planResult = await generatePlan(caseId, profile);
-              plan = planResult.plan;
-            } catch (planError) {
-              console.warn('生成方案超时，允许手动填写:', planError);
-              showToast('AI生成方案超时，请手动填写治疗方案', 'warning');
-              // 继续，使用空方案
+              const extractResult = await extractProfile(caseId);
+              profile = extractResult.profile;
+              try {
+                const planResult = await generatePlan(caseId, profile);
+                plan = planResult.plan;
+              } catch (planError) {
+                console.warn('生成方案超时，允许手动填写:', planError);
+                showToast('AI生成方案超时，请手动填写治疗方案', 'warning');
+              }
+            } catch (extractError) {
+              throw new Error('识别患者信息失败: ' + extractError.message);
             }
-          } catch (extractError) {
-            throw new Error('识别患者信息失败: ' + extractError.message);
           }
 
           // 初始化表单数据
@@ -751,16 +776,25 @@ export default function RehabCareLink() {
     // 更新患者的治疗日志
     const updatedLogs = [generatedLog, ...(selectedPatient.treatmentLogs || [])];
 
-    updatePatient(selectedPatient.id, {
+    // 先更新selectedPatient确保详情页正确显示
+    const updatedPatient = {
+      ...selectedPatient,
       treatmentLogs: updatedLogs,
       todayTreated: true
-    });
+    };
+    setSelectedPatient(updatedPatient);
 
+    // 同步更新patients列表
+    setPatients(prev => prev.map(p =>
+      p.id === selectedPatient.id ? updatedPatient : p
+    ));
+
+    // 关闭对话框并切换到日志tab
     setShowLogConfirm(false);
     setGeneratedLog(null);
     setDetailTab('logs');
     showToast('今日治疗日志已保存', 'success');
-  }, [generatedLog, selectedPatient, updatePatient, showToast]);
+  }, [generatedLog, selectedPatient, showToast]);
 
   // 切换编辑模式
   const toggleEditMode = useCallback(() => {
