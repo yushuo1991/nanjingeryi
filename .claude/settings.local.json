@@ -13,7 +13,12 @@
       "Bash(gh workflow list:*)",
       "Bash(git push:*)",
       "Bash(curl -s http://ey.yushuo.click/api/health)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(for i in {1..5})",
+      "Bash(do git push origin main)",
+      "Bash(break)",
+      "Bash(done)",
+      "Bash(git tag:*)"
     ]
   }
 }

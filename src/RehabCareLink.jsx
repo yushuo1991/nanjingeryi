@@ -444,39 +444,67 @@ export default function RehabCareLink() {
   };
 
   // 完成治疗项目
-  const toggleTreatmentItem = useCallback((patientId, itemId) => {
+  const toggleTreatmentItem = useCallback(async (patientId, itemId) => {
     if (userRole !== 'therapist') return;
 
+    // 找到患者和更新后的数据
+    const patient = patients.find(p => p.id === patientId);
+    if (!patient) return;
+
+    const newItems = patient.treatmentPlan.items.map(item =>
+      item.id === itemId ? { ...item, completed: !item.completed } : item
+    );
+    const updatedPatient = { ...patient, treatmentPlan: { ...patient.treatmentPlan, items: newItems } };
+
     // 更新patients列表
-    setPatients(prev => prev.map(p => {
-      if (p.id === patientId) {
-        const newItems = p.treatmentPlan.items.map(item =>
-          item.id === itemId ? { ...item, completed: !item.completed } : item
-        );
-        return { ...p, treatmentPlan: { ...p.treatmentPlan, items: newItems } };
-      }
-      return p;
-    }));
+    setPatients(prev => prev.map(p =>
+      p.id === patientId ? updatedPatient : p
+    ));
 
     // 同时更新selectedPatient（修复详情页不能选择的问题）
     if (selectedPatient?.id === patientId) {
-      setSelectedPatient(prev => {
-        if (!prev) return prev;
-        const newItems = prev.treatmentPlan.items.map(item =>
-          item.id === itemId ? { ...item, completed: !item.completed } : item
-        );
-        return { ...prev, treatmentPlan: { ...prev.treatmentPlan, items: newItems } };
-      });
+      setSelectedPatient(updatedPatient);
     }
-  }, [userRole, selectedPatient?.id]);
 
-  // 更新患者信息
-  const updatePatient = (patientId, updates) => {
+    // 同步到数据库
+    try {
+      await api(`/api/patients/${patientId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patient: updatedPatient })
+      });
+    } catch (e) {
+      console.error('保存治疗项目状态失败:', e);
+    }
+  }, [userRole, patients, selectedPatient?.id]);
+
+  // 更新患者信息（同步到数据库）
+  const updatePatient = async (patientId, updates) => {
+    // 先更新本地状态（即时响应）
+    const updatedPatient = patients.find(p => p.id === patientId);
+    if (!updatedPatient) return;
+
+    const newPatientData = { ...updatedPatient, ...updates };
+
     setPatients(prev => prev.map(p =>
-      p.id === patientId ? { ...p, ...updates } : p
+      p.id === patientId ? newPatientData : p
     ));
     if (selectedPatient?.id === patientId) {
-      setSelectedPatient(prev => ({ ...prev, ...updates }));
+      setSelectedPatient(newPatientData);
+    }
+
+    // 同步到数据库
+    try {
+      const res = await api(`/api/patients/${patientId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patient: newPatientData })
+      });
+      if (!res?.success) {
+        console.error('保存到数据库失败:', res?.error);
+      }
+    } catch (e) {
+      console.error('保存到数据库失败:', e);
     }
   };
 
@@ -749,9 +777,10 @@ export default function RehabCareLink() {
     // 生成个性化的今日重点
     const highlights = patient.treatmentPlan.focus || '术后早期功能维持与舒适度管理';
 
-    // 生成详细记录
-    const itemNames = items.map(i => i.name).join('、');
-    const detailRecord = `今日康复训练记录（${dateStr}）训练重点：${highlights} 完成项目：${itemNames} 配合度：良好；耐受：良好 安全提醒：${patient.treatmentPlan.precautions[0] || '注意观察患儿反应'}`;
+    // 生成详细记录（优化排版）
+    const itemDetails = items.map(i => `• ${i.name}（${i.duration}）`).join('\n');
+    const precaution = patient.treatmentPlan.precautions?.[0] || '注意观察患儿反应';
+    const detailRecord = `【训练重点】\n${highlights}\n\n【完成项目】\n${itemDetails}\n\n【配合情况】\n配合度：良好 | 耐受性：良好\n\n【安全提醒】\n${precaution}`;
 
     // 生成新日志（待确认）
     const newLog = {
@@ -770,7 +799,7 @@ export default function RehabCareLink() {
   }, []);
 
   // 确认保存日志
-  const confirmSaveLog = useCallback(() => {
+  const confirmSaveLog = useCallback(async () => {
     if (!generatedLog || !selectedPatient) return;
 
     // 更新患者的治疗日志
@@ -788,6 +817,17 @@ export default function RehabCareLink() {
     setPatients(prev => prev.map(p =>
       p.id === selectedPatient.id ? updatedPatient : p
     ));
+
+    // 同步到数据库
+    try {
+      await api(`/api/patients/${selectedPatient.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patient: updatedPatient })
+      });
+    } catch (e) {
+      console.error('保存日志到数据库失败:', e);
+    }
 
     // 关闭对话框并切换到日志tab
     setShowLogConfirm(false);
@@ -810,10 +850,11 @@ export default function RehabCareLink() {
   }, [isEditingDetail, selectedPatient]);
 
   // 保存编辑
-  const savePatientEdit = useCallback(() => {
+  const savePatientEdit = useCallback(async () => {
     if (!editedPatient) return;
 
-    updatePatient(editedPatient.id, editedPatient);
+    // 调用updatePatient会自动同步到数据库
+    await updatePatient(editedPatient.id, editedPatient);
     setIsEditingDetail(false);
     setEditedPatient(null);
     showToast('保存成功', 'success');
@@ -1901,7 +1942,7 @@ export default function RehabCareLink() {
                                   placeholder="详细记录"
                                 />
                               ) : (
-                                <p className="text-xs text-slate-700 leading-relaxed">{log.detailRecord}</p>
+                                <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{log.detailRecord}</p>
                               )}
                             </div>
                           )}
