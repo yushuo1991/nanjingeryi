@@ -1855,7 +1855,24 @@ export default function RehabCareLink() {
                         <div className="bg-[#4a7c59]/5 rounded-2xl p-3">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-bold text-[#1a2f23]">{log.date}</span>
-                            <span className="text-xs text-[#4a7c59]/60">{log.therapist}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-[#4a7c59]/60">{log.therapist}</span>
+                              {/* 删除按钮 - 仅治疗师可见 */}
+                              {userRole === 'therapist' && isEditingDetail && (
+                                <button
+                                  onClick={() => {
+                                    if (window.confirm('确定要删除这条治疗记录吗？')) {
+                                      const newLogs = [...(editedPatient?.treatmentLogs || patient.treatmentLogs)];
+                                      newLogs.splice(i, 1);
+                                      setEditedPatient({ ...editedPatient, treatmentLogs: newLogs });
+                                    }
+                                  }}
+                                  className="p-1 rounded-full bg-red-100 text-red-500 hover:bg-red-200 transition-colors"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </div>
                           </div>
 
                           {/* 亮点标注 */}
@@ -1864,7 +1881,7 @@ export default function RehabCareLink() {
                               <textarea
                                 value={editedPatient.treatmentLogs?.[i]?.highlight || log.highlight}
                                 onChange={(e) => {
-                                  const newLogs = [...(editedPatient.treatmentLogs || [])];
+                                  const newLogs = [...(editedPatient.treatmentLogs || patient.treatmentLogs.map(l => ({...l})))];
                                   if (!newLogs[i]) newLogs[i] = { ...log };
                                   newLogs[i].highlight = e.target.value;
                                   setEditedPatient({ ...editedPatient, treatmentLogs: newLogs });
@@ -1895,7 +1912,7 @@ export default function RehabCareLink() {
                                 <textarea
                                   value={editedPatient.treatmentLogs?.[i]?.detailRecord || log.detailRecord || ''}
                                   onChange={(e) => {
-                                    const newLogs = [...(editedPatient.treatmentLogs || [])];
+                                    const newLogs = [...(editedPatient.treatmentLogs || patient.treatmentLogs.map(l => ({...l})))];
                                     if (!newLogs[i]) newLogs[i] = { ...log };
                                     newLogs[i].detailRecord = e.target.value;
                                     setEditedPatient({ ...editedPatient, treatmentLogs: newLogs });
@@ -1914,7 +1931,7 @@ export default function RehabCareLink() {
                             <textarea
                               value={editedPatient.treatmentLogs?.[i]?.notes || log.notes || ''}
                               onChange={(e) => {
-                                const newLogs = [...(editedPatient.treatmentLogs || [])];
+                                const newLogs = [...(editedPatient.treatmentLogs || patient.treatmentLogs.map(l => ({...l})))];
                                 if (!newLogs[i]) newLogs[i] = { ...log };
                                 newLogs[i].notes = e.target.value;
                                 setEditedPatient({ ...editedPatient, treatmentLogs: newLogs });

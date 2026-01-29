@@ -89,85 +89,58 @@ body::after {
 /* 2. 3D 气泡/果冻按钮 - 核心视觉效果 */
 .bubble-3d {
     position: relative;
-    border-radius: 2.2rem;
-    padding: 0.75rem 0.5rem;
+    border-radius: 2rem;
+    padding: 1rem 0.5rem;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     color: white;
     overflow: hidden;
-    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-    border: none;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 1px solid rgba(255,255,255,0.3);
 }
 
 .bubble-3d:active {
-    transform: scale(0.94);
+    transform: scale(0.96);
 }
 
-/* 气泡顶部高光层 - 模拟光源反射 */
+/* 气泡顶部高光层 */
 .bubble-3d::before {
     content: '';
     position: absolute;
-    top: 6%;
-    left: 12%;
-    right: 12%;
-    height: 50%;
-    background: linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.7) 0%,
-        rgba(255, 255, 255, 0.3) 40%,
-        transparent 100%
-    );
-    border-radius: 50% 50% 40% 40% / 70% 70% 30% 30%;
-    filter: blur(2px);
+    top: 8%; left: 15%; right: 15%; height: 35%;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.8), rgba(255,255,255,0.1));
+    border-radius: 50% / 30%;
+    filter: blur(5px);
     pointer-events: none;
-    z-index: 1;
 }
 
-/* ===== 蓝色气泡 - 深蓝渐变 ===== */
+/* ===== 蓝色气泡 ===== */
 .bubble-blue {
-    background: linear-gradient(
-        160deg,
-        #5ba3d9 0%,
-        #4a93c9 30%,
-        #3d7fb5 60%,
-        #2d6a9f 100%
-    );
+    background: linear-gradient(150deg, #93c5fd, #3b82f6);
     box-shadow:
-        inset 0 3px 8px rgba(255, 255, 255, 0.5),
-        inset 0 -4px 12px rgba(20, 60, 100, 0.3),
-        0 8px 20px -4px rgba(59, 130, 180, 0.5);
+        inset 0 5px 10px rgba(255, 255, 255, 0.7),
+        inset 0 -8px 16px rgba(23, 37, 84, 0.3),
+        0 15px 25px -10px rgba(59, 130, 246, 0.5);
 }
 
-/* ===== 绿色/青色气泡 ===== */
-.bubble-green {
-    background: linear-gradient(
-        160deg,
-        #5dd3c8 0%,
-        #4ac4b9 30%,
-        #3ab5aa 60%,
-        #2aa69b 100%
-    );
+/* ===== 青色气泡 ===== */
+.bubble-green, .bubble-cyan {
+    background: linear-gradient(150deg, #67e8f9, #06b6d4);
     box-shadow:
-        inset 0 3px 8px rgba(255, 255, 255, 0.5),
-        inset 0 -4px 12px rgba(20, 90, 80, 0.3),
-        0 8px 20px -4px rgba(58, 181, 170, 0.5);
+        inset 0 5px 10px rgba(255, 255, 255, 0.7),
+        inset 0 -8px 16px rgba(21, 94, 117, 0.3),
+        0 15px 25px -10px rgba(6, 182, 212, 0.5);
 }
 
 /* ===== 橙色气泡 ===== */
 .bubble-orange {
-    background: linear-gradient(
-        160deg,
-        #ffb347 0%,
-        #ffa033 30%,
-        #ff8c1a 60%,
-        #f07800 100%
-    );
+    background: linear-gradient(150deg, #fdba74, #f97316);
     box-shadow:
-        inset 0 3px 8px rgba(255, 255, 255, 0.5),
-        inset 0 -4px 12px rgba(150, 70, 0, 0.3),
-        0 8px 20px -4px rgba(255, 140, 26, 0.5);
+        inset 0 5px 10px rgba(255, 255, 255, 0.7),
+        inset 0 -8px 16px rgba(124, 45, 18, 0.3),
+        0 15px 25px -10px rgba(249, 115, 22, 0.5);
 }
 
 /* 3. 操作按钮 - 青蓝渐变胶囊（匹配设计图） */
