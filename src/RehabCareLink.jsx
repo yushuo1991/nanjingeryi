@@ -1257,167 +1257,122 @@ export default function RehabCareLink() {
       activePatients.slice(-3).reverse(), [activePatients]);
 
     return (
-    <div className="min-h-screen pb-24 px-3 pt-4">
-      {/* 主容器 - 大圆角毛玻璃卡片 */}
-      <div className="rounded-[40px] p-6 pb-8"
-        style={{
-          background: 'rgba(255, 255, 255, 0.65)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.06)',
-          border: '1px solid rgba(255, 255, 255, 0.8)',
-        }}>
+    <div className="min-h-screen pb-24 px-4 pt-4">
+      {/* 主容器 - 使用 Gemini 的 app-container-card 样式 */}
+      <div className="app-container-card p-6 pb-12">
 
         {/* 顶部问候语 */}
         <div className="text-center pt-4 pb-6">
-          <h1 className="text-2xl font-bold text-gray-800">{getGreeting()}, Dr. Wu</h1>
+          <h1 className="text-2xl font-bold text-gray-800 tracking-tight">{getGreeting()}, Dr. Wu</h1>
         </div>
 
-        {/* 嫩芽图标 - 白色圆形容器 + 青色圆环 */}
-        <div className="flex justify-center mb-8">
-          <div className="relative">
-            {/* 外层青色圆环 */}
-            <div className="w-[120px] h-[120px] rounded-full flex items-center justify-center"
-              style={{
-                background: 'linear-gradient(135deg, #5BCFCF 0%, #7DD8C0 100%)',
-                padding: '3px',
-              }}>
-              {/* 内层白色容器 */}
-              <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
-                {/* 嫩芽 SVG */}
-                <svg width="50" height="60" viewBox="0 0 55 65" fill="none" className="mt-1">
-                  <path d="M27.5 65 L27.5 32" stroke="#4AD97F" strokeWidth="5" strokeLinecap="round"/>
-                  <ellipse cx="16" cy="28" rx="13" ry="18" fill="#4AD97F" transform="rotate(-12 16 28)"/>
-                  <ellipse cx="39" cy="26" rx="13" ry="18" fill="#6BEE9F" transform="rotate(12 39 26)"/>
-                  <path d="M16 18 Q16 28 16 38" stroke="#3CB371" strokeWidth="1.5" opacity="0.4"/>
-                  <path d="M39 16 Q39 26 39 36" stroke="#3CB371" strokeWidth="1.5" opacity="0.4"/>
-                </svg>
-              </div>
-            </div>
+        {/* 嫩芽图标 - 发光圆环容器 */}
+        <div className="flex justify-center mb-10 mt-2">
+          <div className="glow-ring-container w-[140px] h-[140px] flex items-center justify-center">
+            <div className="glow-ring-border"></div>
+            {/* 嫩芽 SVG - 3D效果 */}
+            <svg width="60" height="70" viewBox="0 0 60 70" fill="none" className="mt-4">
+              <defs>
+                <linearGradient id="stemGradient" x1="30" y1="70" x2="30" y2="35">
+                  <stop offset="0%" stopColor="#22c55e" />
+                  <stop offset="100%" stopColor="#86efac" />
+                </linearGradient>
+                <radialGradient id="leafGradientLeft" cx="15" cy="25" r="15" fx="10" fy="20">
+                  <stop offset="0%" stopColor="#bbf7d0" />
+                  <stop offset="100%" stopColor="#4ade80" />
+                </radialGradient>
+                <radialGradient id="leafGradientRight" cx="45" cy="25" r="15" fx="50" fy="20">
+                  <stop offset="0%" stopColor="#86efac" />
+                  <stop offset="100%" stopColor="#22c55e" />
+                </radialGradient>
+              </defs>
+              <path d="M30 70 L30 35" stroke="url(#stemGradient)" strokeWidth="6" strokeLinecap="round" />
+              <ellipse cx="15" cy="25" rx="14" ry="10" fill="url(#leafGradientLeft)" transform="rotate(-20 30 35)" />
+              <ellipse cx="45" cy="25" rx="14" ry="10" fill="url(#leafGradientRight)" transform="rotate(20 30 35)" />
+              <ellipse cx="18" cy="20" rx="6" ry="3" fill="white" fillOpacity="0.3" transform="rotate(-20 30 35)" />
+              <ellipse cx="42" cy="20" rx="6" ry="3" fill="white" fillOpacity="0.3" transform="rotate(20 30 35)" />
+            </svg>
           </div>
         </div>
 
-        {/* 统计卡片 - 三个独立卡片 */}
-        <div className="flex gap-3 justify-center mb-6">
-          <button onClick={() => setShowAllPatients(true)}
-            className="flex-1 max-w-[100px] py-3 px-2 text-center rounded-2xl active:scale-95 transition-transform"
-            style={{
-              background: 'rgba(255, 255, 255, 0.8)',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
-            }}>
-            <div className="text-2xl font-bold text-gray-800">{activePatients.length}</div>
-            <div className="text-[10px] text-gray-500 mt-1 flex items-center justify-center gap-0.5">
-              在治患儿 <span className="text-sm">🧒</span>
+        {/* 统计卡片 - 使用 glass-card-sm */}
+        <div className="flex gap-4 justify-between mb-10 px-1">
+          <button onClick={() => setShowAllPatients(true)} className="flex-1 glass-card-sm py-4 px-2 flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform">
+            <span className="text-2xl font-extrabold text-gray-700">{activePatients.length}</span>
+            <div className="flex items-center gap-1 opacity-70">
+              <span className="text-[10px] font-bold text-gray-500 tracking-wide">在治患儿</span>
+              <span className="text-[10px]">👶</span>
             </div>
           </button>
-          <div className="flex-1 max-w-[100px] py-3 px-2 text-center rounded-2xl"
-            style={{
-              background: 'rgba(255, 255, 255, 0.8)',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
-            }}>
-            <div className="text-2xl font-bold text-gray-800">{todayTreated.length}</div>
-            <div className="text-[10px] text-gray-500 mt-1 flex items-center justify-center gap-0.5">
-              今日已治疗 <span className="text-sm">😊</span>
+          <div className="flex-1 glass-card-sm py-4 px-2 flex flex-col items-center justify-center gap-1">
+            <span className="text-2xl font-extrabold text-gray-700">{todayTreated.length}</span>
+            <div className="flex items-center gap-1 opacity-70">
+              <span className="text-[10px] font-bold text-gray-500 tracking-wide">今日已治</span>
+              <span className="text-[10px]">✅</span>
             </div>
           </div>
-          <div className="flex-1 max-w-[100px] py-3 px-2 text-center rounded-2xl"
-            style={{
-              background: 'rgba(255, 255, 255, 0.8)',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
-            }}>
-            <div className="text-2xl font-bold text-gray-800">{todayPending.length}</div>
-            <div className="text-[10px] text-gray-500 mt-1 flex items-center justify-center gap-0.5">
-              待治疗 <span className="text-sm">😴</span>
+          <div className="flex-1 glass-card-sm py-4 px-2 flex flex-col items-center justify-center gap-1">
+            <span className="text-2xl font-extrabold text-gray-700">{todayPending.length}</span>
+            <div className="flex items-center gap-1 opacity-70">
+              <span className="text-[10px] font-bold text-gray-500 tracking-wide">待治疗</span>
+              <span className="text-[10px]">😴</span>
             </div>
           </div>
         </div>
 
-        {/* 快捷操作按钮 - 胶囊形状 */}
+        {/* 快捷操作按钮 - 使用 btn-clay 样式 */}
         {userRole === 'therapist' && (
-          <div className="flex gap-3 justify-center mb-8">
-            {/* AI智能收治 - 绿色填充 */}
+          <div className="flex gap-4 mb-10">
             <button
               onClick={() => setShowAIModal(true)}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold text-white transition-all active:scale-95"
-              style={{
-                background: 'linear-gradient(135deg, #5BCFCF 0%, #4DB6AC 100%)',
-                boxShadow: '0 2px 8px rgba(91, 207, 207, 0.3)',
-              }}
+              className="flex-1 btn-clay-primary py-4 px-4 rounded-3xl flex items-center justify-center gap-2 font-bold text-sm"
             >
-              <Zap size={16} />
+              <Zap size={20} fill="white" />
               AI智能收治
             </button>
-            {/* 批量生成日报 - 白色描边 */}
             <button
               onClick={initBatchGenerate}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold text-gray-600 transition-all active:scale-95"
-              style={{
-                background: 'rgba(255, 255, 255, 0.9)',
-                border: '1px solid rgba(0, 0, 0, 0.08)',
-                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
-              }}
+              className="flex-1 btn-clay-white py-4 px-4 rounded-3xl flex items-center justify-center gap-2 font-bold text-sm"
             >
-              <Zap size={16} />
+              <Zap size={20} className="text-gray-400" />
               批量生成日报
             </button>
           </div>
         )}
 
-        {/* 最近建档 */}
+        {/* 最近建档 - 使用 list-card */}
         {recentPatients.length > 0 && (
           <div className="mb-6">
-            <h3 className="text-base font-bold text-gray-800 mb-3">最近建档</h3>
-            <div className="space-y-3">
+            <h3 className="text-lg font-bold text-gray-700 mb-4 px-2">最近建档</h3>
+            <div className="space-y-4">
               {recentPatients.map(patient => (
                 <button
                   key={patient.id}
                   onClick={() => navigateTo('patientDetail', patient)}
-                  className="w-full p-4 rounded-2xl flex items-center gap-3 text-left active:scale-[0.98] transition-transform"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.85)',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
-                  }}
+                  className="w-full list-card p-4 flex items-center gap-4 text-left"
                 >
-                  {/* 3D粘土风格头像 */}
-                  <div className="w-11 h-11 rounded-full flex items-center justify-center text-xl"
-                    style={{
-                      background: 'linear-gradient(145deg, #FFE4D6, #FFDAB9)',
-                    }}>
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center text-xl shadow-inner">
                     {patient.avatar}
                   </div>
-                  {/* 信息 */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-gray-800">{patient.name}</span>
-                      <span className="text-sm text-gray-500">{patient.age}</span>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-bold text-gray-800 text-base">{patient.name}, {patient.age}</span>
                     </div>
-                    <p className="text-sm text-[#5BCFCF] font-medium truncate">{patient.diagnosis}</p>
+                    <p className="text-xs text-gray-500 truncate">{patient.diagnosis}</p>
                   </div>
-                  {/* 状态标签 */}
-                  <div className="flex flex-col items-end gap-1">
-                    {patient.safetyAlerts?.length > 0 && (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold text-white"
-                        style={{ background: '#FF8A80' }}>
-                        警示
-                      </span>
-                    )}
-                    {!patient.todayTreated && (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold text-white"
-                        style={{ background: '#FF8A80' }}>
-                        待治疗
-                      </span>
-                    )}
-                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold text-white shadow-sm ${patient.todayTreated ? 'bg-green-400' : 'bg-red-400'}`}>
+                    {patient.todayTreated ? '已治' : '待治'}
+                  </span>
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* 科室患儿分布 */}
-        <div>
-          <h3 className="text-base font-bold text-gray-800 mb-3">科室患儿分布</h3>
-          <div className="space-y-3">
+        {/* 科室患儿分布 - 使用 list-card */}
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-gray-700 mb-4 px-2">科室患儿分布</h3>
+          <div className="space-y-4">
             {initialDepartments.map(dept => {
               const deptPatients = getDepartmentPatients(dept.id);
               const pending = deptPatients.filter(p => p.status === 'active' && !p.todayTreated).length;
@@ -1425,78 +1380,48 @@ export default function RehabCareLink() {
                 <button
                   key={dept.id}
                   onClick={() => navigateTo('patients', dept)}
-                  className="w-full p-4 rounded-2xl flex items-center gap-3 text-left active:scale-[0.98] transition-transform"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.85)',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
-                  }}
+                  className="w-full list-card p-4 flex items-center gap-4 text-left"
                 >
-                  {/* 3D器官图标 */}
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl"
-                    style={{
-                      background: 'linear-gradient(145deg, #FFB3AD, #FF8A80)',
-                    }}>
+                  <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-2xl shadow-sm border border-gray-100">
                     {dept.icon}
                   </div>
-                  {/* 信息 */}
                   <div className="flex-1">
-                    <h4 className="font-bold text-gray-800 mb-1">{dept.name}</h4>
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold text-gray-700"
-                        style={{ background: '#6BEE9F' }}>
-                        {deptPatients.length} 位患儿
-                      </span>
-                      {pending > 0 && (
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold text-white"
-                          style={{ background: '#FF8A80' }}>
-                          {pending} 待治疗
-                        </span>
-                      )}
-                    </div>
+                    <h4 className="font-bold text-gray-800">{dept.name}</h4>
                   </div>
-                  {/* 分享按钮 */}
-                  {userRole === 'therapist' && (
-                    <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        copyShareLink(dept);
-                      }}
-                      className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400"
-                    >
-                      <Share2 size={14} />
-                    </div>
-                  )}
+                  <div className="flex gap-2">
+                    <span className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-xs font-bold">
+                      {deptPatients.length} 位
+                    </span>
+                    {pending > 0 && (
+                      <span className="bg-gray-100 text-gray-400 px-3 py-1 rounded-full text-xs font-bold">
+                        {pending} 待
+                      </span>
+                    )}
+                  </div>
                 </button>
               );
             })}
           </div>
         </div>
+
       </div>
 
-      {/* FAB按钮 - 右下角固定 */}
+      {/* FAB按钮 - 使用 fab-clay */}
       {userRole === 'therapist' && (
-        <div className="fixed bottom-24 right-4 z-40">
+        <div className="fixed bottom-24 right-6 z-50">
           <button
             onClick={() => setShowFabMenu(!showFabMenu)}
-            className="w-14 h-14 rounded-full flex items-center justify-center text-white text-2xl font-bold transition-all active:scale-90"
-            style={{
-              background: 'linear-gradient(145deg, #7DD8C0, #5BCFCF)',
-              boxShadow: '0 4px 15px rgba(91, 207, 207, 0.4)',
-            }}
+            className="w-16 h-16 rounded-full fab-clay flex items-center justify-center text-white text-3xl transition-transform active:scale-90"
           >
-            <Plus size={28} className={`transition-transform ${showFabMenu ? 'rotate-45' : ''}`} />
+            <Plus size={32} strokeWidth={3} className={`transition-transform ${showFabMenu ? 'rotate-45' : ''}`} />
           </button>
 
           {/* FAB菜单 */}
           {showFabMenu && (
-            <div className="absolute bottom-16 right-0 p-2 min-w-[180px] rounded-2xl animate-scale-in"
-              style={{
-                background: 'rgba(255, 255, 255, 0.95)',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-              }}>
-              <FabMenuItem icon={<Sparkles size={18} />} label="AI智能收治" color="text-[#5BCFCF]" onClick={() => { setShowAIModal(true); setShowFabMenu(false); }} />
-              <FabMenuItem icon={<Zap size={18} />} label="批量生成日报" color="text-[#FFB347]" onClick={() => { initBatchGenerate(); setShowFabMenu(false); }} />
-              <FabMenuItem icon={<BookOpen size={18} />} label="治疗模板库" color="text-[#87CEEB]" onClick={() => { setShowTemplates(true); setShowFabMenu(false); }} />
+            <div className="absolute bottom-20 right-0 p-2 min-w-[180px] rounded-2xl animate-scale-in list-card">
+              <FabMenuItem icon={<Sparkles size={18} />} label="AI智能收治" color="text-emerald-500" onClick={() => { setShowAIModal(true); setShowFabMenu(false); }} />
+              <FabMenuItem icon={<Zap size={18} />} label="批量生成日报" color="text-amber-500" onClick={() => { initBatchGenerate(); setShowFabMenu(false); }} />
+              <FabMenuItem icon={<BookOpen size={18} />} label="治疗模板库" color="text-sky-500" onClick={() => { setShowTemplates(true); setShowFabMenu(false); }} />
             </div>
           )}
         </div>
