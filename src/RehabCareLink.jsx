@@ -1256,83 +1256,85 @@ export default function RehabCareLink() {
     const recentPatients = useMemo(() =>
       activePatients.slice(-3).reverse(), [activePatients]);
 
+    // 3D嫩芽图标组件
+    const SproutIcon = () => (
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+        <defs>
+          <linearGradient id="leafGrad" x1="0" y1="0" x2="64" y2="64">
+            <stop offset="0%" stopColor="#86efac" />
+            <stop offset="100%" stopColor="#22c55e" />
+          </linearGradient>
+          <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity="0.2" />
+          </filter>
+        </defs>
+        <path d="M32 60 V 36" stroke="url(#leafGrad)" strokeWidth="6" strokeLinecap="round" />
+        <path d="M32 44 C 32 44, 12 44, 8 32 C 4 20, 16 16, 32 36" fill="url(#leafGrad)" filter="url(#dropShadow)" />
+        <path d="M32 44 C 32 44, 52 44, 56 32 C 60 20, 48 16, 32 36" fill="url(#leafGrad)" filter="url(#dropShadow)" />
+      </svg>
+    );
+
     return (
-    <div className="min-h-screen pb-24 px-4 pt-4">
-      {/* 主容器 - 使用 Gemini 的 app-container-card 样式 */}
-      <div className="app-container-card p-6 pb-12">
+    <div className="min-h-screen flex justify-center pt-6 pb-6 px-4">
+      {/* 主容器 - 毛玻璃面板 */}
+      <div className="glass-panel-container w-full max-w-md relative overflow-hidden flex flex-col">
 
         {/* 顶部问候语 */}
-        <div className="text-center pt-4 pb-6">
-          <h1 className="text-2xl font-bold text-gray-800 tracking-tight">{getGreeting()}, Dr. Wu</h1>
+        <div className="pt-8 pb-4 text-center z-10">
+          <h1 className="text-2xl font-extrabold text-[#1e293b] tracking-tight">
+            {getGreeting()}, Dr. Wu
+          </h1>
         </div>
 
-        {/* 嫩芽图标 - 发光圆环容器 */}
-        <div className="flex justify-center mb-10 mt-2">
-          <div className="glow-ring-container w-[140px] h-[140px] flex items-center justify-center">
-            <div className="glow-ring-border"></div>
-            {/* 嫩芽 SVG - 3D效果 */}
-            <svg width="60" height="70" viewBox="0 0 60 70" fill="none" className="mt-4">
-              <defs>
-                <linearGradient id="stemGradient" x1="30" y1="70" x2="30" y2="35">
-                  <stop offset="0%" stopColor="#22c55e" />
-                  <stop offset="100%" stopColor="#86efac" />
-                </linearGradient>
-                <radialGradient id="leafGradientLeft" cx="15" cy="25" r="15" fx="10" fy="20">
-                  <stop offset="0%" stopColor="#bbf7d0" />
-                  <stop offset="100%" stopColor="#4ade80" />
-                </radialGradient>
-                <radialGradient id="leafGradientRight" cx="45" cy="25" r="15" fx="50" fy="20">
-                  <stop offset="0%" stopColor="#86efac" />
-                  <stop offset="100%" stopColor="#22c55e" />
-                </radialGradient>
-              </defs>
-              <path d="M30 70 L30 35" stroke="url(#stemGradient)" strokeWidth="6" strokeLinecap="round" />
-              <ellipse cx="15" cy="25" rx="14" ry="10" fill="url(#leafGradientLeft)" transform="rotate(-20 30 35)" />
-              <ellipse cx="45" cy="25" rx="14" ry="10" fill="url(#leafGradientRight)" transform="rotate(20 30 35)" />
-              <ellipse cx="18" cy="20" rx="6" ry="3" fill="white" fillOpacity="0.3" transform="rotate(-20 30 35)" />
-              <ellipse cx="42" cy="20" rx="6" ry="3" fill="white" fillOpacity="0.3" transform="rotate(20 30 35)" />
-            </svg>
+        {/* 嫩芽发光圆环 */}
+        <div className="flex justify-center mb-8 z-10 mt-2">
+          <div className="sprout-ring-outer">
+            <div className="sprout-ring-inner">
+              <div className="transform translate-y-1">
+                <SproutIcon />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* 统计卡片 - 使用 glass-card-sm */}
-        <div className="flex gap-4 justify-between mb-10 px-1">
-          <button onClick={() => setShowAllPatients(true)} className="flex-1 glass-card-sm py-4 px-2 flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform">
-            <span className="text-2xl font-extrabold text-gray-700">{activePatients.length}</span>
-            <div className="flex items-center gap-1 opacity-70">
-              <span className="text-[10px] font-bold text-gray-500 tracking-wide">在治患儿</span>
+        {/* 统计卡片 */}
+        <div className="flex justify-between px-6 gap-3 mb-8 z-10">
+          <button onClick={() => setShowAllPatients(true)} className="stat-glass-card flex-1 py-3 px-2 flex flex-col items-center active:scale-95 transition-transform">
+            <span className="text-2xl font-bold text-gray-700 mb-1">{activePatients.length}</span>
+            <div className="flex items-center gap-1 opacity-80">
+              <span className="text-[11px] font-bold text-gray-500">在治患儿</span>
               <span className="text-[10px]">👶</span>
             </div>
           </button>
-          <div className="flex-1 glass-card-sm py-4 px-2 flex flex-col items-center justify-center gap-1">
-            <span className="text-2xl font-extrabold text-gray-700">{todayTreated.length}</span>
-            <div className="flex items-center gap-1 opacity-70">
-              <span className="text-[10px] font-bold text-gray-500 tracking-wide">今日已治</span>
+          <div className="stat-glass-card flex-1 py-3 px-2 flex flex-col items-center">
+            <span className="text-2xl font-bold text-gray-700 mb-1">{todayTreated.length}</span>
+            <div className="flex items-center gap-1 opacity-80">
+              <span className="text-[11px] font-bold text-gray-500">今日已治</span>
               <span className="text-[10px]">✅</span>
             </div>
           </div>
-          <div className="flex-1 glass-card-sm py-4 px-2 flex flex-col items-center justify-center gap-1">
-            <span className="text-2xl font-extrabold text-gray-700">{todayPending.length}</span>
-            <div className="flex items-center gap-1 opacity-70">
-              <span className="text-[10px] font-bold text-gray-500 tracking-wide">待治疗</span>
+          <div className="stat-glass-card flex-1 py-3 px-2 flex flex-col items-center">
+            <span className="text-2xl font-bold text-gray-700 mb-1">{todayPending.length}</span>
+            <div className="flex items-center gap-1 opacity-80">
+              <span className="text-[11px] font-bold text-gray-500">待治疗</span>
               <span className="text-[10px]">😴</span>
             </div>
           </div>
         </div>
 
-        {/* 快捷操作按钮 - 使用 btn-clay 样式 */}
+        {/* 快捷操作按钮 */}
         {userRole === 'therapist' && (
-          <div className="flex gap-4 mb-10">
+          <div className="flex px-6 gap-4 mb-8 z-10">
             <button
               onClick={() => setShowAIModal(true)}
-              className="flex-1 btn-clay-primary py-4 px-4 rounded-3xl flex items-center justify-center gap-2 font-bold text-sm"
+              className="flex-1 btn-clay-green h-14 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm"
             >
               <Zap size={20} fill="white" />
               AI智能收治
             </button>
             <button
               onClick={initBatchGenerate}
-              className="flex-1 btn-clay-white py-4 px-4 rounded-3xl flex items-center justify-center gap-2 font-bold text-sm"
+              className="flex-1 btn-clay-glass h-14 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm"
             >
               <Zap size={20} className="text-gray-400" />
               批量生成日报
@@ -1340,92 +1342,103 @@ export default function RehabCareLink() {
           </div>
         )}
 
-        {/* 最近建档 - 使用 list-card */}
-        {recentPatients.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-lg font-bold text-gray-700 mb-4 px-2">最近建档</h3>
-            <div className="space-y-4">
-              {recentPatients.map(patient => (
-                <button
-                  key={patient.id}
-                  onClick={() => navigateTo('patientDetail', patient)}
-                  className="w-full list-card p-4 flex items-center gap-4 text-left"
-                >
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center text-xl shadow-inner">
-                    {patient.avatar}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-bold text-gray-800 text-base">{patient.name}, {patient.age}</span>
+        {/* 最近建档 - 可滚动区域 */}
+        <div className="flex-1 px-6 pb-24 overflow-y-auto hide-scrollbar z-10">
+          {recentPatients.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-base font-bold text-gray-700 mb-4">最近建档</h3>
+              <div className="space-y-4">
+                {recentPatients.map(patient => (
+                  <button
+                    key={patient.id}
+                    onClick={() => navigateTo('patientDetail', patient)}
+                    className="w-full patient-list-item p-4 flex items-start gap-4 text-left"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-100 to-orange-100 flex items-center justify-center text-2xl shadow-inner flex-shrink-0">
+                      {patient.avatar}
                     </div>
-                    <p className="text-xs text-gray-500 truncate">{patient.diagnosis}</p>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold text-white shadow-sm ${patient.todayTreated ? 'bg-green-400' : 'bg-red-400'}`}>
-                    {patient.todayTreated ? '已治' : '待治'}
-                  </span>
-                </button>
-              ))}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start">
+                        <h4 className="font-bold text-gray-800 text-sm mb-1">
+                          {patient.name}, {patient.age}
+                        </h4>
+                        <span className={`text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm ${patient.todayTreated ? 'bg-green-400' : 'bg-red-400'}`}>
+                          {patient.todayTreated ? '已治' : '待治'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-400 leading-relaxed line-clamp-2">
+                        {patient.diagnosis}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
+          )}
+
+          {/* 科室患儿分布 */}
+          <div className="pt-4">
+            <h3 className="text-base font-bold text-gray-700 mb-4">科室患儿分布</h3>
+            <div className="space-y-4">
+              {initialDepartments.map(dept => {
+                const deptPatients = getDepartmentPatients(dept.id);
+                const pending = deptPatients.filter(p => p.status === 'active' && !p.todayTreated).length;
+                return (
+                  <button
+                    key={dept.id}
+                    onClick={() => navigateTo('patients', dept)}
+                    className="w-full patient-list-item p-4 flex items-center gap-4 text-left"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-xl shadow-sm border border-gray-100">
+                      {dept.icon}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-gray-700 text-sm">{dept.name}</h4>
+                      <div className="flex gap-2 mt-1">
+                        <span className="bg-green-100 text-green-600 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                          {deptPatients.length} 位患儿
+                        </span>
+                        {pending > 0 && (
+                          <span className="bg-green-100 text-green-600 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            {pending} 待治
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <Share2 size={16} className="text-gray-300" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* FAB按钮 */}
+        {userRole === 'therapist' && (
+          <div className="absolute bottom-8 right-6 z-20">
+            <button
+              onClick={() => setShowFabMenu(!showFabMenu)}
+              className="fab-3d-green w-16 h-16 transition-transform active:scale-90"
+            >
+              <Plus size={32} strokeWidth={3} color="white" className={`transition-transform ${showFabMenu ? 'rotate-45' : ''}`} />
+            </button>
+
+            {/* FAB菜单 */}
+            {showFabMenu && (
+              <div className="absolute bottom-20 right-0 p-2 min-w-[180px] patient-list-item animate-scale-in">
+                <FabMenuItem icon={<Sparkles size={18} />} label="AI智能收治" color="text-emerald-500" onClick={() => { setShowAIModal(true); setShowFabMenu(false); }} />
+                <FabMenuItem icon={<Zap size={18} />} label="批量生成日报" color="text-amber-500" onClick={() => { initBatchGenerate(); setShowFabMenu(false); }} />
+                <FabMenuItem icon={<BookOpen size={18} />} label="治疗模板库" color="text-sky-500" onClick={() => { setShowTemplates(true); setShowFabMenu(false); }} />
+              </div>
+            )}
           </div>
         )}
 
-        {/* 科室患儿分布 - 使用 list-card */}
-        <div className="mb-6">
-          <h3 className="text-lg font-bold text-gray-700 mb-4 px-2">科室患儿分布</h3>
-          <div className="space-y-4">
-            {initialDepartments.map(dept => {
-              const deptPatients = getDepartmentPatients(dept.id);
-              const pending = deptPatients.filter(p => p.status === 'active' && !p.todayTreated).length;
-              return (
-                <button
-                  key={dept.id}
-                  onClick={() => navigateTo('patients', dept)}
-                  className="w-full list-card p-4 flex items-center gap-4 text-left"
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-2xl shadow-sm border border-gray-100">
-                    {dept.icon}
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-gray-800">{dept.name}</h4>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-xs font-bold">
-                      {deptPatients.length} 位
-                    </span>
-                    {pending > 0 && (
-                      <span className="bg-gray-100 text-gray-400 px-3 py-1 rounded-full text-xs font-bold">
-                        {pending} 待
-                      </span>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        {/* 装饰性背景模糊 */}
+        <div className="absolute top-0 left-0 w-full h-40 bg-blue-100/50 blur-3xl -z-0 pointer-events-none"></div>
+        <div className="absolute bottom-0 right-0 w-40 h-40 bg-green-100/30 blur-3xl -z-0 pointer-events-none"></div>
 
       </div>
-
-      {/* FAB按钮 - 使用 fab-clay */}
-      {userRole === 'therapist' && (
-        <div className="fixed bottom-24 right-6 z-50">
-          <button
-            onClick={() => setShowFabMenu(!showFabMenu)}
-            className="w-16 h-16 rounded-full fab-clay flex items-center justify-center text-white text-3xl transition-transform active:scale-90"
-          >
-            <Plus size={32} strokeWidth={3} className={`transition-transform ${showFabMenu ? 'rotate-45' : ''}`} />
-          </button>
-
-          {/* FAB菜单 */}
-          {showFabMenu && (
-            <div className="absolute bottom-20 right-0 p-2 min-w-[180px] rounded-2xl animate-scale-in list-card">
-              <FabMenuItem icon={<Sparkles size={18} />} label="AI智能收治" color="text-emerald-500" onClick={() => { setShowAIModal(true); setShowFabMenu(false); }} />
-              <FabMenuItem icon={<Zap size={18} />} label="批量生成日报" color="text-amber-500" onClick={() => { initBatchGenerate(); setShowFabMenu(false); }} />
-              <FabMenuItem icon={<BookOpen size={18} />} label="治疗模板库" color="text-sky-500" onClick={() => { setShowTemplates(true); setShowFabMenu(false); }} />
-            </div>
-          )}
-        </div>
-      )}
     </div>
     );
   };

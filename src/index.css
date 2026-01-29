@@ -5,128 +5,117 @@
 @tailwind utilities;
 
 :root {
-  /* Background: Soft Sky Blue -> White */
-  --color-bg-start: #dbeafe;
-  --color-bg-mid: #eff6ff;
-  --color-bg-end: #ffffff;
-
-  /* Primary Brand Colors (Mint/Green) */
-  --color-primary: #4ade80;
-  --color-primary-dark: #22c55e;
-  --color-primary-light: #86efac;
-
-  /* Accent Colors */
-  --color-accent-cyan: #22d3ee;
-
-  /* Text */
-  --color-text-main: #1e293b;
-  --color-text-sub: #64748b;
+  /* Sky Background */
+  --bg-sky-top: #bae6fd;    /* Light Sky Blue */
+  --bg-sky-mid: #e0f2fe;    /* Very Light Blue */
+  --bg-white: #ffffff;
 }
 
 body {
   font-family: 'Nunito', sans-serif;
-  background: linear-gradient(180deg, var(--color-bg-start) 0%, var(--color-bg-mid) 40%, var(--color-bg-end) 100%);
-  color: var(--color-text-main);
+  /* The overarching blue sky gradient */
+  background: linear-gradient(180deg, var(--bg-sky-top) 0%, var(--bg-sky-mid) 40%, var(--bg-white) 100%);
   min-height: 100vh;
+  color: #334155;
   -webkit-font-smoothing: antialiased;
 }
 
-/* ==================== Glassmorphism (Frosted Glass) ==================== */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.05);
+/* ==================== Main Glass Panel ==================== */
+/* This matches the large central phone-like container */
+.glass-panel-container {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.1),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+  border-radius: 40px;
 }
 
-.glass-card-sm {
+/* ==================== 3D Sprout Glow Ring ==================== */
+.sprout-ring-outer {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  /* Glowing cyan/white gradient border effect */
+  background: conic-gradient(from 180deg, rgba(165, 243, 252, 0.1), rgba(34, 211, 238, 0.4), rgba(165, 243, 252, 0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 30px rgba(103, 232, 249, 0.3);
+  position: relative;
+}
+
+.sprout-ring-inner {
+  width: 120px;
+  height: 120px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(4px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 2px 10px rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+/* ==================== Stats Cards (Frosted) ==================== */
+.stat-glass-card {
   background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+  border-radius: 24px;
+}
+
+/* ==================== 3D Action Buttons ==================== */
+.btn-clay-green {
+  /* The green gradient button */
+  background: linear-gradient(135deg, #6ee7b7 0%, #34d399 100%);
+  box-shadow:
+    0 10px 20px -5px rgba(52, 211, 153, 0.4),
+    inset 0 2px 0 rgba(255, 255, 255, 0.3);
+  border: none;
+  color: white;
+  transition: transform 0.1s;
+}
+.btn-clay-green:active {
+  transform: scale(0.98);
+}
+
+.btn-clay-glass {
+  /* The white/glass button */
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 10px 20px -5px rgba(0, 0, 0, 0.05),
+    inset 0 2px 0 rgba(255, 255, 255, 0.5);
+  color: #475569;
+  transition: transform 0.1s;
+}
+.btn-clay-glass:active {
+  transform: scale(0.98);
+}
+
+/* ==================== Patient List Item ==================== */
+.patient-list-item {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
   border-radius: 20px;
 }
 
-/* ==================== Claymorphism (Soft 3D) ==================== */
-.app-container-card {
-  background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(20px);
-  border-radius: 40px;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow:
-    0 20px 40px -10px rgba(0, 0, 0, 0.05),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-}
-
-/* 3D Buttons */
-.btn-clay-primary {
+/* ==================== FAB (Plus Button) ==================== */
+.fab-3d-green {
   background: linear-gradient(135deg, #6ee7b7 0%, #34d399 100%);
-  color: white;
-  border: none;
   box-shadow:
-    6px 6px 12px #b8e2d4,
-    -6px -6px 12px #ffffff;
-  transition: all 0.2s ease;
-}
-.btn-clay-primary:active {
-  transform: scale(0.98);
-  box-shadow: inset 4px 4px 8px rgba(0,0,0,0.1);
-}
-
-.btn-clay-white {
-  background: #ffffff;
-  color: var(--color-text-sub);
-  border: 1px solid #f0f0f0;
-  box-shadow:
-    6px 6px 12px rgba(0,0,0,0.05),
-    -6px -6px 12px #ffffff;
-  transition: all 0.2s ease;
-}
-.btn-clay-white:active {
-  transform: scale(0.98);
-  box-shadow: inset 3px 3px 6px rgba(0,0,0,0.05);
-}
-
-/* The Glowing Ring Container */
-.glow-ring-container {
+    0 12px 25px -8px rgba(16, 185, 129, 0.5),
+    inset 0 3px 5px rgba(255, 255, 255, 0.4),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.05);
   border-radius: 50%;
-  background: linear-gradient(145deg, rgba(255,255,255,0.8), rgba(230,255,250,0.4));
-  box-shadow:
-    0 0 20px rgba(34, 211, 238, 0.3),
-    inset 0 0 20px rgba(255, 255, 255, 0.8);
-  border: 2px solid rgba(255, 255, 255, 0.9);
-  position: relative;
-}
-
-.glow-ring-border {
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  border: 2px solid rgba(100, 240, 220, 0.4);
-  filter: blur(2px);
-  z-index: -1;
-}
-
-/* Patient List Item */
-.list-card {
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 24px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-  border: 1px solid rgba(255,255,255,0.9);
-  transition: transform 0.2s;
-}
-.list-card:active {
-  transform: scale(0.99);
-}
-
-/* FAB */
-.fab-clay {
-  background: linear-gradient(135deg, #6ee7b7, #34d399);
-  box-shadow:
-    5px 5px 15px rgba(16, 185, 129, 0.3),
-    -5px -5px 15px rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(255,255,255,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ==================== 安全区域适配 ==================== */
@@ -190,8 +179,8 @@ body {
 /* ==================== 输入框焦点 ==================== */
 input:focus, textarea:focus, select:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.2);
+  border-color: #34d399;
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.2);
 }
 
 /* ==================== 移动端优化 ==================== */
@@ -202,4 +191,12 @@ input, textarea, button, select {
 
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* ==================== 底部导航 ==================== */
+.bottom-nav {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
