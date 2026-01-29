@@ -22,18 +22,13 @@ body::before {
     top: 0; left: 0; right: 0; bottom: 0;
     z-index: -3;
     pointer-events: none;
-    opacity: 0.5;
-    filter: blur(80px); /* 极高模糊度，融入背景 */
+    opacity: 0.7;
+    filter: blur(60px);
     background-image:
-        /* 左上大云朵 */
         radial-gradient(ellipse 60% 50% at 15% 20%, rgba(255, 255, 255, 0.9) 0%, transparent 50%),
-        /* 右上云朵 */
         radial-gradient(ellipse 50% 40% at 85% 15%, rgba(255, 255, 255, 0.7) 0%, transparent 45%),
-        /* 中间偏右云朵 */
         radial-gradient(ellipse 45% 35% at 70% 60%, rgba(186, 230, 253, 0.5) 0%, transparent 50%),
-        /* 左下粉色光晕 */
         radial-gradient(ellipse 55% 45% at 20% 80%, rgba(251, 207, 232, 0.6) 0%, transparent 50%),
-        /* 右下蓝色光晕 */
         radial-gradient(ellipse 40% 35% at 90% 85%, rgba(165, 215, 250, 0.5) 0%, transparent 45%);
 }
 
@@ -68,21 +63,13 @@ body::after {
 
 /* 1. 主界面大毛玻璃容器 - 柔和渐变背景 */
 .main-glass-container {
-    /* 从上到下：淡粉橙 -> 淡粉 -> 奶白 */
-    background: linear-gradient(
-        180deg,
-        rgba(255, 232, 220, 0.95) 0%,
-        rgba(255, 240, 235, 0.92) 30%,
-        rgba(255, 248, 245, 0.9) 60%,
-        rgba(255, 255, 255, 0.88) 100%
-    );
-    backdrop-filter: blur(20px) saturate(150%);
-    -webkit-backdrop-filter: blur(20px) saturate(150%);
-    border: 2px solid rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 2px solid rgba(255, 255, 255, 0.6);
     box-shadow:
-        0 25px 50px -12px rgba(0, 0, 0, 0.1),
-        0 12px 24px -8px rgba(0, 0, 0, 0.06),
-        inset 0 1px 2px rgba(255, 255, 255, 1);
+        0 30px 60px -12px rgba(0, 0, 0, 0.08),
+        inset 0 2px 4px rgba(255, 255, 255, 0.8);
     border-radius: 2.5rem;
 }
 
@@ -120,7 +107,7 @@ body::after {
 .bubble-blue {
     background: linear-gradient(150deg, #93c5fd, #3b82f6);
     box-shadow:
-        inset 0 5px 10px rgba(255, 255, 255, 0.7),
+        inset 0 5px 10px rgba(255, 255, 255, 0.8),
         inset 0 -8px 16px rgba(23, 37, 84, 0.3),
         0 15px 25px -10px rgba(59, 130, 246, 0.5);
 }
@@ -129,7 +116,7 @@ body::after {
 .bubble-green, .bubble-cyan {
     background: linear-gradient(150deg, #67e8f9, #06b6d4);
     box-shadow:
-        inset 0 5px 10px rgba(255, 255, 255, 0.7),
+        inset 0 5px 10px rgba(255, 255, 255, 0.8),
         inset 0 -8px 16px rgba(21, 94, 117, 0.3),
         0 15px 25px -10px rgba(6, 182, 212, 0.5);
 }
@@ -138,7 +125,7 @@ body::after {
 .bubble-orange {
     background: linear-gradient(150deg, #fdba74, #f97316);
     box-shadow:
-        inset 0 5px 10px rgba(255, 255, 255, 0.7),
+        inset 0 5px 10px rgba(255, 255, 255, 0.8),
         inset 0 -8px 16px rgba(124, 45, 18, 0.3),
         0 15px 25px -10px rgba(249, 115, 22, 0.5);
 }
