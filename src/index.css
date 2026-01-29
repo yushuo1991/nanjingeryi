@@ -6,8 +6,9 @@
 
 /* ==================== 设计系统 - Soft Claymorphism + Glassmorphism ==================== */
 :root {
-  /* 背景渐变色 */
-  --color-bg-start: #E0F2F7;
+  /* 背景渐变色 - 更柔和的浅蓝 */
+  --color-bg-start: #E8F4F8;
+  --color-bg-mid: #F0F8FA;
   --color-bg-end: #FFFFFF;
 
   /* 主色调 - 薄荷绿 */
@@ -54,7 +55,7 @@ html {
 }
 
 body {
-  background: linear-gradient(180deg, var(--color-bg-start) 0%, var(--color-bg-end) 100%);
+  background: linear-gradient(180deg, var(--color-bg-start) 0%, var(--color-bg-mid) 40%, var(--color-bg-end) 100%);
   min-height: 100vh;
   overflow-x: hidden;
   color: var(--color-text-primary);
