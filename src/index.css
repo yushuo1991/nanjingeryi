@@ -7,139 +7,282 @@
 /* ================= 全局背景设定 ================= */
 body {
   font-family: 'Nunito', sans-serif;
-  background: linear-gradient(135deg, #dbeafe 0%, #fce7f3 100%);
+  /* 更柔和的蓝粉渐变 */
+  background: linear-gradient(145deg, #c7e0f4 0%, #e8d5f0 50%, #f5e6e8 100%);
   color: #475569;
   min-height: 100vh;
   overflow-x: hidden;
+  position: relative;
 }
 
-/* 背景装饰层1：柔焦云朵效果 */
+/* 背景装饰层1：极度柔焦的大云朵 - 创造景深 */
 body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: -3;
+    pointer-events: none;
+    opacity: 0.5;
+    filter: blur(80px); /* 极高模糊度，融入背景 */
+    background-image:
+        /* 左上大云朵 */
+        radial-gradient(ellipse 60% 50% at 15% 20%, rgba(255, 255, 255, 0.9) 0%, transparent 50%),
+        /* 右上云朵 */
+        radial-gradient(ellipse 50% 40% at 85% 15%, rgba(255, 255, 255, 0.7) 0%, transparent 45%),
+        /* 中间偏右云朵 */
+        radial-gradient(ellipse 45% 35% at 70% 60%, rgba(186, 230, 253, 0.5) 0%, transparent 50%),
+        /* 左下粉色光晕 */
+        radial-gradient(ellipse 55% 45% at 20% 80%, rgba(251, 207, 232, 0.6) 0%, transparent 50%),
+        /* 右下蓝色光晕 */
+        radial-gradient(ellipse 40% 35% at 90% 85%, rgba(165, 215, 250, 0.5) 0%, transparent 45%);
+}
+
+/* 背景装饰层2：中景云朵层 */
+body::after {
     content: '';
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
     z-index: -2;
     pointer-events: none;
-    opacity: 0.6;
-    filter: blur(40px);
+    opacity: 0.35;
+    filter: blur(50px);
     background-image:
-        radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.8) 0%, transparent 30%),
-        radial-gradient(circle at 80% 70%, rgba(186, 230, 253, 0.4) 0%, transparent 30%),
-        radial-gradient(circle at 40% 80%, rgba(251, 207, 232, 0.4) 0%, transparent 30%);
+        radial-gradient(circle at 30% 40%, rgba(255, 255, 255, 0.8) 0%, transparent 25%),
+        radial-gradient(circle at 75% 30%, rgba(224, 242, 254, 0.6) 0%, transparent 20%),
+        radial-gradient(circle at 60% 75%, rgba(252, 231, 243, 0.5) 0%, transparent 25%);
 }
 
-/* 背景装饰层2：微妙的圆点纹理 */
-body::after {
-    content: '';
+/* 背景装饰层3：微妙圆点纹理 - 使用额外的div或在组件中添加 */
+.dot-pattern {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
     z-index: -1;
-    opacity: 0.4;
-    background-image: radial-gradient(#a5b4fc 1px, transparent 1px);
-    background-size: 32px 32px;
-    mask-image: radial-gradient(circle at 50% 50%, black 40%, transparent 100%);
+    pointer-events: none;
+    opacity: 0.15;
+    background-image: radial-gradient(rgba(148, 163, 184, 0.8) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 20%, transparent 70%);
 }
 
 /* ================= 核心组件样式 ================= */
 
-/* 1. 主界面大毛玻璃容器 */
+/* 1. 主界面大毛玻璃容器 - 厚重悬浮感 */
 .main-glass-container {
-    background: rgba(255, 255, 255, 0.55);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 2px solid rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    /* 厚实的玻璃切面边框 */
+    border: 2.5px solid rgba(255, 255, 255, 0.85);
+    /* 多层阴影创造悬浮感 */
     box-shadow:
-        0 25px 50px -12px rgba(0, 0, 0, 0.1),
-        inset 0 1px 3px rgba(255, 255, 255, 0.8);
-    border-radius: 2.5rem;
+        /* 主投影 - 大而柔和 */
+        0 30px 60px -15px rgba(0, 0, 0, 0.12),
+        /* 中层投影 */
+        0 15px 30px -10px rgba(0, 0, 0, 0.08),
+        /* 近距离柔和投影 */
+        0 5px 15px rgba(0, 0, 0, 0.04),
+        /* 顶部内边缘高光 */
+        inset 0 1px 2px rgba(255, 255, 255, 0.9),
+        /* 底部内边缘微妙深度 */
+        inset 0 -1px 2px rgba(0, 0, 0, 0.02);
+    border-radius: 2.8rem;
 }
 
-/* 2. 3D 气泡/果冻按钮 */
+/* 2. 3D 气泡/果冻按钮 - 核心视觉效果 */
 .bubble-3d {
     position: relative;
-    border-radius: 2rem;
-    padding: 1rem;
+    border-radius: 1.8rem;
+    padding: 0.9rem 0.5rem;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     color: white;
     overflow: hidden;
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-    border: 1px solid rgba(255,255,255,0.2);
-}
-.bubble-3d:active {
-    transform: scale(0.96);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    /* 微妙的玻璃边框 */
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
 }
 
-/* 气泡通用顶部高光层 */
+.bubble-3d:active {
+    transform: scale(0.94);
+}
+
+/* 气泡顶部高光层 - 模拟光源反射 */
 .bubble-3d::before {
     content: '';
     position: absolute;
-    top: 6%; left: 12%; right: 12%;
-    height: 35%;
-    background: linear-gradient(to bottom, rgba(255,255,255,0.8), rgba(255,255,255,0.1));
-    border-radius: 50% / 25%;
+    top: 8%;
+    left: 15%;
+    right: 15%;
+    height: 45%;
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.95) 0%,
+        rgba(255, 255, 255, 0.6) 30%,
+        rgba(255, 255, 255, 0.1) 70%,
+        transparent 100%
+    );
+    border-radius: 50% 50% 45% 45% / 60% 60% 40% 40%;
+    filter: blur(3px);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* 气泡底部反光层 - 环境光反射 */
+.bubble-3d::after {
+    content: '';
+    position: absolute;
+    bottom: 8%;
+    left: 20%;
+    right: 20%;
+    height: 25%;
+    background: linear-gradient(
+        0deg,
+        rgba(255, 255, 255, 0.25) 0%,
+        transparent 100%
+    );
+    border-radius: 45% 45% 50% 50% / 40% 40% 60% 60%;
     filter: blur(4px);
     pointer-events: none;
+    z-index: 1;
 }
 
-/* 蓝色气泡变体 */
+/* ===== 蓝色气泡 - 果冻质感 ===== */
 .bubble-blue {
-    background: linear-gradient(145deg, #93c5fd, #60a5fa);
+    background: linear-gradient(
+        155deg,
+        #a5d8ff 0%,
+        #74c0fc 25%,
+        #4dabf7 50%,
+        #339af0 75%,
+        #228be6 100%
+    );
     box-shadow:
-        inset 0 4px 6px rgba(255, 255, 255, 0.6),
-        inset 0 -8px 16px rgba(30, 64, 175, 0.25),
-        0 14px 24px -8px rgba(96, 165, 250, 0.5);
-}
-/* 绿色气泡变体 */
-.bubble-green {
-    background: linear-gradient(145deg, #6ee7b7, #34d399);
-    box-shadow:
-        inset 0 4px 6px rgba(255, 255, 255, 0.6),
-        inset 0 -8px 16px rgba(6, 95, 70, 0.25),
-        0 14px 24px -8px rgba(52, 211, 153, 0.5);
-}
-/* 橙色气泡变体 */
-.bubble-orange {
-    background: linear-gradient(145deg, #fdba74, #fb923c);
-    box-shadow:
-        inset 0 4px 6px rgba(255, 255, 255, 0.6),
-        inset 0 -8px 16px rgba(124, 45, 18, 0.25),
-        0 14px 24px -8px rgba(251, 146, 60, 0.5);
+        /* 顶部强高光 - 模拟光源 */
+        inset 0 6px 12px rgba(255, 255, 255, 0.8),
+        inset 0 2px 4px rgba(255, 255, 255, 0.9),
+        /* 底部深色 - 环境遮蔽 */
+        inset 0 -8px 16px rgba(25, 91, 160, 0.4),
+        inset 0 -3px 6px rgba(25, 91, 160, 0.2),
+        /* 左右边缘微妙深度 */
+        inset 4px 0 8px rgba(25, 91, 160, 0.1),
+        inset -4px 0 8px rgba(25, 91, 160, 0.1),
+        /* 外部投影 - 悬浮感 */
+        0 12px 28px -6px rgba(51, 154, 240, 0.55),
+        0 6px 12px -4px rgba(51, 154, 240, 0.3);
 }
 
-/* 3. 操作按钮 */
+/* ===== 绿色气泡 - 果冻质感 ===== */
+.bubble-green {
+    background: linear-gradient(
+        155deg,
+        #96f2d7 0%,
+        #63e6be 25%,
+        #38d9a9 50%,
+        #20c997 75%,
+        #12b886 100%
+    );
+    box-shadow:
+        inset 0 6px 12px rgba(255, 255, 255, 0.8),
+        inset 0 2px 4px rgba(255, 255, 255, 0.9),
+        inset 0 -8px 16px rgba(8, 102, 68, 0.4),
+        inset 0 -3px 6px rgba(8, 102, 68, 0.2),
+        inset 4px 0 8px rgba(8, 102, 68, 0.1),
+        inset -4px 0 8px rgba(8, 102, 68, 0.1),
+        0 12px 28px -6px rgba(32, 201, 151, 0.55),
+        0 6px 12px -4px rgba(32, 201, 151, 0.3);
+}
+
+/* ===== 橙色气泡 - 果冻质感 ===== */
+.bubble-orange {
+    background: linear-gradient(
+        155deg,
+        #ffd8a8 0%,
+        #ffc078 25%,
+        #ffa94d 50%,
+        #ff922b 75%,
+        #fd7e14 100%
+    );
+    box-shadow:
+        inset 0 6px 12px rgba(255, 255, 255, 0.8),
+        inset 0 2px 4px rgba(255, 255, 255, 0.9),
+        inset 0 -8px 16px rgba(166, 72, 0, 0.35),
+        inset 0 -3px 6px rgba(166, 72, 0, 0.2),
+        inset 4px 0 8px rgba(166, 72, 0, 0.1),
+        inset -4px 0 8px rgba(166, 72, 0, 0.1),
+        0 12px 28px -6px rgba(255, 146, 43, 0.55),
+        0 6px 12px -4px rgba(255, 146, 43, 0.3);
+}
+
+/* 3. 操作按钮 - 青蓝渐变胶囊 */
 .btn-cyan-gradient {
-    background: linear-gradient(90deg, #22d3ee, #3b82f6);
-    box-shadow: 0 8px 20px -6px rgba(34, 211, 238, 0.6);
+    background: linear-gradient(90deg, #22d3ee 0%, #0ea5e9 50%, #0284c7 100%);
+    box-shadow:
+        0 10px 25px -5px rgba(14, 165, 233, 0.5),
+        0 4px 10px -3px rgba(14, 165, 233, 0.3),
+        inset 0 1px 2px rgba(255, 255, 255, 0.4);
     color: white;
     border: none;
-    transition: transform 0.1s;
+    transition: all 0.15s ease;
 }
-.btn-cyan-gradient:active { transform: scale(0.98); }
+.btn-cyan-gradient:active {
+    transform: scale(0.97);
+    box-shadow:
+        0 5px 15px -3px rgba(14, 165, 233, 0.4),
+        inset 0 1px 2px rgba(255, 255, 255, 0.3);
+}
 
-/* 4. 列表项 */
-.list-item-rounded {
-    background: rgba(255, 255, 255, 0.7);
+/* 4. 白色毛玻璃按钮 */
+.btn-glass-white {
+    background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(10px);
-    border-radius: 1.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.8);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-    transition: all 0.2s;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    color: #64748b;
+    box-shadow:
+        0 6px 16px -4px rgba(0, 0, 0, 0.08),
+        inset 0 1px 2px rgba(255, 255, 255, 0.8);
+    transition: all 0.15s ease;
+}
+.btn-glass-white:active {
+    transform: scale(0.97);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+/* 5. 列表项 - 柔和圆角毛玻璃 */
+.list-item-rounded {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 1.4rem;
+    border: 1.5px solid rgba(255, 255, 255, 0.9);
+    box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.04),
+        0 2px 6px rgba(0, 0, 0, 0.02),
+        inset 0 1px 1px rgba(255, 255, 255, 0.8);
+    transition: all 0.2s ease;
 }
 .list-item-rounded:hover {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.9);
     transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(0,0,0,0.05);
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.06),
+        0 4px 10px rgba(0, 0, 0, 0.03),
+        inset 0 1px 1px rgba(255, 255, 255, 0.9);
 }
 
-/* 5. 粉色 FAB 按钮 */
+/* 6. 粉色 FAB 按钮 - 3D效果 */
 .fab-pink {
-    background: linear-gradient(135deg, #f472b6, #e11d48);
+    background: linear-gradient(145deg, #f472b6 0%, #ec4899 50%, #db2777 100%);
     box-shadow:
-        0 12px 24px -6px rgba(244, 114, 182, 0.6),
-        inset 0 2px 3px rgba(255,255,255,0.5);
+        0 14px 30px -8px rgba(236, 72, 153, 0.6),
+        0 6px 14px -4px rgba(236, 72, 153, 0.35),
+        inset 0 2px 4px rgba(255, 255, 255, 0.5),
+        inset 0 -2px 6px rgba(157, 23, 77, 0.2);
+    border: 1.5px solid rgba(255, 255, 255, 0.3);
+}
+.fab-pink:active {
+    transform: scale(0.92);
 }
 
 /* ================= 安全区域适配 ================= */
@@ -167,6 +310,11 @@ body::after {
   to { opacity: 1; transform: scale(1); }
 }
 
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
 .animate-slide-up {
   animation: slide-up 0.35s cubic-bezier(0.32, 0.72, 0, 1);
 }
@@ -179,6 +327,10 @@ body::after {
   animation: scale-in 0.2s ease-out;
 }
 
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
 /* ================= 滚动条 ================= */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -186,8 +338,8 @@ body::after {
 /* ================= 输入框焦点 ================= */
 input:focus, textarea:focus, select:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
 }
 
 /* ================= 移动端优化 ================= */
@@ -202,8 +354,9 @@ input, textarea, button, select {
 
 /* ================= 底部导航 ================= */
 .bottom-nav {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04);
 }
