@@ -1277,99 +1277,92 @@ export default function RehabCareLink() {
     return (
     <div className="min-h-screen flex justify-center pt-6 pb-6 px-4">
       {/* 主容器 - 毛玻璃面板 */}
-      <div className="glass-panel-container w-full max-w-md relative overflow-hidden flex flex-col">
+      <div className="main-glass-container w-full max-w-md relative overflow-hidden flex flex-col p-6">
 
         {/* 顶部标题 */}
-        <div className="pt-8 pb-4 text-center z-10">
-          <h1 className="text-xl font-extrabold text-[#1e293b] tracking-tight">
-            南京市儿童医院康复科
-          </h1>
-        </div>
-
-        {/* 嫩芽发光圆环 */}
-        <div className="flex justify-center mb-8 z-10 mt-2">
-          <div className="sprout-ring-outer">
-            <div className="sprout-ring-inner">
-              <div className="transform translate-y-1">
-                <SproutIcon />
-              </div>
-            </div>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-extrabold text-slate-800">
+              南京市儿童医院康复科
+            </h1>
+          </div>
+          <div className="w-10 h-10 rounded-full bg-blue-100 border-2 border-white shadow-sm flex items-center justify-center">
+            <span className="text-xl">👨‍⚕️</span>
           </div>
         </div>
 
-        {/* 统计卡片 */}
-        <div className="flex justify-between px-6 gap-3 mb-8 z-10">
-          <button onClick={() => setShowAllPatients(true)} className="stat-glass-card flex-1 py-3 px-2 flex flex-col items-center active:scale-95 transition-transform">
-            <span className="text-2xl font-bold text-gray-700 mb-1">{activePatients.length}</span>
-            <div className="flex items-center gap-1 opacity-80">
-              <span className="text-[11px] font-bold text-gray-500">在治患儿</span>
-              <span className="text-[10px]">👶</span>
+        {/* 3D气泡统计卡片 */}
+        <div className="grid grid-cols-3 gap-3 mb-8">
+          <button onClick={() => setShowAllPatients(true)} className="bubble-3d bubble-blue">
+            <div className="flex items-center gap-1 mb-1 relative z-10">
+              <span className="text-lg">👶</span>
+              <span className="text-3xl font-black">{activePatients.length}</span>
             </div>
+            <span className="text-[11px] font-bold opacity-90 relative z-10">在治患儿</span>
           </button>
-          <div className="stat-glass-card flex-1 py-3 px-2 flex flex-col items-center">
-            <span className="text-2xl font-bold text-gray-700 mb-1">{todayTreated.length}</span>
-            <div className="flex items-center gap-1 opacity-80">
-              <span className="text-[11px] font-bold text-gray-500">今日已治</span>
-              <span className="text-[10px]">✅</span>
+          <div className="bubble-3d bubble-green">
+            <div className="flex items-center gap-1 mb-1 relative z-10">
+              <span className="text-lg">✅</span>
+              <span className="text-3xl font-black">{todayTreated.length}</span>
             </div>
+            <span className="text-[11px] font-bold opacity-90 relative z-10">今日已治</span>
           </div>
-          <div className="stat-glass-card flex-1 py-3 px-2 flex flex-col items-center">
-            <span className="text-2xl font-bold text-gray-700 mb-1">{todayPending.length}</span>
-            <div className="flex items-center gap-1 opacity-80">
-              <span className="text-[11px] font-bold text-gray-500">待治疗</span>
-              <span className="text-[10px]">😴</span>
+          <div className="bubble-3d bubble-orange">
+            <div className="flex items-center gap-1 mb-1 relative z-10">
+              <span className="text-lg">⏳</span>
+              <span className="text-3xl font-black">{todayPending.length}</span>
             </div>
+            <span className="text-[11px] font-bold opacity-90 relative z-10">待治疗</span>
           </div>
         </div>
 
         {/* 快捷操作按钮 */}
         {userRole === 'therapist' && (
-          <div className="flex px-6 gap-4 mb-8 z-10">
+          <div className="flex gap-4 mb-8">
             <button
               onClick={() => setShowAIModal(true)}
-              className="flex-1 btn-clay-green h-14 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm"
+              className="flex-1 btn-cyan-gradient h-12 rounded-full flex items-center justify-center gap-2 font-bold text-sm transition-transform active:scale-98"
             >
-              <Zap size={20} fill="white" />
+              <Zap size={18} fill="white" />
               AI智能收治
             </button>
             <button
               onClick={initBatchGenerate}
-              className="flex-1 btn-clay-glass h-14 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm"
+              className="flex-1 btn-glass-white h-12 rounded-full flex items-center justify-center gap-2 font-bold text-sm transition-transform active:scale-98"
             >
-              <Zap size={20} className="text-gray-400" />
+              <Zap size={18} className="text-blue-400" />
               批量生成日报
             </button>
           </div>
         )}
 
-        {/* 最近建档 - 仅治疗师可见 */}
-        <div className="flex-1 px-6 pb-24 overflow-y-auto hide-scrollbar z-10">
+        {/* 列表区域 */}
+        <div className="flex-1 overflow-y-auto hide-scrollbar">
+          {/* 最近建档 - 仅治疗师可见 */}
           {userRole === 'therapist' && recentPatients.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-base font-bold text-gray-700 mb-4">最近建档</h3>
-              <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-700 mb-4 pl-1">最近建档</h3>
+              <div className="space-y-3">
                 {recentPatients.map(patient => (
                   <button
                     key={patient.id}
                     onClick={() => navigateTo('patientDetail', patient)}
-                    className="w-full patient-list-item p-4 flex items-start gap-4 text-left"
+                    className="w-full list-item-rounded p-4 flex items-center gap-3 text-left"
                   >
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-100 to-orange-100 flex items-center justify-center text-2xl shadow-inner flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-xl shadow-sm flex-shrink-0 border-2 border-white">
                       {patient.avatar}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start">
-                        <h4 className="font-bold text-gray-800 text-sm mb-1">
-                          {patient.name}, {patient.age}
-                        </h4>
-                        <span className={`text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm ${patient.todayTreated ? 'bg-green-400' : 'bg-red-400'}`}>
-                          {patient.todayTreated ? '已治' : '待治'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-400 leading-relaxed line-clamp-2">
+                      <h4 className="font-bold text-slate-800 text-sm mb-0.5">
+                        {patient.name}, {patient.age}
+                      </h4>
+                      <p className="text-xs text-slate-400 leading-relaxed truncate">
                         {patient.diagnosis}
                       </p>
                     </div>
+                    <span className={`text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm ${patient.todayTreated ? 'bg-green-400' : 'bg-red-400'}`}>
+                      {patient.todayTreated ? '已治' : '待治'}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -1377,9 +1370,9 @@ export default function RehabCareLink() {
           )}
 
           {/* 科室患儿分布 */}
-          <div className="pt-4">
-            <h3 className="text-base font-bold text-gray-700 mb-4">科室患儿分布</h3>
-            <div className="space-y-4">
+          <div className="mb-20">
+            <h3 className="text-sm font-bold text-slate-700 mb-4 pl-1">科室患儿分布</h3>
+            <div className="space-y-3">
               {initialDepartments.map(dept => {
                 const deptPatients = getDepartmentPatients(dept.id);
                 const pending = deptPatients.filter(p => p.status === 'active' && !p.todayTreated).length;
@@ -1387,27 +1380,26 @@ export default function RehabCareLink() {
                   <button
                     key={dept.id}
                     onClick={() => navigateTo('patients', dept)}
-                    className="w-full patient-list-item p-4 flex items-center gap-4 text-left"
+                    className="w-full list-item-rounded p-4 flex items-center gap-3 text-left"
                   >
                     <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-xl shadow-sm border border-gray-100">
                       {dept.icon}
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-bold text-gray-700 text-sm">{dept.name}</h4>
+                      <h4 className="font-bold text-slate-700 text-sm">{dept.name}</h4>
                       <div className="flex gap-2 mt-1">
                         <span className="bg-green-100 text-green-600 text-[10px] px-2 py-0.5 rounded-full font-bold">
                           {deptPatients.length} 位患儿
                         </span>
                         {pending > 0 && (
-                          <span className="bg-green-100 text-green-600 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                          <span className="bg-orange-100 text-orange-600 text-[10px] px-2 py-0.5 rounded-full font-bold">
                             {pending} 待治
                           </span>
                         )}
                       </div>
                     </div>
-                    {/* 分享按钮 - 仅治疗师可见 */}
                     {userRole === 'therapist' && (
-                      <Share2 size={16} className="text-gray-300" />
+                      <Share2 size={16} className="text-slate-300" />
                     )}
                   </button>
                 );
@@ -1421,14 +1413,13 @@ export default function RehabCareLink() {
           <div className="absolute bottom-8 right-6 z-20">
             <button
               onClick={() => setShowFabMenu(!showFabMenu)}
-              className="fab-3d-green w-16 h-16 transition-transform active:scale-90"
+              className="fab-pink w-14 h-14 rounded-full flex items-center justify-center transition-transform active:scale-90"
             >
-              <Plus size={32} strokeWidth={3} color="white" className={`transition-transform ${showFabMenu ? 'rotate-45' : ''}`} />
+              <Plus size={28} strokeWidth={3} color="white" className={`transition-transform ${showFabMenu ? 'rotate-45' : ''}`} />
             </button>
 
-            {/* FAB菜单 */}
             {showFabMenu && (
-              <div className="absolute bottom-20 right-0 p-2 min-w-[180px] patient-list-item animate-scale-in">
+              <div className="absolute bottom-16 right-0 p-2 min-w-[180px] list-item-rounded animate-scale-in">
                 <FabMenuItem icon={<Sparkles size={18} />} label="AI智能收治" color="text-emerald-500" onClick={() => { setShowAIModal(true); setShowFabMenu(false); }} />
                 <FabMenuItem icon={<Zap size={18} />} label="批量生成日报" color="text-amber-500" onClick={() => { initBatchGenerate(); setShowFabMenu(false); }} />
                 <FabMenuItem icon={<BookOpen size={18} />} label="治疗模板库" color="text-sky-500" onClick={() => { setShowTemplates(true); setShowFabMenu(false); }} />
@@ -1436,10 +1427,6 @@ export default function RehabCareLink() {
             )}
           </div>
         )}
-
-        {/* 装饰性背景模糊 */}
-        <div className="absolute top-0 left-0 w-full h-40 bg-blue-100/50 blur-3xl -z-0 pointer-events-none"></div>
-        <div className="absolute bottom-0 right-0 w-40 h-40 bg-green-100/30 blur-3xl -z-0 pointer-events-none"></div>
 
       </div>
     </div>
