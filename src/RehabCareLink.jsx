@@ -1279,10 +1279,10 @@ export default function RehabCareLink() {
       {/* 主容器 - 毛玻璃面板 */}
       <div className="glass-panel-container w-full max-w-md relative overflow-hidden flex flex-col">
 
-        {/* 顶部问候语 */}
+        {/* 顶部标题 */}
         <div className="pt-8 pb-4 text-center z-10">
-          <h1 className="text-2xl font-extrabold text-[#1e293b] tracking-tight">
-            {getGreeting()}, Dr. Wu
+          <h1 className="text-xl font-extrabold text-[#1e293b] tracking-tight">
+            南京市儿童医院康复科
           </h1>
         </div>
 
@@ -1342,9 +1342,9 @@ export default function RehabCareLink() {
           </div>
         )}
 
-        {/* 最近建档 - 可滚动区域 */}
+        {/* 最近建档 - 仅治疗师可见 */}
         <div className="flex-1 px-6 pb-24 overflow-y-auto hide-scrollbar z-10">
-          {recentPatients.length > 0 && (
+          {userRole === 'therapist' && recentPatients.length > 0 && (
             <div className="mb-6">
               <h3 className="text-base font-bold text-gray-700 mb-4">最近建档</h3>
               <div className="space-y-4">
@@ -1405,7 +1405,10 @@ export default function RehabCareLink() {
                         )}
                       </div>
                     </div>
-                    <Share2 size={16} className="text-gray-300" />
+                    {/* 分享按钮 - 仅治疗师可见 */}
+                    {userRole === 'therapist' && (
+                      <Share2 size={16} className="text-gray-300" />
+                    )}
                   </button>
                 );
               })}
