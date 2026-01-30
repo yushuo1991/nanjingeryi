@@ -1294,6 +1294,7 @@ export default function RehabCareLink() {
         {/* 3D气泡统计卡片 */}
         <div className="grid grid-cols-3 gap-3 mb-8">
           <button onClick={() => setShowAllPatients(true)} className="bubble-3d bubble-blue">
+            <span className="dots_border"></span>
             <div className="flex items-center gap-1 mb-1 relative z-10">
               <span className="text-lg">👶</span>
               <span className="text-3xl font-black">{activePatients.length}</span>
@@ -1301,6 +1302,7 @@ export default function RehabCareLink() {
             <span className="text-[11px] font-bold opacity-90 relative z-10">在治患儿</span>
           </button>
           <div className="bubble-3d bubble-green">
+            <span className="dots_border"></span>
             <div className="flex items-center gap-1 mb-1 relative z-10">
               <span className="text-lg">✅</span>
               <span className="text-3xl font-black">{todayTreated.length}</span>
@@ -1308,6 +1310,7 @@ export default function RehabCareLink() {
             <span className="text-[11px] font-bold opacity-90 relative z-10">今日已治</span>
           </div>
           <div className="bubble-3d bubble-orange">
+            <span className="dots_border"></span>
             <div className="flex items-center gap-1 mb-1 relative z-10">
               <span className="text-lg">⏳</span>
               <span className="text-3xl font-black">{todayPending.length}</span>
