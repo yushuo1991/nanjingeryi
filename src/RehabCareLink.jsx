@@ -1377,7 +1377,7 @@ export default function RehabCareLink() {
           )}
 
           {/* 科室患儿分布 */}
-          <div className="mb-20">
+          <div className="mb-24">
             <h3 className="text-sm font-bold text-slate-700 mb-4 pl-1">科室患儿分布</h3>
             <div className="space-y-3">
               {initialDepartments.map(dept => {
@@ -1412,27 +1412,6 @@ export default function RehabCareLink() {
             </div>
           </div>
         </div>
-
-        {/* FAB按钮 */}
-        {userRole === 'therapist' && (
-          <div className="absolute bottom-8 right-6 z-20">
-            <button
-              onClick={() => setShowFabMenu(!showFabMenu)}
-              className="w-14 h-14 rounded-full flex items-center justify-center transition-transform active:scale-90 bg-gradient-to-br from-pink-400 to-rose-500 shadow-lg shadow-pink-300/50"
-            >
-              <Plus size={28} strokeWidth={3} color="white" className={`transition-transform ${showFabMenu ? 'rotate-45' : ''}`} />
-            </button>
-
-            {showFabMenu && (
-              <div className="absolute bottom-16 right-0 p-2 min-w-[180px] bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-lg animate-scale-in">
-                <FabMenuItem icon={<Sparkles size={18} />} label="AI智能收治" color="text-emerald-500" onClick={() => { setShowAIModal(true); setShowFabMenu(false); }} />
-                <FabMenuItem icon={<Zap size={18} />} label="批量生成日报" color="text-amber-500" onClick={() => { initBatchGenerate(); setShowFabMenu(false); }} />
-                <FabMenuItem icon={<BookOpen size={18} />} label="治疗模板库" color="text-sky-500" onClick={() => { setShowTemplates(true); setShowFabMenu(false); }} />
-              </div>
-            )}
-          </div>
-        )}
-
       </div>
     </div>
     );
@@ -1780,7 +1759,7 @@ export default function RehabCareLink() {
 
                 {/* 治疗项目列表 */}
                 <div className="flex items-center justify-between mb-3">
-                  <h5 className="text-sm font-bold text-slate-700">治疗项目</h5>
+                  <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wide">治疗项目</h5>
                   {/* 治疗师视角显示生成日志按钮 */}
                   {userRole === 'therapist' && (
                     <button

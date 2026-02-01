@@ -425,7 +425,9 @@ export const generateTreatmentCard = (patient) => {
               const url = URL.createObjectURL(blob);
               const link = document.createElement('a');
               link.href = url;
-              link.download = '治疗卡片-${patient.name}-${today.replace(/\\//g, '')}.png';
+              const patientName = '${patient.name}';
+              const dateStr = '${today}'.replace(/\\//g, '');
+              link.download = '治疗卡片-' + patientName + '-' + dateStr + '.png';
               document.body.appendChild(link);
               link.click();
               document.body.removeChild(link);
@@ -433,7 +435,7 @@ export const generateTreatmentCard = (patient) => {
 
               btn.disabled = false;
               btn.textContent = '✅ 已保存';
-              setTimeout(() => {
+              setTimeout(function() {
                 btn.textContent = '💾 保存图片';
               }, 2000);
             });
@@ -441,7 +443,7 @@ export const generateTreatmentCard = (patient) => {
             console.error('保存失败:', error);
             btn.disabled = false;
             btn.textContent = '❌ 保存失败';
-            setTimeout(() => {
+            setTimeout(function() {
               btn.textContent = '💾 保存图片';
             }, 2000);
           }
