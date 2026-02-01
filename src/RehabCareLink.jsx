@@ -1143,22 +1143,22 @@ export default function RehabCareLink() {
     </svg>
   );
 
-  // 顶部Header - 有机科技风格
-  const Header = ({ title, showBack = false, rightAction = null, showLogo = false, dark = false }) => (
+  // 顶部Header - 浅色毛玻璃风格（与首页统一）
+  const Header = ({ title, showBack = false, rightAction = null, showLogo = false }) => (
     <div className="sticky top-0 z-40">
       {/* 毛玻璃背景 */}
-      <div className={`absolute inset-0 backdrop-blur-xl ${dark ? 'bg-[#0a1628]/80 border-b border-[#00e5cc]/10' : 'glass-light border-b border-[#4a7c59]/10'}`} />
+      <div className="absolute inset-0 backdrop-blur-xl bg-white/80 border-b border-slate-100" />
       <div className="relative px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {showBack && (
-            <button onClick={goBack} className={`p-2 -ml-2 rounded-full transition-all duration-200 active:scale-95 ${dark ? 'hover:bg-white/10' : 'hover:bg-[#4a7c59]/10'}`}>
-              <ChevronLeft size={24} className={dark ? 'text-white' : 'text-[#1a2f23]'} />
+            <button onClick={goBack} className="p-2 -ml-2 rounded-full transition-all duration-200 active:scale-95 hover:bg-slate-100">
+              <ChevronLeft size={24} className="text-slate-600" />
             </button>
           )}
           {showLogo && <HospitalLogo size={36} />}
           <div>
-            <h1 className={`text-lg font-bold tracking-tight ${dark ? 'text-white' : 'text-[#1a2f23]'}`}>{title}</h1>
-            {showLogo && <p className={`text-xs -mt-0.5 ${dark ? 'text-white/60' : 'text-[#4a7c59]'}`}>康复云查房助手</p>}
+            <h1 className="text-lg font-bold tracking-tight text-slate-800">{title}</h1>
+            {showLogo && <p className="text-xs -mt-0.5 text-slate-500">康复云查房助手</p>}
           </div>
         </div>
         {rightAction}
@@ -1166,7 +1166,7 @@ export default function RehabCareLink() {
     </div>
   );
 
-  // 底部导航 - Glassmorphism 风格
+  // 底部导航 - 浅色毛玻璃风格
   const BottomNav = () => (
     <div className="fixed bottom-0 left-0 right-0 z-50">
       {/* 毛玻璃背景 */}
@@ -1179,23 +1179,27 @@ export default function RehabCareLink() {
           onClick={() => navigateTo('home')}
         />
 
-        {/* 中间悬浮按钮 - 薄荷绿粘土风格 */}
+        {/* 中间悬浮按钮 */}
         {userRole === 'therapist' && (
           <div className="relative -mt-8">
             <button
               onClick={() => setShowFabMenu(!showFabMenu)}
-              className={`fab-button ${showFabMenu ? 'rotate-45 !bg-gray-700' : ''}`}
+              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-90 ${
+                showFabMenu
+                  ? 'bg-slate-600 rotate-45'
+                  : 'bg-gradient-to-br from-pink-400 to-rose-500 shadow-pink-300/50'
+              }`}
             >
               <Plus size={28} className="text-white" />
             </button>
 
             {/* FAB菜单 */}
             {showFabMenu && (
-              <div className="absolute bottom-20 left-1/2 -translate-x-1/2 glass-card-strong p-2 min-w-[200px]">
-                <FabMenuItem icon={<Sparkles size={20} />} label="AI智能收治" color="text-[#6BEE9F]" onClick={() => { setShowAIModal(true); setShowFabMenu(false); }} />
-                <FabMenuItem icon={<Zap size={20} />} label="批量生成日报" color="text-[#FFB347]" onClick={() => { initBatchGenerate(); setShowFabMenu(false); }} />
-                <FabMenuItem icon={<BookOpen size={20} />} label="治疗模板库" color="text-[#87CEEB]" onClick={() => { setShowTemplates(true); setShowFabMenu(false); }} />
-                <FabMenuItem icon={<ClipboardList size={20} />} label="快速录入" color="text-[#FF8A80]" onClick={() => { setShowQuickEntry(true); setShowFabMenu(false); }} />
+              <div className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-xl rounded-2xl p-2 min-w-[200px] shadow-xl border border-slate-100 animate-scale-in">
+                <FabMenuItem icon={<Sparkles size={20} />} label="AI智能收治" color="text-blue-500" onClick={() => { setShowAIModal(true); setShowFabMenu(false); }} />
+                <FabMenuItem icon={<Zap size={20} />} label="批量生成日报" color="text-amber-500" onClick={() => { initBatchGenerate(); setShowFabMenu(false); }} />
+                <FabMenuItem icon={<BookOpen size={20} />} label="治疗模板库" color="text-emerald-500" onClick={() => { setShowTemplates(true); setShowFabMenu(false); }} />
+                <FabMenuItem icon={<ClipboardList size={20} />} label="快速录入" color="text-rose-500" onClick={() => { setShowQuickEntry(true); setShowFabMenu(false); }} />
               </div>
             )}
           </div>
@@ -1216,28 +1220,28 @@ export default function RehabCareLink() {
     <button
       onClick={onClick}
       className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all duration-200 ${
-        active ? 'text-[#6BEE9F]' : 'text-gray-400 hover:text-gray-600'
+        active ? 'text-blue-500' : 'text-slate-400 hover:text-slate-600'
       }`}
     >
       <div className="relative">
         {icon}
         {badge > 0 && (
-          <span className="absolute -top-1 -right-2 bg-[#FF8A80] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+          <span className="absolute -top-1 -right-2 bg-rose-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
             {badge}
           </span>
         )}
       </div>
-      <span className={`text-[10px] font-medium ${active ? 'text-[#6BEE9F]' : ''}`}>{label}</span>
+      <span className={`text-[10px] font-medium ${active ? 'text-blue-500' : ''}`}>{label}</span>
     </button>
   ));
 
   const FabMenuItem = ({ icon, label, color, onClick }) => (
     <button
       onClick={onClick}
-      className="flex items-center gap-3 w-full px-4 py-3 hover:bg-[#4a7c59]/10 rounded-2xl transition-all duration-200 active:scale-98"
+      className="flex items-center gap-3 w-full px-4 py-3 hover:bg-slate-50 rounded-xl transition-all duration-200 active:scale-98"
     >
       <span className={color}>{icon}</span>
-      <span className="text-sm font-semibold text-gray-700">{label}</span>
+      <span className="text-sm font-semibold text-slate-700">{label}</span>
     </button>
   );
 
@@ -1434,44 +1438,59 @@ export default function RehabCareLink() {
     );
   };
 
-  // 患儿列表页 - Glassmorphism 风格
+  // 患儿列表页 - 浅色毛玻璃风格（与首页统一）
   const PatientsPage = () => {
     const deptPatients = getDepartmentPatients(selectedDepartment.id);
     const activePatients = deptPatients.filter(p => p.status === 'active');
     const completedPatients = deptPatients.filter(p => p.status === 'completed');
 
     return (
-      <div className="min-h-screen pb-24">
-        <Header title={selectedDepartment.name} showBack />
-
-        <div className="px-4 py-4">
-          {/* 进行中 */}
-          <div className="mb-6">
-            <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-              <div className="w-2 h-2 bg-[#6BEE9F] rounded-full" />
-              进行中 ({activePatients.length})
-            </h3>
-            <div className="space-y-3">
-              {activePatients.map(patient => (
-                <PatientCard key={patient.id} patient={patient} onClick={() => navigateTo('patientDetail', patient)} />
-              ))}
+      <div className="min-h-screen flex justify-center pt-6 pb-6 px-4">
+        <div className="main-glass-container w-full max-w-md relative overflow-hidden flex flex-col p-6">
+          {/* 顶部标题栏 */}
+          <div className="mb-6 flex items-center gap-3">
+            <button onClick={goBack} className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-all">
+              <ChevronLeft size={24} className="text-slate-600" />
+            </button>
+            <div className="flex-1">
+              <h1 className="text-lg font-extrabold text-slate-800">{selectedDepartment.name}</h1>
+              <p className="text-xs text-slate-500">{activePatients.length} 位患儿在治</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-xl shadow-sm border border-slate-100">
+              {selectedDepartment.icon}
             </div>
           </div>
 
-          {/* 已完成/出院 */}
-          {completedPatients.length > 0 && (
-            <div>
-              <h3 className="text-sm font-bold text-gray-400 mb-3 flex items-center gap-2">
-                <div className="w-2 h-2 bg-gray-300 rounded-full" />
-                已完成/出院 ({completedPatients.length})
+          {/* 列表区域 */}
+          <div className="flex-1 overflow-y-auto hide-scrollbar">
+            {/* 进行中 */}
+            <div className="mb-6">
+              <h3 className="text-sm font-bold text-slate-600 mb-3 flex items-center gap-2 pl-1">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full" />
+                进行中 ({activePatients.length})
               </h3>
-              <div className="space-y-3 opacity-60">
-                {completedPatients.map(patient => (
+              <div className="space-y-3">
+                {activePatients.map(patient => (
                   <PatientCard key={patient.id} patient={patient} onClick={() => navigateTo('patientDetail', patient)} />
                 ))}
               </div>
             </div>
-          )}
+
+            {/* 已完成/出院 */}
+            {completedPatients.length > 0 && (
+              <div className="mb-20">
+                <h3 className="text-sm font-bold text-slate-400 mb-3 flex items-center gap-2 pl-1">
+                  <div className="w-2 h-2 bg-slate-300 rounded-full" />
+                  已完成/出院 ({completedPatients.length})
+                </h3>
+                <div className="space-y-3 opacity-70">
+                  {completedPatients.map(patient => (
+                    <PatientCard key={patient.id} patient={patient} onClick={() => navigateTo('patientDetail', patient)} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -1480,65 +1499,68 @@ export default function RehabCareLink() {
   const PatientCard = React.memo(({ patient, onClick }) => (
     <button
       onClick={onClick}
-      className="w-full patient-card text-left"
+      className="w-full bg-white/60 backdrop-blur-xl rounded-2xl p-4 text-left border border-white/50 shadow-sm hover:bg-white/80 transition-all active:scale-[0.98]"
     >
       <div className="flex items-start gap-3">
-        <div className="w-12 h-12 avatar-clay clay-icon-peach flex items-center justify-center text-2xl">
+        <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center text-2xl border-2 border-white shadow-sm flex-shrink-0">
           {patient.avatar}
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <h4 className="font-bold text-gray-800">{patient.name}</h4>
-            <span className="text-xs text-gray-500">{patient.age} · {patient.gender}</span>
-            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">{patient.bedNo}</span>
+            <h4 className="font-bold text-slate-800">{patient.name}</h4>
+            <span className="text-xs text-slate-400">{patient.age} · {patient.gender}</span>
+            <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">{patient.bedNo}</span>
           </div>
-          <p className="text-sm text-[#6BEE9F] font-medium mb-2">{patient.diagnosis}</p>
+          <p className="text-sm text-blue-600 font-medium mb-2 truncate">{patient.diagnosis}</p>
 
           {/* 标签区 */}
           <div className="flex flex-wrap gap-1.5">
             {patient.safetyAlerts?.map((alert, i) => (
-              <span key={i} className="status-badge status-pending text-[10px]">
+              <span key={i} className="bg-rose-100 text-rose-600 text-[10px] px-2 py-0.5 rounded-full flex items-center font-medium">
                 <AlertTriangle size={10} className="mr-0.5" />
                 {alert}
               </span>
             ))}
             {patient.todayTreated ? (
-              <span className="status-badge status-completed text-[10px]">
+              <span className="bg-emerald-100 text-emerald-600 text-[10px] px-2 py-0.5 rounded-full flex items-center font-medium">
                 <CheckCircle2 size={10} className="mr-0.5" />
                 今日已治疗
               </span>
             ) : patient.status === 'active' && (
-              <span className="status-badge status-warning text-[10px]">
+              <span className="bg-amber-100 text-amber-600 text-[10px] px-2 py-0.5 rounded-full flex items-center font-medium">
                 <Clock size={10} className="mr-0.5" />
                 待治疗
               </span>
             )}
           </div>
         </div>
-        <ChevronRight size={18} className="text-gray-300 mt-2" />
+        <ChevronRight size={18} className="text-slate-300 mt-2 flex-shrink-0" />
       </div>
     </button>
   ));
 
-  // 患儿详情页 - Glassmorphism 风格
+  // 患儿详情页 - 浅色毛玻璃风格（与首页统一）
   const PatientDetailPage = () => {
     const patient = selectedPatient;
     if (!patient) return null;
 
     return (
-      <div className="min-h-screen pb-24">
-        <Header
-          title="患儿详情"
-          showBack
-          rightAction={
-            <div className="flex gap-2">
+      <div className="min-h-screen flex justify-center pt-6 pb-6 px-4">
+        <div className="main-glass-container w-full max-w-md relative overflow-hidden flex flex-col p-6">
+          {/* 顶部标题栏 */}
+          <div className="mb-6 flex items-center gap-3">
+            <button onClick={goBack} className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-all">
+              <ChevronLeft size={24} className="text-slate-600" />
+            </button>
+            <h1 className="text-lg font-extrabold text-slate-800 flex-1">患儿详情</h1>
+            <div className="flex gap-1">
               {/* 打印按钮 */}
               <button
                 onClick={() => printPatientRecord(patient)}
-                className="p-2 hover:bg-gray-100 rounded-xl transition-all duration-200"
+                className="p-2 hover:bg-slate-100 rounded-xl transition-all"
                 title="打印患者档案"
               >
-                <Printer size={20} className="text-gray-600" />
+                <Printer size={20} className="text-slate-500" />
               </button>
               {/* 编辑按钮 - 仅治疗师可见 */}
               {userRole === 'therapist' && (
@@ -1546,7 +1568,7 @@ export default function RehabCareLink() {
                   {isEditingDetail && (
                     <button
                       onClick={savePatientEdit}
-                      className="p-2 bg-[#a8ff78]/20 text-[#2d5a3d] rounded-xl transition-all duration-200 hover:bg-[#a8ff78]/30"
+                      className="p-2 bg-emerald-100 text-emerald-600 rounded-xl transition-all hover:bg-emerald-200"
                       title="保存"
                     >
                       <Check size={20} />
@@ -1554,10 +1576,10 @@ export default function RehabCareLink() {
                   )}
                   <button
                     onClick={toggleEditMode}
-                    className={`p-2 rounded-xl transition-all duration-200 ${
+                    className={`p-2 rounded-xl transition-all ${
                       isEditingDetail
-                        ? 'bg-[#4a7c59]/10 text-[#4a7c59] hover:bg-[#4a7c59]/20'
-                        : 'hover:bg-[#4a7c59]/10 text-[#4a7c59]'
+                        ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        : 'hover:bg-slate-100 text-slate-500'
                     }`}
                     title={isEditingDetail ? '取消编辑' : '编辑详情'}
                   >
@@ -1569,394 +1591,416 @@ export default function RehabCareLink() {
               {userRole === 'therapist' && (
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="p-2 hover:bg-[#ff4d6d]/10 rounded-xl transition-all duration-200"
+                  className="p-2 hover:bg-rose-100 rounded-xl transition-all"
                   title="删除患者"
                 >
-                  <Trash2 size={20} className="text-[#ff4d6d]" />
+                  <Trash2 size={20} className="text-rose-500" />
                 </button>
               )}
             </div>
-          }
-        />
-
-        <div className="px-4 py-4">
-          {/* 基础信息卡片 */}
-          <div className="card-organic p-5 mb-4">
-            <div className="flex items-start gap-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#a8ff78]/20 to-[#00e5cc]/20 rounded-2xl flex items-center justify-center text-3xl border border-[#4a7c59]/10">
-                {patient.avatar}
-              </div>
-              <div className="flex-1">
-                {isEditingDetail && editedPatient ? (
-                  <>
-                    <div className="flex items-center gap-2 mb-2">
-                      <input
-                        type="text"
-                        value={editedPatient.name}
-                        onChange={(e) => setEditedPatient({ ...editedPatient, name: e.target.value })}
-                        className="text-xl font-bold text-[#1a2f23] border-b border-[#00e5cc] focus:border-[#00e5cc] outline-none bg-transparent w-24"
-                        placeholder="姓名"
-                      />
-                      <input
-                        type="text"
-                        value={editedPatient.age}
-                        onChange={(e) => setEditedPatient({ ...editedPatient, age: e.target.value })}
-                        className="text-sm text-[#4a7c59] border-b border-[#00e5cc] focus:border-[#00e5cc] outline-none bg-transparent w-16"
-                        placeholder="年龄"
-                      />
-                      <select
-                        value={editedPatient.gender}
-                        onChange={(e) => setEditedPatient({ ...editedPatient, gender: e.target.value })}
-                        className="text-sm text-[#4a7c59] border-b border-[#00e5cc] focus:border-[#00e5cc] outline-none bg-transparent"
-                      >
-                        <option value="男">男</option>
-                        <option value="女">女</option>
-                      </select>
-                    </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm text-[#4a7c59]">床号：</span>
-                      <input
-                        type="text"
-                        value={editedPatient.bedNo}
-                        onChange={(e) => setEditedPatient({ ...editedPatient, bedNo: e.target.value })}
-                        className="text-sm text-[#1a2f23] border-b border-[#00e5cc] focus:border-[#00e5cc] outline-none bg-transparent w-16"
-                        placeholder="床号"
-                      />
-                      <span className="text-[#4a7c59]/40">·</span>
-                      <input
-                        type="text"
-                        value={editedPatient.department}
-                        onChange={(e) => setEditedPatient({ ...editedPatient, department: e.target.value })}
-                        className="text-sm text-[#1a2f23] border-b border-[#00e5cc] focus:border-[#00e5cc] outline-none bg-transparent w-24"
-                        placeholder="科室"
-                      />
-                    </div>
-                    <input
-                      type="text"
-                      value={editedPatient.diagnosis}
-                      onChange={(e) => setEditedPatient({ ...editedPatient, diagnosis: e.target.value })}
-                      className="text-[#4a7c59] font-medium border-b border-[#00e5cc] focus:border-[#00e5cc] outline-none bg-transparent w-full"
-                      placeholder="诊断"
-                    />
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h2 className="text-xl font-bold text-[#1a2f23]">{patient.name}</h2>
-                      <span className="text-sm text-[#4a7c59]/60">{patient.age} · {patient.gender}</span>
-                    </div>
-                    <p className="text-sm text-[#4a7c59]/70 mb-1">床号：{patient.bedNo} · {patient.department}</p>
-                    <p className="text-[#4a7c59] font-semibold">{patient.diagnosis}</p>
-                  </>
-                )}
-              </div>
-            </div>
           </div>
 
-          {/* 家庭作业 */}
-          {patient.homework?.length > 0 && (
-            <div className="card-organic p-4 mb-4">
-              <h4 className="text-sm font-bold text-[#1a2f23] mb-3 flex items-center gap-2">
-                <BookOpen size={16} className="text-[#ffd93d]" />
-                家庭作业 (Home Program)
-              </h4>
-              <div className="space-y-2">
-                {patient.homework.map(hw => (
-                  <div key={hw.id} className="flex items-center gap-3 p-3 bg-[#4a7c59]/5 rounded-2xl">
-                    {hw.completed ? (
-                      <CheckCircle2 size={20} className="text-[#a8ff78]" />
-                    ) : (
-                      <Circle size={20} className="text-[#4a7c59]/30" />
-                    )}
-                    <span className={`text-sm flex-1 ${hw.completed ? 'text-[#4a7c59]/60' : 'text-[#1a2f23]'}`}>
-                      {hw.task}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Tab切换 */}
-          <div className="flex gap-2 mb-4">
-            <TabButton active={detailTab === 'today'} onClick={() => setDetailTab('today')}>
-              📋 今日治疗
-            </TabButton>
-            <TabButton active={detailTab === 'logs'} onClick={() => setDetailTab('logs')}>
-              📅 治疗日志
-            </TabButton>
-          </div>
-
-          {/* 今日治疗 */}
-          {detailTab === 'today' && (
-            <div className="card-organic p-4">
-              {/* 治疗目标 - 有机风格 */}
-              <div className="bg-gradient-to-r from-[#00e5cc]/10 to-[#a8ff78]/10 border border-[#00e5cc]/20 rounded-2xl p-4 mb-4">
-                <h5 className="text-sm font-bold text-[#1a2f23] flex items-center gap-2 mb-2">
-                  <Target size={16} className="text-[#00e5cc]" />
-                  治疗目标
-                </h5>
-                {isEditingDetail && editedPatient ? (
-                  <textarea
-                    value={editedPatient.treatmentPlan?.focus || ''}
-                    onChange={(e) => setEditedPatient({
-                      ...editedPatient,
-                      treatmentPlan: { ...editedPatient.treatmentPlan, focus: e.target.value }
-                    })}
-                    className="text-sm text-[#1a2f23] leading-relaxed w-full bg-white/50 border border-[#00e5cc]/30 rounded-xl p-2 focus:border-[#00e5cc] outline-none resize-none"
-                    rows={2}
-                    placeholder="治疗目标"
-                  />
-                ) : (
-                  <p className="text-sm text-[#1a2f23] leading-relaxed">{patient.treatmentPlan?.focus}</p>
-                )}
-              </div>
-
-              {/* 个性化重点 */}
-              {patient.treatmentPlan?.highlights?.length > 0 && (
-                <div className="bg-gradient-to-r from-[#ffd93d]/10 to-[#ffb347]/10 border border-[#ffd93d]/20 rounded-2xl p-4 mb-4">
-                  <h5 className="text-sm font-bold text-[#1a2f23] flex items-center gap-2 mb-2">
-                    <Star size={16} className="text-[#ffd93d]" />
-                    今日个性化重点
-                  </h5>
-                  <ul className="text-sm text-[#1a2f23] space-y-1.5">
-                    {patient.treatmentPlan.highlights.map((h, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <span className="text-[#ffd93d] mt-0.5">•</span>
-                        <span className="flex-1">{h}</span>
-                      </li>
-                    ))}
-                  </ul>
+          {/* 内容区域 */}
+          <div className="flex-1 overflow-y-auto hide-scrollbar pb-20">
+            {/* 基础信息卡片 */}
+            <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-5 border border-white/50 shadow-sm mb-4">
+              <div className="flex items-start gap-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center text-3xl border-2 border-white shadow-sm flex-shrink-0">
+                  {patient.avatar}
                 </div>
-              )}
-
-              {/* 注意事项 */}
-              {patient.treatmentPlan?.precautions?.length > 0 && (
-                <div className="bg-gradient-to-r from-[#ff4d6d]/10 to-[#ff6b81]/10 border border-[#ff4d6d]/20 rounded-2xl p-4 mb-4">
-                  <h5 className="text-sm font-bold text-[#1a2f23] flex items-center gap-2 mb-2">
-                    <AlertCircle size={16} className="text-[#ff4d6d]" />
-                    注意事项
-                  </h5>
-                  <ul className="text-sm text-[#1a2f23] space-y-1.5">
-                    {patient.treatmentPlan.precautions.map((p, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <span className="text-[#ff4d6d] mt-0.5">⚠</span>
-                        <span className="flex-1">{p}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* 治疗项目列表 */}
-              <div className="flex items-center justify-between mb-3">
-                <h5 className="text-sm font-bold text-[#1a2f23]">治疗项目</h5>
-                {/* 治疗师视角显示生成日志按钮 */}
-                {userRole === 'therapist' && (
-                  <button
-                    onClick={() => generateTodayLog(patient)}
-                    className="flex items-center gap-1.5 bg-gradient-to-r from-[#4a7c59] to-[#2d5a3d] text-white px-3 py-1.5 rounded-xl text-xs font-semibold shadow-sm hover:shadow-md transition-all active:scale-95"
-                  >
-                    <FileText size={14} />
-                    生成今日日志
-                  </button>
-                )}
-              </div>
-              {patient.treatmentPlan?.items?.length > 0 ? (
-                <div className="space-y-2">
-                  {patient.treatmentPlan.items.map(item => (
-                    <div
-                      key={item.id}
-                      onClick={() => toggleTreatmentItem(patient.id, item.id)}
-                      className={`flex items-center gap-3 p-3 rounded-2xl border transition cursor-pointer ${
-                        item.completed
-                          ? 'bg-[#a8ff78]/10 border-[#a8ff78]/30'
-                          : 'bg-white border-[#4a7c59]/10 hover:border-[#00e5cc]/30'
-                      }`}
-                    >
-                      <span className="text-2xl">{item.icon}</span>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className={`font-semibold ${item.completed ? 'text-[#2d5a3d]' : 'text-[#1a2f23]'}`}>
-                            {item.name}
-                          </span>
-                          <span className="text-xs text-slate-500">{item.duration}</span>
-                        </div>
-                        <p className="text-xs text-slate-500">{item.note}</p>
+                <div className="flex-1 min-w-0">
+                  {isEditingDetail && editedPatient ? (
+                    <>
+                      <div className="flex items-center gap-2 mb-2">
+                        <input
+                          type="text"
+                          value={editedPatient.name}
+                          onChange={(e) => setEditedPatient({ ...editedPatient, name: e.target.value })}
+                          className="text-xl font-bold text-slate-800 border-b-2 border-blue-400 focus:border-blue-500 outline-none bg-transparent w-24"
+                          placeholder="姓名"
+                        />
+                        <input
+                          type="text"
+                          value={editedPatient.age}
+                          onChange={(e) => setEditedPatient({ ...editedPatient, age: e.target.value })}
+                          className="text-sm text-slate-600 border-b-2 border-blue-400 focus:border-blue-500 outline-none bg-transparent w-16"
+                          placeholder="年龄"
+                        />
+                        <select
+                          value={editedPatient.gender}
+                          onChange={(e) => setEditedPatient({ ...editedPatient, gender: e.target.value })}
+                          className="text-sm text-slate-600 border-b-2 border-blue-400 focus:border-blue-500 outline-none bg-transparent"
+                        >
+                          <option value="男">男</option>
+                          <option value="女">女</option>
+                        </select>
                       </div>
-                      {item.completed ? (
-                        <CheckCircle2 size={24} className="text-emerald-500" />
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm text-slate-400">床号：</span>
+                        <input
+                          type="text"
+                          value={editedPatient.bedNo}
+                          onChange={(e) => setEditedPatient({ ...editedPatient, bedNo: e.target.value })}
+                          className="text-sm text-slate-700 border-b-2 border-blue-400 focus:border-blue-500 outline-none bg-transparent w-16"
+                          placeholder="床号"
+                        />
+                        <span className="text-slate-300">·</span>
+                        <input
+                          type="text"
+                          value={editedPatient.department}
+                          onChange={(e) => setEditedPatient({ ...editedPatient, department: e.target.value })}
+                          className="text-sm text-slate-700 border-b-2 border-blue-400 focus:border-blue-500 outline-none bg-transparent w-24"
+                          placeholder="科室"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        value={editedPatient.diagnosis}
+                        onChange={(e) => setEditedPatient({ ...editedPatient, diagnosis: e.target.value })}
+                        className="text-blue-600 font-medium border-b-2 border-blue-400 focus:border-blue-500 outline-none bg-transparent w-full"
+                        placeholder="诊断"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h2 className="text-xl font-bold text-slate-800">{patient.name}</h2>
+                        <span className="text-sm text-slate-400">{patient.age} · {patient.gender}</span>
+                      </div>
+                      <p className="text-sm text-slate-400 mb-1">床号：{patient.bedNo} · {patient.department}</p>
+                      <p className="text-blue-600 font-semibold">{patient.diagnosis}</p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 家庭作业 */}
+            {patient.homework?.length > 0 && (
+              <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-4 border border-white/50 shadow-sm mb-4">
+                <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                  <BookOpen size={16} className="text-amber-500" />
+                  家庭作业 (Home Program)
+                </h4>
+                <div className="space-y-2">
+                  {patient.homework.map(hw => (
+                    <div key={hw.id} className="flex items-center gap-3 p-3 bg-white/50 rounded-xl">
+                      {hw.completed ? (
+                        <CheckCircle2 size={20} className="text-emerald-500" />
                       ) : (
-                        <Circle size={24} className="text-slate-300" />
+                        <Circle size={20} className="text-slate-300" />
                       )}
+                      <span className={`text-sm flex-1 ${hw.completed ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                        {hw.task}
+                      </span>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-8 text-slate-400">
-                  <ClipboardList size={40} className="mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">暂无治疗安排</p>
+              </div>
+            )}
+
+            {/* Tab切换 */}
+            <div className="flex gap-2 mb-4">
+              <TabButton active={detailTab === 'today'} onClick={() => setDetailTab('today')}>
+                📋 今日治疗
+              </TabButton>
+              <TabButton active={detailTab === 'logs'} onClick={() => setDetailTab('logs')}>
+                📅 治疗日志
+              </TabButton>
+            </div>
+
+            {/* 今日治疗 */}
+            {detailTab === 'today' && (
+              <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-4 border border-white/50 shadow-sm">
+                {/* 治疗目标 */}
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4">
+                  <h5 className="text-sm font-bold text-slate-700 flex items-center gap-2 mb-2">
+                    <Target size={16} className="text-blue-500" />
+                    治疗目标
+                  </h5>
+                  {isEditingDetail && editedPatient ? (
+                    <textarea
+                      value={editedPatient.treatmentPlan?.focus || ''}
+                      onChange={(e) => setEditedPatient({
+                        ...editedPatient,
+                        treatmentPlan: { ...editedPatient.treatmentPlan, focus: e.target.value }
+                      })}
+                      className="text-sm text-slate-700 leading-relaxed w-full bg-white border border-blue-200 rounded-lg p-2 focus:border-blue-400 outline-none resize-none"
+                      rows={2}
+                      placeholder="治疗目标"
+                    />
+                  ) : (
+                    <p className="text-sm text-slate-600 leading-relaxed">{patient.treatmentPlan?.focus}</p>
+                  )}
+                </div>
+
+                {/* 个性化重点 */}
+                {patient.treatmentPlan?.highlights?.length > 0 && (
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 mb-4">
+                    <h5 className="text-sm font-bold text-slate-700 flex items-center gap-2 mb-2">
+                      <Star size={16} className="text-amber-500" />
+                      今日个性化重点
+                    </h5>
+                    <ul className="text-sm text-slate-600 space-y-1.5">
+                      {patient.treatmentPlan.highlights.map((h, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-amber-500 mt-0.5">•</span>
+                          <span className="flex-1">{h}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* 注意事项 */}
+                {patient.treatmentPlan?.precautions?.length > 0 && (
+                  <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 mb-4">
+                    <h5 className="text-sm font-bold text-slate-700 flex items-center gap-2 mb-2">
+                      <AlertCircle size={16} className="text-rose-500" />
+                      注意事项
+                    </h5>
+                    <ul className="text-sm text-slate-600 space-y-1.5">
+                      {patient.treatmentPlan.precautions.map((p, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-rose-500 mt-0.5">⚠</span>
+                          <span className="flex-1">{p}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* 治疗项目列表 */}
+                <div className="flex items-center justify-between mb-3">
+                  <h5 className="text-sm font-bold text-slate-700">治疗项目</h5>
+                  {/* 治疗师视角显示生成日志按钮 */}
                   {userRole === 'therapist' && (
                     <button
-                      onClick={() => setShowQuickEntry(true)}
-                      className="mt-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-full text-sm hover:shadow-md transition"
+                      onClick={() => generateTodayLog(patient)}
+                      className="btn-particle py-1.5 px-3 rounded-xl text-xs"
                     >
-                      快速录入
+                      <div className="points_wrapper">
+                        <div className="point"></div>
+                        <div className="point"></div>
+                        <div className="point"></div>
+                      </div>
+                      <span className="inner">
+                        <FileText size={14} />
+                        生成今日日志
+                      </span>
                     </button>
                   )}
                 </div>
-              )}
-
-              {/* 完成治疗按钮 */}
-              {userRole === 'therapist' && patient.treatmentPlan?.items?.length > 0 && !patient.todayTreated && (
-                <button
-                  onClick={() => {
-                    const newLog = {
-                      date: '2026-01-11',
-                      items: patient.treatmentPlan.items.filter(i => i.completed).map(i => i.name),
-                      highlight: patient.treatmentPlan.highlights?.[0] || '常规训练',
-                      notes: '治疗顺利完成',
-                      therapist: '吴大勇'
-                    };
-                    updatePatient(patient.id, {
-                      todayTreated: true,
-                      treatmentLogs: [newLog, ...(patient.treatmentLogs || [])]
-                    });
-                  }}
-                  className="w-full mt-4 bg-gradient-to-r from-emerald-400 to-teal-500 text-white py-3 rounded-2xl font-bold hover:shadow-lg transition flex items-center justify-center gap-2"
-                >
-                  <CheckCircle2 size={20} />
-                  完成今日治疗
-                </button>
-              )}
-
-              {patient.todayTreated && (
-                <div className="mt-4 text-center text-emerald-600 flex items-center justify-center gap-2 font-semibold">
-                  <CheckCircle2 size={20} className="text-emerald-500" />
-                  今日治疗已完成
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 治疗日志（时间轴） */}
-          {detailTab === 'logs' && (
-            <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-4 border border-white/50 shadow-sm">
-              {patient.treatmentLogs?.length > 0 ? (
-                <div className="relative">
-                  {/* 时间轴线 */}
-                  <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-blue-200" />
-
-                  <div className="space-y-6">
-                    {patient.treatmentLogs.map((log, i) => (
-                      <div key={i} className="relative pl-10">
-                        {/* 时间轴圆点 */}
-                        <div className="absolute left-2.5 top-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white shadow-sm" />
-
-                        <div className="bg-slate-50 rounded-2xl p-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-bold text-slate-800">{log.date}</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-slate-500">{log.therapist}</span>
-                              {/* 删除按钮 - 仅治疗师可见 */}
-                              {userRole === 'therapist' && isEditingDetail && (
-                                <button
-                                  onClick={() => {
-                                    if (window.confirm('确定要删除这条治疗记录吗？')) {
-                                      const newLogs = [...(editedPatient?.treatmentLogs || patient.treatmentLogs)];
-                                      newLogs.splice(i, 1);
-                                      setEditedPatient({ ...editedPatient, treatmentLogs: newLogs });
-                                    }
-                                  }}
-                                  className="p-1 rounded-full bg-red-100 text-red-500 hover:bg-red-200 transition-colors"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              )}
-                            </div>
+                {patient.treatmentPlan?.items?.length > 0 ? (
+                  <div className="space-y-2">
+                    {patient.treatmentPlan.items.map(item => (
+                      <div
+                        key={item.id}
+                        onClick={() => toggleTreatmentItem(patient.id, item.id)}
+                        className={`flex items-center gap-3 p-3 rounded-xl border transition cursor-pointer ${
+                          item.completed
+                            ? 'bg-emerald-50 border-emerald-200'
+                            : 'bg-white/50 border-slate-100 hover:border-blue-200'
+                        }`}
+                      >
+                        <span className="text-2xl">{item.icon}</span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`font-semibold ${item.completed ? 'text-emerald-600' : 'text-slate-700'}`}>
+                              {item.name}
+                            </span>
+                            <span className="text-xs text-slate-400">{item.duration}</span>
                           </div>
-
-                          {/* 亮点标注 */}
-                          <div className="bg-amber-50 border border-amber-100 rounded-xl p-2 mb-2">
-                            {isEditingDetail && editedPatient ? (
-                              <textarea
-                                value={editedPatient.treatmentLogs?.[i]?.highlight || log.highlight}
-                                onChange={(e) => {
-                                  const newLogs = [...(editedPatient.treatmentLogs || patient.treatmentLogs.map(l => ({...l})))];
-                                  if (!newLogs[i]) newLogs[i] = { ...log };
-                                  newLogs[i].highlight = e.target.value;
-                                  setEditedPatient({ ...editedPatient, treatmentLogs: newLogs });
-                                }}
-                                className="text-sm text-[#1a2f23] w-full bg-transparent border-none outline-none resize-none"
-                                rows={2}
-                              />
-                            ) : (
-                              <p className="text-sm text-[#1a2f23] flex items-center gap-1">
-                                <Star size={14} className="text-[#ffd93d]" />
-                                {log.highlight}
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="flex flex-wrap gap-1 mb-2">
-                            {log.items.map((item, j) => (
-                              <span key={j} className="text-xs bg-[#00e5cc]/20 text-[#1a2f23] px-2 py-0.5 rounded-xl font-medium">
-                                {typeof item === 'string' ? item : item.name}
-                              </span>
-                            ))}
-                          </div>
-
-                          {/* 详细记录 */}
-                          {(log.detailRecord || isEditingDetail) && (
-                            <div className="bg-[#4a7c59]/10 rounded-xl p-2 mb-2">
-                              {isEditingDetail && editedPatient ? (
-                                <textarea
-                                  value={editedPatient.treatmentLogs?.[i]?.detailRecord || log.detailRecord || ''}
-                                  onChange={(e) => {
-                                    const newLogs = [...(editedPatient.treatmentLogs || patient.treatmentLogs.map(l => ({...l})))];
-                                    if (!newLogs[i]) newLogs[i] = { ...log };
-                                    newLogs[i].detailRecord = e.target.value;
-                                    setEditedPatient({ ...editedPatient, treatmentLogs: newLogs });
-                                  }}
-                                  className="text-xs text-[#1a2f23] leading-relaxed w-full bg-transparent border-none outline-none resize-none"
-                                  rows={3}
-                                  placeholder="详细记录"
-                                />
-                              ) : (
-                                <p className="text-xs text-[#1a2f23] leading-relaxed whitespace-pre-wrap">{log.detailRecord}</p>
-                              )}
-                            </div>
-                          )}
-
-                          {isEditingDetail && editedPatient ? (
-                            <textarea
-                              value={editedPatient.treatmentLogs?.[i]?.notes || log.notes || ''}
-                              onChange={(e) => {
-                                const newLogs = [...(editedPatient.treatmentLogs || patient.treatmentLogs.map(l => ({...l})))];
-                                if (!newLogs[i]) newLogs[i] = { ...log };
-                                newLogs[i].notes = e.target.value;
-                                setEditedPatient({ ...editedPatient, treatmentLogs: newLogs });
-                              }}
-                              className="text-xs text-[#4a7c59] w-full bg-white border border-[#4a7c59]/20 rounded-xl p-2 outline-none resize-none"
-                              rows={2}
-                              placeholder="备注"
-                            />
-                          ) : (
-                            <p className="text-xs text-[#4a7c59]/70">{log.notes}</p>
-                          )}
+                          <p className="text-xs text-slate-400">{item.note}</p>
                         </div>
+                        {item.completed ? (
+                          <CheckCircle2 size={24} className="text-emerald-500" />
+                        ) : (
+                          <Circle size={24} className="text-slate-300" />
+                        )}
                       </div>
                     ))}
                   </div>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-[#4a7c59]/60">
-                  <FileText size={40} className="mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">暂无治疗记录</p>
-                </div>
-              )}
-            </div>
-          )}
+                ) : (
+                  <div className="text-center py-8 text-slate-400">
+                    <ClipboardList size={40} className="mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">暂无治疗安排</p>
+                    {userRole === 'therapist' && (
+                      <button
+                        onClick={() => setShowQuickEntry(true)}
+                        className="mt-3 btn-particle btn-particle-cyan px-4 py-2 rounded-full text-sm"
+                      >
+                        <div className="points_wrapper">
+                          <div className="point"></div>
+                          <div className="point"></div>
+                          <div className="point"></div>
+                        </div>
+                        <span className="inner">快速录入</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* 完成治疗按钮 */}
+                {userRole === 'therapist' && patient.treatmentPlan?.items?.length > 0 && !patient.todayTreated && (
+                  <button
+                    onClick={() => {
+                      const newLog = {
+                        date: '2026-01-11',
+                        items: patient.treatmentPlan.items.filter(i => i.completed).map(i => i.name),
+                        highlight: patient.treatmentPlan.highlights?.[0] || '常规训练',
+                        notes: '治疗顺利完成',
+                        therapist: '吴大勇'
+                      };
+                      updatePatient(patient.id, {
+                        todayTreated: true,
+                        treatmentLogs: [newLog, ...(patient.treatmentLogs || [])]
+                      });
+                    }}
+                    className="w-full mt-4 btn-particle btn-particle-emerald py-3 rounded-xl"
+                  >
+                    <div className="points_wrapper">
+                      <div className="point"></div>
+                      <div className="point"></div>
+                      <div className="point"></div>
+                      <div className="point"></div>
+                      <div className="point"></div>
+                    </div>
+                    <span className="inner">
+                      <CheckCircle2 size={18} />
+                      完成今日治疗
+                    </span>
+                  </button>
+                )}
+
+                {patient.todayTreated && (
+                  <div className="mt-4 text-center text-emerald-600 flex items-center justify-center gap-2 font-semibold">
+                    <CheckCircle2 size={20} className="text-emerald-500" />
+                    今日治疗已完成
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 治疗日志（时间轴） */}
+            {detailTab === 'logs' && (
+              <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-4 border border-white/50 shadow-sm">
+                {patient.treatmentLogs?.length > 0 ? (
+                  <div className="relative">
+                    {/* 时间轴线 */}
+                    <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-blue-200" />
+
+                    <div className="space-y-6">
+                      {patient.treatmentLogs.map((log, i) => (
+                        <div key={i} className="relative pl-10">
+                          {/* 时间轴圆点 */}
+                          <div className="absolute left-2.5 top-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white shadow-sm" />
+
+                          <div className="bg-white/70 rounded-xl p-3 border border-slate-100">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-bold text-slate-700">{log.date}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-slate-400">{log.therapist}</span>
+                                {/* 删除按钮 - 仅治疗师可见 */}
+                                {userRole === 'therapist' && isEditingDetail && (
+                                  <button
+                                    onClick={() => {
+                                      if (window.confirm('确定要删除这条治疗记录吗？')) {
+                                        const newLogs = [...(editedPatient?.treatmentLogs || patient.treatmentLogs)];
+                                        newLogs.splice(i, 1);
+                                        setEditedPatient({ ...editedPatient, treatmentLogs: newLogs });
+                                      }
+                                    }}
+                                    className="p-1 rounded-full bg-rose-100 text-rose-500 hover:bg-rose-200 transition-colors"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* 亮点标注 */}
+                            <div className="bg-amber-50 border border-amber-100 rounded-lg p-2 mb-2">
+                              {isEditingDetail && editedPatient ? (
+                                <textarea
+                                  value={editedPatient.treatmentLogs?.[i]?.highlight || log.highlight}
+                                  onChange={(e) => {
+                                    const newLogs = [...(editedPatient.treatmentLogs || patient.treatmentLogs.map(l => ({...l})))];
+                                    if (!newLogs[i]) newLogs[i] = { ...log };
+                                    newLogs[i].highlight = e.target.value;
+                                    setEditedPatient({ ...editedPatient, treatmentLogs: newLogs });
+                                  }}
+                                  className="text-sm text-slate-700 w-full bg-transparent border-none outline-none resize-none"
+                                  rows={2}
+                                />
+                              ) : (
+                                <p className="text-sm text-slate-700 flex items-center gap-1">
+                                  <Star size={14} className="text-amber-500" />
+                                  {log.highlight}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {log.items.map((item, j) => (
+                                <span key={j} className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-lg font-medium">
+                                  {typeof item === 'string' ? item : item.name}
+                                </span>
+                              ))}
+                            </div>
+
+                            {/* 详细记录 */}
+                            {(log.detailRecord || isEditingDetail) && (
+                              <div className="bg-slate-50 rounded-lg p-2 mb-2">
+                                {isEditingDetail && editedPatient ? (
+                                  <textarea
+                                    value={editedPatient.treatmentLogs?.[i]?.detailRecord || log.detailRecord || ''}
+                                    onChange={(e) => {
+                                      const newLogs = [...(editedPatient.treatmentLogs || patient.treatmentLogs.map(l => ({...l})))];
+                                      if (!newLogs[i]) newLogs[i] = { ...log };
+                                      newLogs[i].detailRecord = e.target.value;
+                                      setEditedPatient({ ...editedPatient, treatmentLogs: newLogs });
+                                    }}
+                                    className="text-xs text-slate-600 leading-relaxed w-full bg-transparent border-none outline-none resize-none"
+                                    rows={3}
+                                    placeholder="详细记录"
+                                  />
+                                ) : (
+                                  <p className="text-xs text-slate-500 leading-relaxed whitespace-pre-wrap">{log.detailRecord}</p>
+                                )}
+                              </div>
+                            )}
+
+                            {isEditingDetail && editedPatient ? (
+                              <textarea
+                                value={editedPatient.treatmentLogs?.[i]?.notes || log.notes || ''}
+                                onChange={(e) => {
+                                  const newLogs = [...(editedPatient.treatmentLogs || patient.treatmentLogs.map(l => ({...l})))];
+                                  if (!newLogs[i]) newLogs[i] = { ...log };
+                                  newLogs[i].notes = e.target.value;
+                                  setEditedPatient({ ...editedPatient, treatmentLogs: newLogs });
+                                }}
+                                className="text-xs text-slate-600 w-full bg-slate-50 border border-slate-200 rounded-lg p-2 outline-none resize-none"
+                                rows={2}
+                                placeholder="备注"
+                              />
+                            ) : (
+                              <p className="text-xs text-slate-400">{log.notes}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-slate-400">
+                    <FileText size={40} className="mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">暂无治疗记录</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -1965,96 +2009,102 @@ export default function RehabCareLink() {
   const TabButton = ({ children, active, onClick }) => (
     <button
       onClick={onClick}
-      className={`flex-1 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-200 ${
+      className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
         active
-          ? 'bg-gradient-to-r from-[#4a7c59] to-[#2d5a3d] text-white shadow-md'
-          : 'bg-white text-[#4a7c59] border border-[#4a7c59]/20 hover:border-[#4a7c59]/40'
+          ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md'
+          : 'bg-white/50 text-slate-500 border border-slate-200 hover:border-blue-300'
       }`}
     >
       {children}
     </button>
   );
 
-  // 我的页面 - 有机科技风格
+  // 我的页面 - 浅色毛玻璃风格（与首页统一）
   const ProfilePage = () => (
-    <div className="min-h-screen pb-24" style={{ background: '#fdfbf7' }}>
-      <Header title="我的" />
-
-      <div className="px-4 py-4">
-        {/* 用户卡片 - 夜空主题 */}
-        <div className="bg-night-sky rounded-3xl p-5 text-white shadow-lg mb-4 relative overflow-hidden">
-          <div className="flex items-center gap-4 relative z-10">
-            <div className="w-16 h-16 glass-dark rounded-2xl flex items-center justify-center text-3xl">
-              👨‍⚕️
-            </div>
-            <div>
-              <h2 className="text-xl font-bold">吴大勇</h2>
-              <p className="text-white/70 text-sm">康复医学科 · 主管治疗师</p>
-              <p className="text-white/50 text-xs mt-1">工号：KF20180015</p>
-            </div>
-          </div>
+    <div className="min-h-screen flex justify-center pt-6 pb-6 px-4">
+      <div className="main-glass-container w-full max-w-md relative overflow-hidden flex flex-col p-6">
+        {/* 顶部标题 */}
+        <div className="mb-6">
+          <h1 className="text-lg font-extrabold text-slate-800">我的</h1>
         </div>
 
-        {/* 角色切换 */}
-        <div className="card-organic p-4 mb-4">
-          <h3 className="text-sm font-semibold text-[#4a7c59] mb-3">视角切换（演示用）</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => setUserRole('therapist')}
-              className={`p-3 rounded-2xl border-2 transition ${
-                userRole === 'therapist'
-                  ? 'border-[#00e5cc] bg-[#00e5cc]/10'
-                  : 'border-[#4a7c59]/20 bg-white'
-              }`}
-            >
-              <Edit3 size={24} className={userRole === 'therapist' ? 'text-[#00e5cc] mx-auto mb-1' : 'text-[#4a7c59]/40 mx-auto mb-1'} />
-              <p className={`text-sm font-semibold ${userRole === 'therapist' ? 'text-[#1a2f23]' : 'text-[#4a7c59]/60'}`}>
-                治疗师
-              </p>
-              <p className="text-xs text-[#4a7c59]/50">可编辑管理</p>
-            </button>
-            <button
-              onClick={() => setUserRole('doctor')}
-              className={`p-3 rounded-2xl border-2 transition ${
-                userRole === 'doctor'
-                  ? 'border-[#a8ff78] bg-[#a8ff78]/10'
-                  : 'border-[#4a7c59]/20 bg-white'
-              }`}
-            >
-              <Eye size={24} className={userRole === 'doctor' ? 'text-[#a8ff78] mx-auto mb-1' : 'text-[#4a7c59]/40 mx-auto mb-1'} />
-              <p className={`text-sm font-semibold ${userRole === 'doctor' ? 'text-[#1a2f23]' : 'text-[#4a7c59]/60'}`}>
-                主治医生
-              </p>
-              <p className="text-xs text-[#4a7c59]/50">只读查看</p>
-            </button>
-          </div>
-        </div>
-
-        {/* 统计 */}
-        <div className="card-organic p-4 mb-4">
-          <h3 className="text-sm font-semibold text-[#4a7c59] mb-3">本月统计</h3>
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-2xl font-bold text-[#00e5cc]">156</p>
-              <p className="text-xs text-[#4a7c59]/60">治疗人次</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-[#ffd93d]">23</p>
-              <p className="text-xs text-[#4a7c59]/60">新收患儿</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-[#a8ff78]">12</p>
-              <p className="text-xs text-[#4a7c59]/60">康复出院</p>
+        {/* 内容区域 */}
+        <div className="flex-1 overflow-y-auto hide-scrollbar pb-20">
+          {/* 用户卡片 */}
+          <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-5 border border-white/50 shadow-sm mb-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center text-3xl border-2 border-white shadow-sm">
+                👨‍⚕️
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-slate-800">吴大勇</h2>
+                <p className="text-slate-500 text-sm">康复医学科 · 主管治疗师</p>
+                <p className="text-slate-400 text-xs mt-1">工号：KF20180015</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* 菜单 */}
-        <div className="card-organic overflow-hidden">
-          <MenuItem icon={<BookOpen size={20} />} label="治疗模板库" onClick={() => setShowTemplates(true)} />
-          <MenuItem icon={<Bell size={20} />} label="消息通知" />
-          <MenuItem icon={<Settings size={20} />} label="设置" />
-          <MenuItem icon={<Info size={20} />} label="关于" />
+          {/* 角色切换 */}
+          <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-4 border border-white/50 shadow-sm mb-4">
+            <h3 className="text-sm font-semibold text-slate-500 mb-3">视角切换（演示用）</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setUserRole('therapist')}
+                className={`p-3 rounded-xl border-2 transition ${
+                  userRole === 'therapist'
+                    ? 'border-blue-400 bg-blue-50'
+                    : 'border-slate-200 bg-white/50'
+                }`}
+              >
+                <Edit3 size={24} className={userRole === 'therapist' ? 'text-blue-500 mx-auto mb-1' : 'text-slate-400 mx-auto mb-1'} />
+                <p className={`text-sm font-semibold ${userRole === 'therapist' ? 'text-slate-700' : 'text-slate-400'}`}>
+                  治疗师
+                </p>
+                <p className="text-xs text-slate-400">可编辑管理</p>
+              </button>
+              <button
+                onClick={() => setUserRole('doctor')}
+                className={`p-3 rounded-xl border-2 transition ${
+                  userRole === 'doctor'
+                    ? 'border-emerald-400 bg-emerald-50'
+                    : 'border-slate-200 bg-white/50'
+                }`}
+              >
+                <Eye size={24} className={userRole === 'doctor' ? 'text-emerald-500 mx-auto mb-1' : 'text-slate-400 mx-auto mb-1'} />
+                <p className={`text-sm font-semibold ${userRole === 'doctor' ? 'text-slate-700' : 'text-slate-400'}`}>
+                  主治医生
+                </p>
+                <p className="text-xs text-slate-400">只读查看</p>
+              </button>
+            </div>
+          </div>
+
+          {/* 统计 */}
+          <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-4 border border-white/50 shadow-sm mb-4">
+            <h3 className="text-sm font-semibold text-slate-500 mb-3">本月统计</h3>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-2xl font-bold text-blue-500">156</p>
+                <p className="text-xs text-slate-400">治疗人次</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-amber-500">23</p>
+                <p className="text-xs text-slate-400">新收患儿</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-emerald-500">12</p>
+                <p className="text-xs text-slate-400">康复出院</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 菜单 */}
+          <div className="bg-white/60 backdrop-blur-xl rounded-2xl overflow-hidden border border-white/50 shadow-sm">
+            <MenuItem icon={<BookOpen size={20} />} label="治疗模板库" onClick={() => setShowTemplates(true)} />
+            <MenuItem icon={<Bell size={20} />} label="消息通知" />
+            <MenuItem icon={<Settings size={20} />} label="设置" />
+            <MenuItem icon={<Info size={20} />} label="关于" />
+          </div>
         </div>
       </div>
     </div>
@@ -2063,33 +2113,33 @@ export default function RehabCareLink() {
   const MenuItem = ({ icon, label, onClick }) => (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-[#4a7c59]/5 border-b border-[#4a7c59]/10 last:border-none transition"
+      className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/50 border-b border-slate-100 last:border-none transition"
     >
-      <span className="text-[#4a7c59]">{icon}</span>
-      <span className="text-[#1a2f23] font-medium">{label}</span>
-      <ChevronRight size={18} className="text-[#4a7c59]/30 ml-auto" />
+      <span className="text-blue-500">{icon}</span>
+      <span className="text-slate-700 font-medium">{label}</span>
+      <ChevronRight size={18} className="text-slate-300 ml-auto" />
     </button>
   );
 
   // ==================== 弹窗组件 ====================
 
-  // 新建患者弹窗 - 有机科技风格
+  // 新建患者弹窗 - 浅色毛玻璃风格
   const AIModal = () => {
     const [newAlertInput, setNewAlertInput] = useState('');
 
     return (
-      <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center" onClick={() => { setShowAIModal(false); setAiStep(0); setAiResult(null); setUploadedImage(null); setOcrText(''); setOcrProgress(0); }}>
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center" onClick={() => { setShowAIModal(false); setAiStep(0); setAiResult(null); setUploadedImage(null); setOcrText(''); setOcrProgress(0); }}>
         <div
-          className="bg-gradient-to-b from-slate-800/95 to-slate-900/95 backdrop-blur-2xl rounded-t-[32px] w-full max-h-[90vh] overflow-y-auto animate-slide-up border-t border-white/10"
+          className="bg-gradient-to-b from-white/95 to-slate-50/95 backdrop-blur-2xl rounded-t-[32px] w-full max-h-[90vh] overflow-y-auto animate-slide-up border-t border-white/80 shadow-2xl"
           onClick={e => e.stopPropagation()}
         >
-          <div className="sticky top-0 bg-slate-800/90 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between z-10">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <Sparkles className="text-cyan-400" size={20} />
+          <div className="sticky top-0 bg-white/90 backdrop-blur-xl border-b border-slate-100 px-4 py-3 flex items-center justify-between z-10">
+            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <Sparkles className="text-blue-500" size={20} />
               AI智能建档
             </h3>
-            <button onClick={() => { setShowAIModal(false); setAiStep(0); setAiResult(null); setUploadedImage(null); setOcrText(''); setOcrProgress(0); }} className="p-2 hover:bg-white/10 rounded-full">
-              <X size={20} className="text-white/70" />
+            <button onClick={() => { setShowAIModal(false); setAiStep(0); setAiResult(null); setUploadedImage(null); setOcrText(''); setOcrProgress(0); }} className="p-2 hover:bg-slate-100 rounded-full">
+              <X size={20} className="text-slate-500" />
             </button>
           </div>
 
@@ -2097,11 +2147,11 @@ export default function RehabCareLink() {
             {/* 步骤0：上传病历图片 */}
             {aiStep === 0 && (
               <div className="text-center py-8">
-                <div className="w-20 h-20 bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-cyan-500/30">
-                  <Upload size={36} className="text-cyan-400" />
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-purple-100 rounded-3xl flex items-center justify-center mx-auto mb-4 border-2 border-white shadow-md">
+                  <Upload size={36} className="text-blue-500" />
                 </div>
-                <h4 className="text-lg font-bold text-white mb-2">上传病历资料</h4>
-                <p className="text-sm text-white/60 mb-6">上传病历图片，AI将自动识别并提取患者信息</p>
+                <h4 className="text-lg font-bold text-slate-800 mb-2">上传病历资料</h4>
+                <p className="text-sm text-slate-500 mb-6">上传病历图片，AI将自动识别并提取患者信息</p>
 
                 <input
                   type="file"
@@ -2114,14 +2164,14 @@ export default function RehabCareLink() {
 
                 <label
                   htmlFor="medical-record-upload"
-                  className="block border-2 border-dashed border-white/20 rounded-3xl p-8 mb-4 hover:border-cyan-400 hover:bg-cyan-500/10 transition-all cursor-pointer"
+                  className="block border-2 border-dashed border-slate-200 rounded-3xl p-8 mb-4 hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer"
                 >
-                  <Camera size={32} className="text-white/40 mx-auto mb-2" />
-                  <p className="text-sm text-white font-medium">点击选择图片或拍照（支持多图）</p>
-                  <p className="text-xs text-white/50 mt-2">支持 JPG、PNG 等图片格式</p>
+                  <Camera size={32} className="text-slate-400 mx-auto mb-2" />
+                  <p className="text-sm text-slate-700 font-medium">点击选择图片或拍照（支持多图）</p>
+                  <p className="text-xs text-slate-400 mt-2">支持 JPG、PNG 等图片格式</p>
                 </label>
 
-                <p className="text-xs text-white/40">图片将作为病历附件保存，方便日后查阅</p>
+                <p className="text-xs text-slate-400">图片将作为病历附件保存，方便日后查阅</p>
               </div>
             )}
 
@@ -2138,26 +2188,26 @@ export default function RehabCareLink() {
                     />
                   )}
                   {/* 加载动画覆盖层 */}
-                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 rounded-2xl">
-                    <Loader2 size={32} className="text-cyan-400 animate-spin" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-2xl">
+                    <Loader2 size={32} className="text-blue-500 animate-spin" />
                   </div>
                 </div>
 
-                <h4 className="text-lg font-bold text-white mb-2">AI识别中...</h4>
-                <p className="text-sm text-white/60 mb-4">正在识别病例图片，请稍候</p>
+                <h4 className="text-lg font-bold text-slate-800 mb-2">AI识别中...</h4>
+                <p className="text-sm text-slate-500 mb-4">正在识别病例图片，请稍候</p>
 
                 {/* 进度条 */}
                 <div className="max-w-xs mx-auto">
-                  <div className="w-full bg-white/10 rounded-full h-2.5 mb-2 overflow-hidden">
+                  <div className="w-full bg-slate-100 rounded-full h-2.5 mb-2 overflow-hidden">
                     <div
-                      className="bg-gradient-to-r from-cyan-400 to-emerald-400 h-2.5 rounded-full animate-pulse"
+                      className="bg-gradient-to-r from-blue-400 to-purple-400 h-2.5 rounded-full animate-pulse"
                       style={{ width: '100%', opacity: 0.8 }}
                     />
                   </div>
-                  <p className="text-xs text-white/50">识别中，请耐心等待...</p>
+                  <p className="text-xs text-slate-400">识别中，请耐心等待...</p>
                 </div>
 
-                <p className="text-xs text-white/40 mt-6">
+                <p className="text-xs text-slate-400 mt-6">
                   AI智能识别 · 图片理解
                 </p>
               </div>
@@ -2166,22 +2216,22 @@ export default function RehabCareLink() {
             {/* 步骤2：填写患者信息表单 */}
             {aiStep === 2 && aiResult && (
               <div className="space-y-4">
-                <div className="bg-emerald-500/20 border border-emerald-500/30 rounded-2xl p-3 mb-2">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 mb-2">
                   <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle2 size={16} className="text-emerald-400" />
-                    <span className="text-sm font-semibold text-emerald-400">AI识别完成</span>
+                    <CheckCircle2 size={16} className="text-emerald-500" />
+                    <span className="text-sm font-semibold text-emerald-600">AI识别完成</span>
                   </div>
-                  <p className="text-xs text-white/70">已自动填充识别到的信息，请核对并补充，然后生成训练方案。</p>
+                  <p className="text-xs text-slate-600">已自动填充识别到的信息，请核对并补充，然后生成训练方案。</p>
                 </div>
 
                 {/* 病历图片预览 */}
-                <div className="bg-white/5 rounded-2xl p-3">
+                <div className="bg-slate-50 rounded-2xl p-3">
                   <div className="flex items-center gap-3 mb-2">
-                    <FileText size={16} className="text-white/70" />
-                    <span className="text-sm font-semibold text-white">病历附件</span>
+                    <FileText size={16} className="text-slate-500" />
+                    <span className="text-sm font-semibold text-slate-700">病历附件</span>
                     <button
                       onClick={() => { setAiStep(0); setUploadedImage(null); setAiResult(null); setOcrText(''); }}
-                      className="ml-auto text-xs text-rose-400 hover:text-rose-300 font-medium"
+                      className="ml-auto text-xs text-rose-500 hover:text-rose-600 font-medium"
                     >
                       重新上传
                     </button>
@@ -2189,100 +2239,97 @@ export default function RehabCareLink() {
                   <img
                     src={uploadedImage}
                     alt="病历"
-                    className="w-full max-h-40 object-contain rounded-xl border border-white/10"
+                    className="w-full max-h-40 object-contain rounded-xl border border-slate-200"
                   />
                 </div>
 
                 {/* 基本信息 */}
-                <div className="dark-glass-card">
-                  <div className="card-inner !flex-col !items-stretch !gap-3">
-                  <h5 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
-                    <User size={16} className="text-cyan-400" />
-                    基本信息 <span className="text-rose-400">*</span>
+                <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-4 border border-slate-100 shadow-sm">
+                  <h5 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                    <User size={16} className="text-blue-500" />
+                    基本信息 <span className="text-rose-500">*</span>
                   </h5>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs text-white/60 mb-1 block">姓名 *</label>
+                      <label className="text-xs text-slate-500 mb-1 block">姓名 *</label>
                       <input
                         type="text"
                         value={aiResult.name}
                         onChange={(e) => updateFormField('name', e.target.value)}
                         placeholder="请输入患儿姓名"
-                        className="w-full border border-white/20 rounded-xl px-3 py-2 text-sm text-white placeholder-white/40 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 outline-none bg-white/10"
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none bg-white"
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-white/60 mb-1 block">年龄 *</label>
+                      <label className="text-xs text-slate-500 mb-1 block">年龄 *</label>
                       <input
                         type="text"
                         value={aiResult.age}
                         onChange={(e) => updateFormField('age', e.target.value)}
                         placeholder="如：5岁3个月"
-                        className="w-full border border-white/20 rounded-xl px-3 py-2 text-sm text-white placeholder-white/40 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 outline-none bg-white/10"
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none bg-white"
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-white/60 mb-1 block">性别 *</label>
+                      <label className="text-xs text-slate-500 mb-1 block">性别 *</label>
                       <select
                         value={aiResult.gender}
                         onChange={(e) => updateFormField('gender', e.target.value)}
-                        className="w-full border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 outline-none bg-white/10"
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none bg-white"
                       >
-                        <option value="男" className="bg-slate-800">男</option>
-                        <option value="女" className="bg-slate-800">女</option>
+                        <option value="男">男</option>
+                        <option value="女">女</option>
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs text-white/60 mb-1 block">床号 *</label>
+                      <label className="text-xs text-slate-500 mb-1 block">床号 *</label>
                       <input
                         type="text"
                         value={aiResult.bedNo}
                         onChange={(e) => updateFormField('bedNo', e.target.value)}
                         placeholder="如：301-1"
-                        className="w-full border border-white/20 rounded-xl px-3 py-2 text-sm text-white placeholder-white/40 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 outline-none bg-white/10"
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none bg-white"
                       />
                     </div>
                     <div className="col-span-2">
-                      <label className="text-xs text-white/60 mb-1 block">所属科室 *</label>
+                      <label className="text-xs text-slate-500 mb-1 block">所属科室 *</label>
                       <select
                         value={aiResult.department}
                         onChange={(e) => updateFormField('department', e.target.value)}
-                        className="w-full border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 outline-none bg-white/10"
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none bg-white"
                       >
                         {initialDepartments.map(dept => (
-                          <option key={dept.id} value={dept.name} className="bg-slate-800">{dept.icon} {dept.name}</option>
+                          <option key={dept.id} value={dept.name}>{dept.icon} {dept.name}</option>
                         ))}
                       </select>
                     </div>
                     <div className="col-span-2">
-                      <label className="text-xs text-white/60 mb-1 block">诊断信息 *</label>
+                      <label className="text-xs text-slate-500 mb-1 block">诊断信息 *</label>
                       <textarea
                         value={aiResult.diagnosis}
                         onChange={(e) => updateFormField('diagnosis', e.target.value)}
                         placeholder="请输入诊断信息"
                         rows={2}
-                        className="w-full border border-white/20 rounded-xl px-3 py-2 text-sm text-white placeholder-white/40 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 outline-none resize-none bg-white/10"
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none resize-none bg-white"
                       />
                     </div>
-                  </div>
                   </div>
                 </div>
 
                 {/* 安全提醒 */}
-                <div className="dark-glass-card">
-                  <div className="card-inner !flex-col !items-stretch !gap-3">
-                  <h5 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
-                    <AlertTriangle size={16} className="text-rose-400" />
+                <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-4 border border-slate-100 shadow-sm">
+                  <h5 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                    <AlertTriangle size={16} className="text-rose-500" />
                     安全提醒
                   </h5>
                   <div className="flex flex-wrap gap-2 mb-3">
                     {aiResult.safetyAlerts.map((alert, i) => (
                       <span
                         key={i}
-                        className="bg-rose-500/20 text-rose-400 text-xs px-2.5 py-1 rounded-xl flex items-center gap-1 font-medium"
+                        className="bg-rose-100 text-rose-600 text-xs px-2.5 py-1 rounded-xl flex items-center gap-1 font-medium"
                       >
                         {alert}
-                        <button onClick={() => removeSafetyAlert(i)} className="hover:text-rose-300">
+                        <button onClick={() => removeSafetyAlert(i)} className="hover:text-rose-700">
                           <X size={12} />
                         </button>
                       </span>
@@ -2294,7 +2341,7 @@ export default function RehabCareLink() {
                       value={newAlertInput}
                       onChange={(e) => setNewAlertInput(e.target.value)}
                       placeholder="添加安全提醒，如：防跌倒"
-                      className="flex-1 border border-white/20 rounded-xl px-3 py-2 text-sm text-white placeholder-white/40 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 outline-none bg-white/10"
+                      className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none bg-white"
                       onKeyPress={(e) => {
                         if (e.key === 'Enter') {
                           addSafetyAlert(newAlertInput);
@@ -2304,7 +2351,7 @@ export default function RehabCareLink() {
                     />
                     <button
                       onClick={() => { addSafetyAlert(newAlertInput); setNewAlertInput(''); }}
-                      className="px-3 py-2 bg-rose-500/20 text-rose-400 rounded-xl text-sm font-semibold hover:bg-rose-500/30"
+                      className="px-3 py-2 bg-rose-100 text-rose-600 rounded-xl text-sm font-semibold hover:bg-rose-200"
                     >
                       添加
                     </button>
@@ -2314,31 +2361,29 @@ export default function RehabCareLink() {
                       <button
                         key={tag}
                         onClick={() => addSafetyAlert(tag)}
-                        className="text-xs px-2 py-0.5 bg-white/10 text-white/70 rounded-lg hover:bg-white/20"
+                        className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200"
                       >
                         + {tag}
                       </button>
                     ))}
                   </div>
-                  </div>
                 </div>
 
                 {/* 治疗计划 */}
-                <div className="dark-glass-card">
-                  <div className="card-inner !flex-col !items-stretch !gap-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <h5 className="text-sm font-bold text-white flex items-center gap-2">
-                      <ClipboardList size={16} className="text-emerald-400" />
+                <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-4 border border-slate-100 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <h5 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <ClipboardList size={16} className="text-emerald-500" />
                       治疗计划（可选）
                     </h5>
                     <button
                       onClick={addTreatmentItem}
-                      className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold"
+                      className="text-xs text-blue-500 hover:text-blue-600 font-semibold"
                     >
                       + 添加项目
                     </button>
                   </div>
-                  <div className="mb-1">
+                  <div className="mb-3">
                     <input
                       type="text"
                       value={aiResult.treatmentPlan.focus}
@@ -2347,35 +2392,34 @@ export default function RehabCareLink() {
                         treatmentPlan: { ...prev.treatmentPlan, focus: e.target.value }
                       }))}
                       placeholder="治疗重点，如：改善呼吸功能，增强运动耐力（总时长20分钟）"
-                      className="w-full border border-white/20 rounded-xl px-3 py-2 text-sm text-white placeholder-white/40 focus:border-cyan-400 outline-none bg-white/10"
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:border-blue-400 outline-none bg-white"
                     />
                   </div>
                   <div className="space-y-2">
                     {aiResult.treatmentPlan.items.map((item, i) => (
-                      <div key={i} className="flex items-center gap-2 bg-white/5 rounded-xl p-2">
+                      <div key={i} className="flex items-center gap-2 bg-slate-50 rounded-xl p-2">
                         <input
                           type="text"
                           value={item.name}
                           onChange={(e) => updateTreatmentItem(i, 'name', e.target.value)}
                           placeholder="项目名称"
-                          className="flex-1 border border-white/20 rounded-lg px-2 py-1 text-sm text-white placeholder-white/40 bg-white/10"
+                          className="flex-1 border border-slate-200 rounded-lg px-2 py-1 text-sm text-slate-700 placeholder-slate-400 bg-white"
                         />
                         <input
                           type="text"
                           value={item.duration}
                           onChange={(e) => updateTreatmentItem(i, 'duration', e.target.value)}
                           placeholder="时长"
-                          className="w-20 border border-white/20 rounded-lg px-2 py-1 text-sm text-white placeholder-white/40 bg-white/10"
+                          className="w-20 border border-slate-200 rounded-lg px-2 py-1 text-sm text-slate-700 placeholder-slate-400 bg-white"
                         />
                         <button
                           onClick={() => removeTreatmentItem(i)}
-                          className="p-1 text-white/40 hover:text-rose-400"
+                          className="p-1 text-slate-400 hover:text-rose-500"
                         >
                           <Trash2 size={14} />
                         </button>
                       </div>
                     ))}
-                  </div>
                   </div>
                 </div>
 
@@ -2383,36 +2427,54 @@ export default function RehabCareLink() {
                 <div className="flex gap-3 pt-2 pb-4">
                   <button
                     onClick={() => { setAiStep(0); setAiResult(null); setUploadedImage(null); setOcrText(''); setOcrProgress(0); }}
-                    className="flex-1 border border-white/30 text-white/70 py-3 rounded-2xl font-semibold hover:bg-white/10 transition"
+                    className="flex-1 border border-slate-300 text-slate-600 py-3 rounded-xl font-semibold hover:bg-slate-50 transition"
                   >
                     取消
                   </button>
                   <button
                     onClick={handleGeneratePlan}
                     disabled={isOcrProcessing}
-                    className="flex-1 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-98 disabled:opacity-60"
+                    className="flex-1 btn-particle btn-particle-cyan py-3 rounded-xl disabled:opacity-60"
                   >
-                    <Sparkles size={20} />
-                    生成方案
+                    <div className="points_wrapper">
+                      <div className="point"></div>
+                      <div className="point"></div>
+                      <div className="point"></div>
+                      <div className="point"></div>
+                      <div className="point"></div>
+                    </div>
+                    <span className="inner">
+                      <Sparkles size={18} />
+                      生成方案
+                    </span>
                   </button>
                   <button
                     onClick={confirmAdmission}
                     disabled={isSavingPatient || isOcrProcessing}
-                    className={`flex-1 bg-gradient-to-r from-rose-500 to-pink-500 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 text-white shadow-lg ${
+                    className={`flex-1 btn-particle btn-particle-emerald py-3 rounded-xl ${
                       isSavingPatient ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
+                    <div className="points_wrapper">
+                      <div className="point"></div>
+                      <div className="point"></div>
+                      <div className="point"></div>
+                      <div className="point"></div>
+                      <div className="point"></div>
+                    </div>
+                    <span className="inner">
                     {isSavingPatient ? (
                       <>
-                        <Loader2 size={20} className="animate-spin" />
+                        <Loader2 size={18} className="animate-spin" />
                         建档中...
                       </>
                     ) : (
                       <>
-                        <Check size={20} />
+                        <Check size={18} />
                         确认建档
                       </>
                     )}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -2423,7 +2485,7 @@ export default function RehabCareLink() {
     );
   };
 
-  // 批量生成日报弹窗 - 有机科技风格
+  // 批量生成日报弹窗 - 浅色毛玻璃风格
   const BatchGenerateModal = () => {
     const current = batchPatients[currentBatchIndex];
     const [editingRecord, setEditingRecord] = useState(current?.generatedRecord || null);
@@ -2439,33 +2501,33 @@ export default function RehabCareLink() {
     const allConfirmed = batchPatients.every(p => p.generatedRecord.confirmed);
 
     return (
-      <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center" onClick={() => setShowBatchGenerate(false)}>
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center" onClick={() => setShowBatchGenerate(false)}>
         <div
-          className="bg-gradient-to-b from-slate-800/95 to-slate-900/95 backdrop-blur-2xl rounded-t-[32px] w-full max-h-[90vh] overflow-y-auto border-t border-white/10"
+          className="bg-gradient-to-b from-white/95 to-slate-50/95 backdrop-blur-2xl rounded-t-[32px] w-full max-h-[90vh] overflow-y-auto border-t border-white/80 shadow-2xl"
           onClick={e => e.stopPropagation()}
         >
-          <div className="sticky top-0 bg-slate-800/90 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between z-10">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <Zap className="text-amber-400" size={20} />
+          <div className="sticky top-0 bg-white/90 backdrop-blur-xl border-b border-slate-100 px-4 py-3 flex items-center justify-between z-10">
+            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <Zap className="text-amber-500" size={20} />
               批量生成日报
             </h3>
-            <button onClick={() => setShowBatchGenerate(false)} className="p-2 hover:bg-white/10 rounded-full">
-              <X size={20} className="text-white/70" />
+            <button onClick={() => setShowBatchGenerate(false)} className="p-2 hover:bg-slate-100 rounded-full">
+              <X size={20} className="text-slate-500" />
             </button>
           </div>
 
           {/* 进度指示 */}
-          <div className="px-4 py-3 bg-white/5 flex items-center gap-2 overflow-x-auto">
+          <div className="px-4 py-3 bg-slate-50 flex items-center gap-2 overflow-x-auto">
             {batchPatients.map((p, i) => (
               <button
                 key={p.id}
                 onClick={() => setCurrentBatchIndex(i)}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition ${
                   i === currentBatchIndex
-                    ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-white font-semibold'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold shadow-md'
                     : p.generatedRecord.confirmed
-                      ? 'bg-emerald-500/20 text-emerald-400 font-medium'
-                      : 'bg-white/10 text-white/70 border border-white/20'
+                      ? 'bg-emerald-100 text-emerald-600 font-medium'
+                      : 'bg-white text-slate-600 border border-slate-200'
                 }`}
               >
                 {p.generatedRecord.confirmed && <Check size={14} />}
@@ -2476,64 +2538,78 @@ export default function RehabCareLink() {
 
           <div className="p-4">
             {/* 患者信息 */}
-            <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/10">
-              <div className="w-12 h-12 bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 rounded-2xl flex items-center justify-center text-2xl border border-white/10">
+            <div className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-100">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center text-2xl border-2 border-white shadow-sm">
                 {current.avatar}
               </div>
               <div>
-                <h4 className="font-bold text-white">{current.name}</h4>
-                <p className="text-sm text-white/60">{current.bedNo} · {current.diagnosis}</p>
+                <h4 className="font-bold text-slate-800">{current.name}</h4>
+                <p className="text-sm text-slate-500">{current.bedNo} · {current.diagnosis}</p>
               </div>
             </div>
 
             {current.generatedRecord.confirmed ? (
               <div className="text-center py-8">
-                <CheckCircle2 size={48} className="text-emerald-400 mx-auto mb-3" />
-                <p className="text-emerald-400 font-semibold">已确认</p>
+                <CheckCircle2 size={48} className="text-emerald-500 mx-auto mb-3" />
+                <p className="text-emerald-600 font-semibold">已确认</p>
               </div>
             ) : (
               <>
                 {/* 治疗项目 */}
                 <div className="mb-4">
-                  <h5 className="text-sm font-semibold text-white mb-2">治疗项目</h5>
+                  <h5 className="text-sm font-semibold text-slate-700 mb-2">治疗项目</h5>
                   <div className="flex flex-wrap gap-2">
                     {editingRecord?.items.map((item, i) => (
-                      <span key={i} className="bg-cyan-500/20 text-cyan-300 text-sm px-3 py-1 rounded-xl font-medium">{item}</span>
+                      <span key={i} className="bg-blue-100 text-blue-600 text-sm px-3 py-1 rounded-xl font-medium">{item}</span>
                     ))}
                   </div>
                 </div>
 
                 {/* 个性化亮点 */}
                 <div className="mb-4">
-                  <h5 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-                    <Star size={16} className="text-amber-400" />
+                  <h5 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                    <Star size={16} className="text-amber-500" />
                     今日亮点（可编辑）
                   </h5>
                   <textarea
                     value={editingRecord?.highlight || ''}
                     onChange={e => setEditingRecord(prev => ({ ...prev, highlight: e.target.value }))}
-                    className="w-full border border-white/20 rounded-2xl p-3 text-sm text-white placeholder-white/40 resize-none focus:outline-none focus:ring-2 focus:ring-cyan-400/30 focus:border-cyan-400 bg-white/10"
+                    className="w-full border border-slate-200 rounded-2xl p-3 text-sm text-slate-700 placeholder-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 bg-white"
                     rows={2}
                   />
                 </div>
 
                 {/* 备注 */}
                 <div className="mb-4">
-                  <h5 className="text-sm font-semibold text-white mb-2">治疗备注</h5>
+                  <h5 className="text-sm font-semibold text-slate-700 mb-2">治疗备注</h5>
                   <textarea
                     value={editingRecord?.notes || ''}
                     onChange={e => setEditingRecord(prev => ({ ...prev, notes: e.target.value }))}
-                    className="w-full border border-white/20 rounded-2xl p-3 text-sm text-white placeholder-white/40 resize-none focus:outline-none focus:ring-2 focus:ring-cyan-400/30 focus:border-cyan-400 bg-white/10"
+                    className="w-full border border-slate-200 rounded-2xl p-3 text-sm text-slate-700 placeholder-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 bg-white"
                     rows={2}
                   />
                 </div>
 
                 <button
                   onClick={() => confirmBatchItem(currentBatchIndex, editingRecord)}
-                  className="w-full bg-gradient-to-r from-cyan-500 to-emerald-500 text-white py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                  className="w-full btn-particle btn-particle-emerald py-3 rounded-xl"
                 >
-                  <Check size={20} />
-                  确认此记录 ({currentBatchIndex + 1}/{batchPatients.length})
+                  <div className="points_wrapper">
+                    <div className="point"></div>
+                    <div className="point"></div>
+                    <div className="point"></div>
+                    <div className="point"></div>
+                    <div className="point"></div>
+                    <div className="point"></div>
+                    <div className="point"></div>
+                    <div className="point"></div>
+                    <div className="point"></div>
+                    <div className="point"></div>
+                  </div>
+                  <span className="inner">
+                    <Check size={18} />
+                    确认此记录 ({currentBatchIndex + 1}/{batchPatients.length})
+                  </span>
                 </button>
               </>
             )}
@@ -2543,17 +2619,35 @@ export default function RehabCareLink() {
                 {/* 打印全部按钮 */}
                 <button
                   onClick={() => printBatchRecords(batchPatients)}
-                  className="w-full bg-gradient-to-r from-slate-600 to-slate-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg"
+                  className="w-full btn-particle py-3 rounded-xl"
                 >
-                  <Printer size={20} />
-                  打印全部日报
+                  <div className="points_wrapper">
+                    <div className="point"></div>
+                    <div className="point"></div>
+                    <div className="point"></div>
+                    <div className="point"></div>
+                    <div className="point"></div>
+                  </div>
+                  <span className="inner">
+                    <Printer size={18} />
+                    打印全部日报
+                  </span>
                 </button>
                 {/* 关闭按钮 */}
                 <button
                   onClick={() => setShowBatchGenerate(false)}
-                  className="w-full bg-gradient-to-r from-cyan-500 to-emerald-500 text-white px-6 py-3 rounded-2xl font-bold"
+                  className="w-full btn-particle btn-particle-cyan py-3 rounded-xl"
                 >
-                  全部完成，关闭
+                  <div className="points_wrapper">
+                    <div className="point"></div>
+                    <div className="point"></div>
+                    <div className="point"></div>
+                    <div className="point"></div>
+                    <div className="point"></div>
+                  </div>
+                  <span className="inner">
+                    全部完成，关闭
+                  </span>
                 </button>
               </div>
             )}
@@ -2563,42 +2657,40 @@ export default function RehabCareLink() {
     );
   };
 
-  // 模板库弹窗 - 深色毛玻璃风格
+  // 模板库弹窗 - 浅色毛玻璃风格
   const TemplatesModal = () => (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center" onClick={() => setShowTemplates(false)}>
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center" onClick={() => setShowTemplates(false)}>
       <div
-        className="bg-gradient-to-b from-slate-800/95 to-slate-900/95 backdrop-blur-2xl rounded-t-[32px] w-full max-h-[85vh] overflow-y-auto border-t border-white/10"
+        className="bg-gradient-to-b from-white/95 to-slate-50/95 backdrop-blur-2xl rounded-t-[32px] w-full max-h-[85vh] overflow-y-auto border-t border-white/80 shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-slate-800/90 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between z-10">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <BookOpen className="text-emerald-400" size={20} />
+        <div className="sticky top-0 bg-white/90 backdrop-blur-xl border-b border-slate-100 px-4 py-3 flex items-center justify-between z-10">
+          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <BookOpen className="text-emerald-500" size={20} />
             治疗模板库
           </h3>
-          <button onClick={() => setShowTemplates(false)} className="p-2 hover:bg-white/10 rounded-full">
-            <X size={20} className="text-white/70" />
+          <button onClick={() => setShowTemplates(false)} className="p-2 hover:bg-slate-100 rounded-full">
+            <X size={20} className="text-slate-500" />
           </button>
         </div>
 
         <div className="p-4 space-y-4">
           {treatmentTemplates.map(category => (
-            <div key={category.id} className="dark-glass-card">
-              <div className="card-inner !flex-col !items-stretch !gap-3">
-              <h4 className="font-bold text-white mb-1 flex items-center gap-2">
+            <div key={category.id} className="bg-white/70 backdrop-blur-xl rounded-2xl p-4 border border-slate-100 shadow-sm">
+              <h4 className="font-bold text-slate-700 mb-3 flex items-center gap-2">
                 <span className="text-xl">{category.icon}</span>
                 {category.category}
               </h4>
               <div className="grid grid-cols-2 gap-2">
                 {category.items.map((item, i) => (
-                  <div key={i} className="bg-white/5 rounded-2xl p-3 flex items-center gap-2">
+                  <div key={i} className="bg-slate-50 rounded-xl p-3 flex items-center gap-2">
                     <span className="text-lg">{item.icon}</span>
                     <div>
-                      <p className="text-sm font-semibold text-white">{item.name}</p>
-                      <p className="text-xs text-white/50">{item.duration}</p>
+                      <p className="text-sm font-semibold text-slate-700">{item.name}</p>
+                      <p className="text-xs text-slate-400">{item.duration}</p>
                     </div>
                   </div>
                 ))}
-              </div>
               </div>
             </div>
           ))}
@@ -2607,7 +2699,7 @@ export default function RehabCareLink() {
     </div>
   );
 
-  // 快速录入弹窗 - 深色毛玻璃风格
+  // 快速录入弹窗 - 浅色毛玻璃风格
   const QuickEntryModal = () => {
     const [selectedItems, setSelectedItems] = useState([]);
 
@@ -2620,31 +2712,31 @@ export default function RehabCareLink() {
     };
 
     return (
-      <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center" onClick={() => setShowQuickEntry(false)}>
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center" onClick={() => setShowQuickEntry(false)}>
         <div
-          className="bg-gradient-to-b from-slate-800/95 to-slate-900/95 backdrop-blur-2xl rounded-t-[32px] w-full max-h-[85vh] overflow-y-auto border-t border-white/10"
+          className="bg-gradient-to-b from-white/95 to-slate-50/95 backdrop-blur-2xl rounded-t-[32px] w-full max-h-[85vh] overflow-y-auto border-t border-white/80 shadow-2xl"
           onClick={e => e.stopPropagation()}
         >
-          <div className="sticky top-0 bg-slate-800/90 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between z-10">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <ClipboardList className="text-emerald-400" size={20} />
+          <div className="sticky top-0 bg-white/90 backdrop-blur-xl border-b border-slate-100 px-4 py-3 flex items-center justify-between z-10">
+            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <ClipboardList className="text-emerald-500" size={20} />
               快速录入
             </h3>
-            <button onClick={() => setShowQuickEntry(false)} className="p-2 hover:bg-white/10 rounded-full">
-              <X size={20} className="text-white/70" />
+            <button onClick={() => setShowQuickEntry(false)} className="p-2 hover:bg-slate-100 rounded-full">
+              <X size={20} className="text-slate-500" />
             </button>
           </div>
 
           <div className="p-4">
             {/* 已选项目 */}
             {selectedItems.length > 0 && (
-              <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-2xl p-3 mb-4">
-                <h5 className="text-sm font-semibold text-white mb-2">已选择 ({selectedItems.length})</h5>
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-3 mb-4">
+                <h5 className="text-sm font-semibold text-slate-700 mb-2">已选择 ({selectedItems.length})</h5>
                 <div className="flex flex-wrap gap-2">
                   {selectedItems.map((item, i) => (
-                    <span key={i} className="bg-gradient-to-r from-cyan-500 to-emerald-500 text-white text-sm px-3 py-1 rounded-full flex items-center gap-1 font-medium">
+                    <span key={i} className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-sm px-3 py-1 rounded-full flex items-center gap-1 font-medium shadow-sm">
                       {item.icon} {item.name}
-                      <X size={14} className="cursor-pointer hover:text-rose-300" onClick={() => toggleItem(item)} />
+                      <X size={14} className="cursor-pointer hover:text-rose-200" onClick={() => toggleItem(item)} />
                     </span>
                   ))}
                 </div>
@@ -2654,7 +2746,7 @@ export default function RehabCareLink() {
             {/* 模板选择 */}
             {treatmentTemplates.map(category => (
               <div key={category.id} className="mb-4">
-                <h5 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
+                <h5 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
                   {category.icon} {category.category}
                 </h5>
                 <div className="flex flex-wrap gap-2">
@@ -2666,8 +2758,8 @@ export default function RehabCareLink() {
                         onClick={() => toggleItem(item)}
                         className={`px-3 py-1.5 rounded-full text-sm transition font-medium ${
                           isSelected
-                            ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-white'
-                            : 'bg-white/10 text-white/70 hover:bg-white/20'
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-sm'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                       >
                         {item.icon} {item.name}
@@ -2680,10 +2772,24 @@ export default function RehabCareLink() {
 
             <button
               disabled={selectedItems.length === 0}
-              className="w-full bg-gradient-to-r from-cyan-500 to-emerald-500 text-white py-3 rounded-2xl font-bold disabled:opacity-50 disabled:cursor-not-allowed mt-4 shadow-lg"
+              className="w-full btn-particle btn-particle-emerald py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed mt-4"
               onClick={() => setShowQuickEntry(false)}
             >
-              确认添加 ({selectedItems.length} 项)
+              <div className="points_wrapper">
+                <div className="point"></div>
+                <div className="point"></div>
+                <div className="point"></div>
+                <div className="point"></div>
+                <div className="point"></div>
+                <div className="point"></div>
+                <div className="point"></div>
+                <div className="point"></div>
+                <div className="point"></div>
+                <div className="point"></div>
+              </div>
+              <span className="inner">
+                确认添加 ({selectedItems.length} 项)
+              </span>
             </button>
           </div>
         </div>
@@ -2711,12 +2817,12 @@ export default function RehabCareLink() {
 
       {/* 全部患者弹窗 */}
       {showAllPatients && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center" onClick={() => setShowAllPatients(false)}>
-          <div className="bg-gradient-to-b from-slate-800/95 to-slate-900/95 backdrop-blur-2xl rounded-t-[32px] w-full max-h-[85vh] overflow-y-auto border-t border-white/10" onClick={e => e.stopPropagation()}>
-            <div className="sticky top-0 bg-slate-800/90 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between z-10">
-              <h3 className="text-lg font-bold text-white">全部患者 ({patients.length})</h3>
-              <button onClick={() => setShowAllPatients(false)} className="p-2 hover:bg-white/10 rounded-full">
-                <X size={20} className="text-white/70" />
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center" onClick={() => setShowAllPatients(false)}>
+          <div className="bg-gradient-to-b from-white/95 to-slate-50/95 backdrop-blur-2xl rounded-t-[32px] w-full max-h-[85vh] overflow-y-auto border-t border-white/80 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white/90 backdrop-blur-xl border-b border-slate-100 px-4 py-3 flex items-center justify-between z-10">
+              <h3 className="text-lg font-bold text-slate-800">全部患者 ({patients.length})</h3>
+              <button onClick={() => setShowAllPatients(false)} className="p-2 hover:bg-slate-100 rounded-full">
+                <X size={20} className="text-slate-500" />
               </button>
             </div>
             <div className="p-4 space-y-2">
@@ -2727,21 +2833,21 @@ export default function RehabCareLink() {
                     setShowAllPatients(false);
                     navigateTo('patientDetail', patient);
                   }}
-                  className="w-full dark-glass-card"
+                  className="w-full bg-white/60 backdrop-blur-xl rounded-2xl p-3 border border-white/50 shadow-sm hover:bg-white/80 transition-all active:scale-[0.98]"
                 >
-                  <div className="card-inner">
-                  <div className="w-10 h-10 bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 rounded-2xl flex items-center justify-center text-xl border border-white/10">
-                    {patient.avatar}
-                  </div>
-                  <div className="flex-1 text-left">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-white">{patient.name}</span>
-                      <span className="text-xs text-white/50">{patient.age}</span>
-                      <span className="text-xs bg-white/10 text-white/70 px-1.5 rounded-lg">{patient.bedNo}</span>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center text-xl border-2 border-white shadow-sm">
+                      {patient.avatar}
                     </div>
-                    <p className="text-xs text-white/50">{patient.department} · {patient.diagnosis}</p>
-                  </div>
-                  <ChevronRight size={18} className="text-white/30" />
+                    <div className="flex-1 text-left">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-slate-800">{patient.name}</span>
+                        <span className="text-xs text-slate-400">{patient.age}</span>
+                        <span className="text-xs bg-slate-100 text-slate-600 px-1.5 rounded-lg">{patient.bedNo}</span>
+                      </div>
+                      <p className="text-xs text-slate-500">{patient.department} · {patient.diagnosis}</p>
+                    </div>
+                    <ChevronRight size={18} className="text-slate-300" />
                   </div>
                 </button>
               ))}
@@ -2752,32 +2858,41 @@ export default function RehabCareLink() {
 
       {/* 删除确认对话框 */}
       {showDeleteConfirm && selectedPatient && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setShowDeleteConfirm(false)}>
-          <div className="bg-gradient-to-b from-slate-800/95 to-slate-900/95 backdrop-blur-2xl rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-white/10" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="bg-white/95 backdrop-blur-2xl rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-white/80" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-rose-500/20 rounded-2xl flex items-center justify-center">
-                <AlertTriangle size={24} className="text-rose-400" />
+              <div className="w-12 h-12 bg-rose-100 rounded-2xl flex items-center justify-center">
+                <AlertTriangle size={24} className="text-rose-500" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">确认删除</h3>
-                <p className="text-sm text-white/50">此操作无法撤销</p>
+                <h3 className="text-lg font-bold text-slate-800">确认删除</h3>
+                <p className="text-sm text-slate-400">此操作无法撤销</p>
               </div>
             </div>
-            <p className="text-white mb-6">
-              确定要删除患者 <span className="font-bold">{selectedPatient.name}</span> 的所有信息吗？
+            <p className="text-slate-600 mb-6">
+              确定要删除患者 <span className="font-bold text-slate-800">{selectedPatient.name}</span> 的所有信息吗？
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-4 py-2.5 bg-white/10 text-white/70 rounded-2xl font-semibold hover:bg-white/20 transition-colors"
+                className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-semibold hover:bg-slate-200 transition-colors"
               >
                 取消
               </button>
               <button
                 onClick={() => deletePatient(selectedPatient.id)}
-                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-2xl font-semibold"
+                className="flex-1 btn-particle btn-particle-rose py-2.5 rounded-xl"
               >
-                确认删除
+                <div className="points_wrapper">
+                  <div className="point"></div>
+                  <div className="point"></div>
+                  <div className="point"></div>
+                  <div className="point"></div>
+                  <div className="point"></div>
+                </div>
+                <span className="inner">
+                  确认删除
+                </span>
               </button>
             </div>
           </div>
@@ -2786,27 +2901,27 @@ export default function RehabCareLink() {
 
       {/* 日志确认对话框 */}
       {showLogConfirm && generatedLog && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setShowLogConfirm(false)}>
-          <div className="bg-gradient-to-b from-slate-800/95 to-slate-900/95 backdrop-blur-2xl rounded-3xl p-6 max-w-md w-full shadow-2xl max-h-[80vh] overflow-y-auto border border-white/10" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowLogConfirm(false)}>
+          <div className="bg-white/95 backdrop-blur-2xl rounded-3xl p-6 max-w-md w-full shadow-2xl max-h-[80vh] overflow-y-auto border border-white/80" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-emerald-500/20 rounded-2xl flex items-center justify-center">
-                <FileText size={24} className="text-emerald-400" />
+              <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
+                <FileText size={24} className="text-emerald-500" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">确认治疗日志</h3>
-                <p className="text-sm text-white/50">{generatedLog.date}</p>
+                <h3 className="text-lg font-bold text-slate-800">确认治疗日志</h3>
+                <p className="text-sm text-slate-400">{generatedLog.date}</p>
               </div>
             </div>
 
             {/* 今日重点 - 可编辑 */}
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 mb-4">
+            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-4">
               <div className="flex items-start gap-2">
-                <Star size={16} className="text-amber-400 mt-0.5" />
+                <Star size={16} className="text-amber-500 mt-0.5" />
                 <div className="flex-1">
                   <textarea
                     value={generatedLog.highlight}
                     onChange={(e) => setGeneratedLog({ ...generatedLog, highlight: e.target.value })}
-                    className="w-full text-sm font-semibold text-white leading-relaxed bg-transparent border-none outline-none resize-none"
+                    className="w-full text-sm font-semibold text-slate-700 leading-relaxed bg-transparent border-none outline-none resize-none"
                     rows={2}
                   />
                 </div>
@@ -2815,10 +2930,10 @@ export default function RehabCareLink() {
 
             {/* 训练项目 */}
             <div className="mb-4">
-              <label className="text-xs text-white/50 mb-2 block font-medium">完成项目</label>
+              <label className="text-xs text-slate-400 mb-2 block font-medium">完成项目</label>
               <div className="flex flex-wrap gap-2">
                 {generatedLog.items.map((item, i) => (
-                  <span key={i} className="bg-cyan-500/20 text-cyan-300 px-3 py-1.5 rounded-xl text-sm font-medium">
+                  <span key={i} className="bg-blue-100 text-blue-600 px-3 py-1.5 rounded-xl text-sm font-medium">
                     {item.name}
                   </span>
                 ))}
@@ -2827,11 +2942,11 @@ export default function RehabCareLink() {
 
             {/* 详细记录 - 可编辑 */}
             <div className="mb-6">
-              <label className="text-xs text-white/50 mb-2 block font-medium">详细记录</label>
+              <label className="text-xs text-slate-400 mb-2 block font-medium">详细记录</label>
               <textarea
                 value={generatedLog.detailRecord}
                 onChange={(e) => setGeneratedLog({ ...generatedLog, detailRecord: e.target.value })}
-                className="w-full bg-white/10 rounded-2xl p-4 text-sm text-white leading-relaxed border border-white/20 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 outline-none resize-none"
+                className="w-full bg-slate-50 rounded-2xl p-4 text-sm text-slate-700 leading-relaxed border border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none resize-none"
                 rows={5}
               />
             </div>
@@ -2839,15 +2954,24 @@ export default function RehabCareLink() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowLogConfirm(false)}
-                className="flex-1 px-4 py-2.5 bg-white/10 text-white/70 rounded-2xl font-semibold hover:bg-white/20 transition-colors"
+                className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-semibold hover:bg-slate-200 transition-colors"
               >
                 取消
               </button>
               <button
                 onClick={confirmSaveLog}
-                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white rounded-2xl font-bold hover:shadow-lg transition-all"
+                className="flex-1 btn-particle btn-particle-emerald py-2.5 rounded-xl"
               >
-                确认保存
+                <div className="points_wrapper">
+                  <div className="point"></div>
+                  <div className="point"></div>
+                  <div className="point"></div>
+                  <div className="point"></div>
+                  <div className="point"></div>
+                </div>
+                <span className="inner">
+                  确认保存
+                </span>
               </button>
             </div>
           </div>
@@ -2857,7 +2981,7 @@ export default function RehabCareLink() {
       {/* Toast提示 */}
       {toast && (
         <div className={`fixed top-4 left-4 right-4 z-50 p-4 rounded-2xl shadow-lg flex items-center gap-3 animate-slide-up ${
-          toast.type === 'success' ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-white' : 'bg-rose-500 text-white'
+          toast.type === 'success' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white' : 'bg-rose-500 text-white'
         }`}>
           {toast.type === 'success' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
           <span className="flex-1">{toast.message}</span>
