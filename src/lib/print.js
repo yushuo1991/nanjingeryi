@@ -81,37 +81,58 @@ export const generateTreatmentCard = (patient) => {
         }
         .card-container {
           width: 100%;
-          max-width: 480px;
+          max-width: 500px;
         }
         .card {
-          background: rgba(255, 255, 255, 0.85);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          border-radius: 24px;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+          background: rgba(255, 255, 255, 0.75);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          border-radius: 28px;
+          box-shadow: 0 24px 48px rgba(0, 0, 0, 0.12),
+                      0 8px 16px rgba(0, 0, 0, 0.06),
+                      inset 0 1px 0 rgba(255, 255, 255, 0.9);
           overflow: hidden;
-          border: 2px solid rgba(255, 255, 255, 0.6);
+          border: 2px solid rgba(255, 255, 255, 0.7);
+          transition: transform 0.3s ease;
         }
 
         /* 头部 */
         .card-header {
           text-align: center;
-          padding: 24px 24px 20px;
-          background: linear-gradient(135deg, rgba(147, 197, 253, 0.3) 0%, rgba(196, 181, 253, 0.3) 100%);
-          border-bottom: 2px solid rgba(59, 130, 246, 0.2);
+          padding: 32px 28px 24px;
+          background: linear-gradient(135deg,
+            rgba(147, 197, 253, 0.4) 0%,
+            rgba(196, 181, 253, 0.4) 50%,
+            rgba(251, 207, 232, 0.4) 100%);
+          border-bottom: 2px solid rgba(147, 197, 253, 0.3);
+          position: relative;
+        }
+        .card-header::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
         }
         .hospital-name {
-          font-size: 20px;
-          font-weight: 800;
-          color: #1e40af;
-          letter-spacing: 2px;
-          margin-bottom: 6px;
+          font-size: 22px;
+          font-weight: 900;
+          background: linear-gradient(135deg, #1e40af 0%, #7c3aed 50%, #db2777 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          letter-spacing: 3px;
+          margin-bottom: 8px;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
         .document-title {
-          font-size: 16px;
+          font-size: 17px;
           font-weight: 700;
-          color: #3b82f6;
-          letter-spacing: 1px;
+          color: #4f46e5;
+          letter-spacing: 2px;
+          opacity: 0.9;
         }
 
         /* 信息表格 */
@@ -121,17 +142,20 @@ export const generateTreatmentCard = (patient) => {
           margin: 0;
         }
         .info-table td {
-          border: 1px solid #e2e8f0;
-          padding: 10px 12px;
-          font-size: 13px;
-          background: rgba(255, 255, 255, 0.5);
+          border: 1px solid rgba(226, 232, 240, 0.6);
+          padding: 12px 14px;
+          font-size: 14px;
+          background: rgba(255, 255, 255, 0.6);
         }
         .info-table .label {
-          background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+          background: linear-gradient(135deg,
+            rgba(239, 246, 255, 0.8) 0%,
+            rgba(245, 243, 255, 0.8) 100%);
           font-weight: 700;
           color: #475569;
-          width: 80px;
+          width: 85px;
           text-align: center;
+          font-size: 13px;
         }
         .info-table .value {
           color: #1e293b;
@@ -140,27 +164,36 @@ export const generateTreatmentCard = (patient) => {
 
         /* 内容区域 */
         .card-body {
-          padding: 20px 24px;
+          padding: 24px 28px;
         }
         .section {
-          margin-bottom: 18px;
+          margin-bottom: 20px;
         }
         .section:last-child {
           margin-bottom: 0;
         }
         .section-title {
-          font-size: 14px;
-          font-weight: 700;
-          color: #1e40af;
-          padding-bottom: 6px;
-          margin-bottom: 10px;
-          border-bottom: 2px solid #3b82f6;
+          font-size: 15px;
+          font-weight: 800;
+          background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          padding-bottom: 8px;
+          margin-bottom: 12px;
+          border-bottom: 3px solid transparent;
+          border-image: linear-gradient(90deg, #3b82f6, #8b5cf6, transparent) 1;
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
+        }
+        .section-title::before {
+          content: '●';
+          color: #3b82f6;
+          font-size: 12px;
         }
         .section-content {
-          padding-left: 8px;
+          padding-left: 10px;
         }
 
         /* 安全提醒 */
@@ -168,66 +201,92 @@ export const generateTreatmentCard = (patient) => {
           display: inline-block;
           background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
           color: #991b1b;
-          padding: 4px 12px;
-          border-radius: 12px;
-          font-size: 12px;
+          padding: 6px 14px;
+          border-radius: 16px;
+          font-size: 13px;
           font-weight: 700;
-          margin-right: 6px;
-          margin-bottom: 4px;
-          border: 1px solid #f87171;
+          margin-right: 8px;
+          margin-bottom: 6px;
+          border: 2px solid #f87171;
+          box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
         }
 
         /* 治疗计划 */
         .focus-text {
-          font-size: 13px;
+          font-size: 14px;
           color: #1e293b;
-          line-height: 1.6;
-          margin-bottom: 8px;
+          line-height: 1.7;
+          margin-bottom: 10px;
           font-weight: 600;
+          padding: 10px 14px;
+          background: linear-gradient(135deg,
+            rgba(219, 234, 254, 0.5) 0%,
+            rgba(233, 213, 255, 0.5) 100%);
+          border-radius: 12px;
+          border-left: 4px solid #3b82f6;
         }
         .treatment-row {
-          font-size: 13px;
+          font-size: 14px;
           color: #334155;
-          padding: 6px 0;
-          border-bottom: 1px dashed #e2e8f0;
-          line-height: 1.5;
+          padding: 8px 12px;
+          margin-bottom: 6px;
+          background: rgba(248, 250, 252, 0.6);
+          border-radius: 10px;
+          border-left: 3px solid #93c5fd;
+          line-height: 1.6;
+          transition: all 0.2s;
         }
         .treatment-row:last-child {
-          border-bottom: none;
+          margin-bottom: 0;
         }
 
         /* 注意事项 */
         .precautions-text {
           font-size: 13px;
           color: #dc2626;
-          line-height: 1.6;
-          font-weight: 500;
+          line-height: 1.7;
+          font-weight: 600;
+          padding: 8px 12px;
+          background: rgba(254, 226, 226, 0.5);
+          border-radius: 10px;
+          display: inline-block;
+          margin-top: 6px;
         }
 
         /* 治疗记录表格 */
         .record-table {
           width: 100%;
           border-collapse: collapse;
-          margin-top: 10px;
-          font-size: 12px;
+          margin-top: 12px;
+          font-size: 13px;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
         }
         .record-table th,
         .record-table td {
-          border: 1px solid #e2e8f0;
-          padding: 8px 6px;
+          border: 1px solid rgba(226, 232, 240, 0.6);
+          padding: 10px 8px;
           text-align: left;
         }
         .record-table th {
-          background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
-          font-weight: 700;
+          background: linear-gradient(135deg,
+            rgba(219, 234, 254, 0.8) 0%,
+            rgba(224, 231, 255, 0.8) 100%);
+          font-weight: 800;
           color: #1e40af;
           text-align: center;
-          font-size: 12px;
+          font-size: 13px;
+          letter-spacing: 0.5px;
         }
         .record-table td {
-          background: rgba(255, 255, 255, 0.5);
+          background: rgba(255, 255, 255, 0.6);
           color: #334155;
           vertical-align: top;
+          line-height: 1.6;
+        }
+        .record-table tbody tr:hover td {
+          background: rgba(239, 246, 255, 0.6);
         }
         .text-center {
           text-align: center;
@@ -235,37 +294,44 @@ export const generateTreatmentCard = (patient) => {
         .empty-text {
           color: #94a3b8;
           font-style: italic;
+          padding: 16px;
         }
 
         /* 签名区 */
         .signature-area {
-          margin-top: 20px;
-          padding-top: 16px;
-          border-top: 1px solid #e2e8f0;
+          margin-top: 24px;
+          padding-top: 20px;
+          border-top: 2px solid rgba(226, 232, 240, 0.6);
           display: flex;
-          justify-content: space-between;
-          font-size: 13px;
+          justify-content: center;
+          font-size: 14px;
           color: #64748b;
         }
         .signature-item {
           display: flex;
           align-items: center;
-          gap: 8px;
-        }
-        .signature-line {
-          border-bottom: 1px solid #94a3b8;
-          width: 80px;
-          display: inline-block;
+          gap: 10px;
+          padding: 8px 16px;
+          background: linear-gradient(135deg,
+            rgba(239, 246, 255, 0.5) 0%,
+            rgba(245, 243, 255, 0.5) 100%);
+          border-radius: 12px;
+          font-weight: 600;
         }
 
         /* 底部 */
         .card-footer {
-          padding: 12px 24px;
-          background: linear-gradient(135deg, rgba(147, 197, 253, 0.2) 0%, rgba(196, 181, 253, 0.2) 100%);
-          border-top: 1px solid #e2e8f0;
+          padding: 16px 28px;
+          background: linear-gradient(135deg,
+            rgba(147, 197, 253, 0.3) 0%,
+            rgba(196, 181, 253, 0.3) 50%,
+            rgba(251, 207, 232, 0.3) 100%);
+          border-top: 2px solid rgba(147, 197, 253, 0.3);
           text-align: center;
-          font-size: 11px;
-          color: #64748b;
+          font-size: 13px;
+          color: #475569;
+          font-weight: 600;
+          letter-spacing: 1px;
         }
 
         /* 操作按钮 */
@@ -274,29 +340,36 @@ export const generateTreatmentCard = (patient) => {
           top: 20px;
           right: 20px;
           display: flex;
-          gap: 10px;
+          gap: 12px;
           z-index: 1000;
         }
         .action-btn {
-          padding: 12px 24px;
+          padding: 14px 28px;
           border: none;
-          border-radius: 12px;
+          border-radius: 16px;
           cursor: pointer;
-          font-size: 14px;
-          font-weight: 600;
-          transition: all 0.2s;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          font-size: 15px;
+          font-weight: 700;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 4px 16px rgba(0,0,0,0.12),
+                      0 2px 8px rgba(0,0,0,0.08);
+          letter-spacing: 0.5px;
         }
         .btn-save {
-          background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+          background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
           color: white;
+          border: 2px solid rgba(255, 255, 255, 0.3);
         }
         .btn-save:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 16px rgba(59,130,246,0.4);
+          transform: translateY(-3px);
+          box-shadow: 0 8px 24px rgba(59,130,246,0.4),
+                      0 4px 12px rgba(139,92,246,0.3);
+        }
+        .btn-save:active {
+          transform: translateY(-1px);
         }
         .btn-save:disabled {
-          opacity: 0.6;
+          opacity: 0.5;
           cursor: not-allowed;
           transform: none;
         }
