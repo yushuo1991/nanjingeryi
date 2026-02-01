@@ -1,0 +1,37 @@
+name: 测试日志模板功能
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 测试完整流程
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: ${{ secrets.SERVER_PORT }}
+          script: |
+            echo "========== 1. 测试后端健康检查 =========="
+            curl -s http://localhost:3201/api/patients | head -20
+
+            echo ""
+            echo "========== 2. 检查PM2状态 =========="
+            pm2 list
+
+            echo ""
+            echo "========== 3. 检查最近的PM2日志 =========="
+            pm2 logs rehab-care-link-server --lines 20 --nostream
+
+            echo ""
+            echo "========== 4. 测试前端是否正常 =========="
+            curl -s http://localhost/ | grep -o "<title>.*</title>"
+
+            echo ""
+            echo "========== 5. 检查服务器代码版本 =========="
+            grep -n "buildLogTemplatesPrompt" /var/www/rehab-care-link/server/qwen.js | head -3
+            grep -n "logTemplates" /var/www/rehab-care-link/server/index.js | head -5
+
+            echo ""
+            echo "========== 测试完成 =========="
