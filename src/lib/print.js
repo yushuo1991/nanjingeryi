@@ -384,14 +384,6 @@ export const generateTreatmentCard = (patient) => {
             <!-- 签名区 -->
             <div class="signature-area">
               <div class="signature-item">
-                <span>主治医师：</span>
-                <span class="signature-line"></span>
-              </div>
-              <div class="signature-item">
-                <span>治疗师：</span>
-                <span class="signature-line"></span>
-              </div>
-              <div class="signature-item">
                 <span>日期：</span>
                 <span>${today}</span>
               </div>
@@ -400,7 +392,7 @@ export const generateTreatmentCard = (patient) => {
 
           <!-- 底部 -->
           <div class="card-footer">
-            生成时间：${new Date().toLocaleString('zh-CN')} | 南京市儿童医院康复科
+            南京市儿童医院康复科
           </div>
         </div>
       </div>
