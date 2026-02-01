@@ -1,0 +1,31 @@
+name: 检查路由是否存在
+on:
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检查generate-log路由
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: ${{ secrets.SERVER_PORT }}
+          script: |
+            echo "========== 检查index.js文件信息 =========="
+            wc -l /var/www/rehab-care-link/server/index.js
+            ls -lh /var/www/rehab-care-link/server/index.js
+
+            echo ""
+            echo "========== 搜索generate-log路由 =========="
+            grep -n "generate-log" /var/www/rehab-care-link/server/index.js || echo "未找到generate-log"
+
+            echo ""
+            echo "========== 搜索buildLogPrompt =========="
+            grep -n "buildLogPrompt" /var/www/rehab-care-link/server/index.js || echo "未找到buildLogPrompt"
+            grep -n "buildLogPrompt" /var/www/rehab-care-link/server/qwen.js || echo "qwen.js中未找到buildLogPrompt"
+
+            echo ""
+            echo "========== 检查所有patients相关路由 =========="
+            grep -n "app.post.*patients" /var/www/rehab-care-link/server/index.js | head -10
