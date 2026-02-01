@@ -81,7 +81,7 @@ export const generateTreatmentCard = (patient) => {
         }
         .card-container {
           width: 100%;
-          max-width: 500px;
+          max-width: 540px;
         }
         .card {
           background: rgba(255, 255, 255, 0.75);
@@ -143,8 +143,8 @@ export const generateTreatmentCard = (patient) => {
         }
         .info-table td {
           border: 1px solid rgba(226, 232, 240, 0.6);
-          padding: 12px 14px;
-          font-size: 14px;
+          padding: 10px 12px;
+          font-size: 13px;
           background: rgba(255, 255, 255, 0.6);
         }
         .info-table .label {
@@ -153,13 +153,15 @@ export const generateTreatmentCard = (patient) => {
             rgba(245, 243, 255, 0.8) 100%);
           font-weight: 700;
           color: #475569;
-          width: 85px;
+          width: 70px;
           text-align: center;
-          font-size: 13px;
+          font-size: 12px;
+          white-space: nowrap;
         }
         .info-table .value {
           color: #1e293b;
           font-weight: 600;
+          white-space: nowrap;
         }
 
         /* 内容区域 */
