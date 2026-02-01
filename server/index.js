@@ -35,6 +35,7 @@ const {
   buildExtractPromptForMissing,
   buildPlanPrompt,
   buildLogPrompt,
+  buildLogTemplatesPrompt,
   buildAnalyzePrompt,
   buildAnalyzePromptForMissing,
   extractJsonFromText,
@@ -1031,6 +1032,46 @@ function createApp() {
       ...patient,
       admissionDate: patient.admissionDate || toLocalIsoDate(),
     };
+
+    // 如果有治疗计划，生成日志模板
+    if (plan && plan.focus && plan.items) {
+      try {
+        requiredEnv('DASHSCOPE_API_KEY');
+
+        const context = {
+          patient: {
+            name: patient.name,
+            age: patient.age,
+            diagnosis: patient.diagnosis
+          },
+          treatmentPlan: plan
+        };
+
+        const prompt = buildLogTemplatesPrompt(context);
+        const { text } = await callQwenVision({
+          imageDataUrls: [],
+          prompt,
+          requestTag: 'generate-log-templates'
+        });
+
+        const templates = extractJsonFromText(text);
+
+        // 验证模板格式
+        if (Array.isArray(templates) && templates.length > 0) {
+          payload.logTemplates = templates;
+          console.log(`[INFO] Generated ${templates.length} log templates for patient ${patient.name}`);
+        } else {
+          console.warn('[WARN] Failed to generate log templates, using default');
+          payload.logTemplates = [];
+        }
+      } catch (error) {
+        console.error('[ERROR] Failed to generate log templates:', error);
+        // 失败时不阻塞患者创建，使用空数组
+        payload.logTemplates = [];
+      }
+    } else {
+      payload.logTemplates = [];
+    }
 
     const pool = await getPool();
     const [r] = await pool.query('INSERT INTO patients (data) VALUES (?)', [JSON.stringify(payload)]);

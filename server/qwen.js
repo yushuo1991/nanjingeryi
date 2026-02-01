@@ -141,6 +141,62 @@ function buildLogPrompt(context) {
   ].join('\n');
 }
 
+function buildLogTemplatesPrompt(context) {
+  const { patient, treatmentPlan } = context;
+
+  return [
+    '你是儿科医院康复治疗师，需要为患儿预生成5个不同的治疗日志模板。',
+    '这些模板将在未来的治疗中随机使用，所以每个模板必须有明显差异。输出严格 JSON（不要 Markdown，不要多余文本）。',
+    '',
+    '⚠️ 重要要求：',
+    '- 生成5个完全不同的日志模板',
+    '- 配合度和耐受性要有变化（优秀/良好/一般/需改进）',
+    '- 观察记录要具体且多样化，反映不同的治疗状态',
+    '- 体现治疗过程的自然变化（有进步、有波动、有稳定期）',
+    '- 语言要专业但自然，像真实的治疗师记录',
+    '',
+    `患儿信息：`,
+    `- 姓名：${patient.name}`,
+    `- 年龄：${patient.age}`,
+    `- 诊断：${patient.diagnosis}`,
+    '',
+    `治疗计划：`,
+    `- 治疗重点：${treatmentPlan.focus || '功能训练'}`,
+    `- 计划项目：${treatmentPlan.items?.map(i => i.name).join('、') || '无'}`,
+    `- 注意事项：${treatmentPlan.precautions?.join('；') || '无'}`,
+    '',
+    '输出格式（数组包含5个模板）：',
+    '[',
+    '  {',
+    '    "highlight": string,  // 今日治疗重点/亮点，30-50字',
+    '    "cooperation": string,  // 配合度：优秀/良好/一般/需改进',
+    '    "tolerance": string,  // 耐受性：优秀/良好/一般/较差',
+    '    "notes": string,  // 详细观察记录，80-150字',
+    '    "safety": string  // 安全提醒或注意事项',
+    '  },',
+    '  ... (共5个不同的模板)',
+    ']',
+    '',
+    '示例（仅供参考格式）：',
+    '[',
+    '  {',
+    '    "highlight": "患儿今日精神状态佳，主动配合训练，训练时间较前次延长",',
+    '    "cooperation": "优秀",',
+    '    "tolerance": "良好",',
+    '    "notes": "患儿今日精神饱满，情绪稳定。训练时能主动配合，较前次明显进步。训练后略感疲劳但无不适主诉。",',
+    '    "safety": "继续监测生命体征，如有不适立即停止"',
+    '  },',
+    '  {',
+    '    "highlight": "患儿配合度一般，需要鼓励和引导，完成基础训练项目",',
+    '    "cooperation": "一般",',
+    '    "tolerance": "良好",',
+    '    "notes": "患儿今日情绪略显低落，训练初期配合度不高，经鼓励后逐渐投入。完成基础项目，未见明显不适。建议家属多给予正面鼓励。",',
+    '    "safety": "注意观察患儿情绪变化，适时调整训练强度"',
+    '  }',
+    ']',
+  ].join('\n');
+}
+
 function buildAnalyzePrompt() {
   return [
     '你是儿科医院康复治疗师的助手。',
@@ -300,6 +356,7 @@ module.exports = {
   buildExtractPromptForMissing,
   buildPlanPrompt,
   buildLogPrompt,
+  buildLogTemplatesPrompt,
   buildAnalyzePrompt,
   buildAnalyzePromptForMissing,
   extractJsonFromText,

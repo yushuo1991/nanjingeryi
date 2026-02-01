@@ -767,83 +767,67 @@ export default function RehabCareLink() {
     }));
   };
 
-  // 生成今日治疗日志（使用AI生成个性化内容）
-  const generateTodayLog = useCallback(async (patient) => {
+  // 生成今日治疗日志（从预生成的日志模板中随机选择）
+  const generateTodayLog = useCallback((patient) => {
     if (!patient) return;
 
-    // 显示加载状态
-    setIsOcrProcessing(true);
-    showToast('AI正在生成个性化治疗日志...', 'info');
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
 
-    try {
-      const today = new Date();
-      const dateStr = today.toISOString().split('T')[0];
+    // 收集已完成的治疗项目
+    const completedItems = patient.treatmentPlan.items
+      .filter(item => item.completed)
+      .map(item => ({
+        name: item.name,
+        duration: item.duration || '5分钟'
+      }));
 
-      // 收集已完成的治疗项目
-      const completedItems = patient.treatmentPlan.items
-        .filter(item => item.completed)
-        .map(item => ({
+    // 如果没有完成项目，使用全部计划项目
+    const items = completedItems.length > 0
+      ? completedItems
+      : patient.treatmentPlan.items.map(item => ({
           name: item.name,
           duration: item.duration || '5分钟'
         }));
 
-      // 如果没有完成项目，使用全部计划项目
-      const items = completedItems.length > 0
-        ? completedItems
-        : patient.treatmentPlan.items.map(item => ({
-            name: item.name,
-            duration: item.duration || '5分钟'
-          }));
+    // 从预生成的日志模板中随机选择一个
+    const logTemplates = patient.logTemplates || [];
+    let selectedTemplate;
 
-      // 调用AI API生成个性化日志
-      const response = await api(`/api/patients/${patient.id}/generate-log`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          patient: {
-            name: patient.name,
-            age: patient.age,
-            diagnosis: patient.diagnosis,
-            admissionDate: patient.admissionDate
-          },
-          treatmentPlan: patient.treatmentPlan,
-          completedItems: items,
-          previousLogs: patient.treatmentLogs || []
-        })
-      });
-
-      if (!response.success || !response.log) {
-        throw new Error('AI生成日志失败');
-      }
-
-      const aiLog = response.log;
-
-      // 生成详细记录（优化排版）
-      const itemDetails = aiLog.items.map(i => `• ${i.name}（${i.duration}）`).join('\n');
-      const detailRecord = `【训练重点】\n${aiLog.highlight}\n\n【完成项目】\n${itemDetails}\n\n【配合情况】\n配合度：${aiLog.cooperation} | 耐受性：${aiLog.tolerance}\n\n【观察记录】\n${aiLog.notes}\n\n【安全提醒】\n${aiLog.safety}`;
-
-      // 生成新日志（待确认）
-      const newLog = {
-        date: dateStr,
-        highlight: aiLog.highlight,
-        items: aiLog.items,
-        cooperation: aiLog.cooperation,
-        tolerance: aiLog.tolerance,
-        notes: aiLog.notes,
-        safety: aiLog.safety,
-        detailRecord: detailRecord,
-        therapist: aiLog.therapist || '吴大勇'
+    if (logTemplates.length > 0) {
+      // 随机选择一个模板
+      const randomIndex = Math.floor(Math.random() * logTemplates.length);
+      selectedTemplate = logTemplates[randomIndex];
+    } else {
+      // 如果没有预生成模板，使用默认模板
+      selectedTemplate = {
+        highlight: patient.treatmentPlan.focus || '常规康复训练',
+        cooperation: '良好',
+        tolerance: '良好',
+        notes: '患儿配合训练，完成计划项目，未见明显不适。',
+        safety: patient.treatmentPlan.precautions?.[0] || '注意观察患儿反应'
       };
-
-      setGeneratedLog(newLog);
-      setShowLogConfirm(true);
-      showToast('AI日志生成成功，请确认后保存', 'success');
-    } catch (error) {
-      console.error('生成日志失败:', error);
-      showToast('AI生成日志失败: ' + (error.message || '未知错误'), 'error');
-    } finally {
-      setIsOcrProcessing(false);
     }
+
+    // 生成详细记录
+    const itemDetails = items.map(i => `• ${i.name}（${i.duration}）`).join('\n');
+    const detailRecord = `【训练重点】\n${selectedTemplate.highlight}\n\n【完成项目】\n${itemDetails}\n\n【配合情况】\n配合度：${selectedTemplate.cooperation} | 耐受性：${selectedTemplate.tolerance}\n\n【观察记录】\n${selectedTemplate.notes}\n\n【安全提醒】\n${selectedTemplate.safety}`;
+
+    // 生成新日志
+    const newLog = {
+      date: dateStr,
+      highlight: selectedTemplate.highlight,
+      items: items,
+      cooperation: selectedTemplate.cooperation,
+      tolerance: selectedTemplate.tolerance,
+      notes: selectedTemplate.notes,
+      safety: selectedTemplate.safety,
+      detailRecord: detailRecord,
+      therapist: '吴大勇'
+    };
+
+    setGeneratedLog(newLog);
+    setShowLogConfirm(true);
   }, []);
 
   // 确认保存日志
