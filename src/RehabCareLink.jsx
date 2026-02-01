@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 import { api } from './lib/api';
-import { printPatientRecord, printBatchRecords } from './lib/print';
+import { printPatientRecord, printBatchRecords, generateTreatmentCard } from './lib/print';
 
 // ==================== 设计系统配色 - 有机科技主题 ====================
 const colors = {
@@ -1554,6 +1554,14 @@ export default function RehabCareLink() {
             </button>
             <h1 className="text-lg font-extrabold text-slate-800 flex-1">患儿详情</h1>
             <div className="flex gap-1">
+              {/* 生成卡片按钮 */}
+              <button
+                onClick={() => generateTreatmentCard(patient)}
+                className="p-2 hover:bg-blue-100 rounded-xl transition-all"
+                title="生成治疗卡片"
+              >
+                <Share2 size={20} className="text-blue-500" />
+              </button>
               {/* 打印按钮 */}
               <button
                 onClick={() => printPatientRecord(patient)}

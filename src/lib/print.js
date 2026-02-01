@@ -19,6 +19,512 @@ const safeArray = (arr) => {
   return arr.map(item => safeString(item)).filter(Boolean);
 };
 
+// 生成治疗卡片 - 精美展示卡片
+export const generateTreatmentCard = (patient) => {
+  const cardWindow = window.open('', '_blank');
+  const today = new Date().toLocaleDateString('zh-CN');
+
+  const treatmentLogs = patient.treatmentLogs || [];
+  const treatmentItems = patient.treatmentPlan?.items || [];
+  const precautions = patient.treatmentPlan?.precautions || [];
+  const safetyAlerts = patient.safetyAlerts || [];
+  const gasGoals = patient.gasGoals || [];
+
+  // 生成安全提醒标签
+  const alertsHtml = safetyAlerts.length > 0
+    ? safetyAlerts.map(a => `<span class="alert-tag">⚠️ ${safeString(a)}</span>`).join('')
+    : '';
+
+  // 生成治疗项目
+  const itemsHtml = treatmentItems.map(item => {
+    const name = safeString(item.name || item);
+    const duration = item.duration || '';
+    const completed = item.completed ? '✓' : '';
+    return `
+      <div class="treatment-item ${item.completed ? 'completed' : ''}">
+        <span class="item-icon">${item.icon || '💊'}</span>
+        <span class="item-name">${name}</span>
+        <span class="item-duration">${duration}</span>
+        ${completed ? '<span class="item-check">✓</span>' : ''}
+      </div>
+    `;
+  }).join('');
+
+  // 生成GAS目标进度
+  const goalsHtml = gasGoals.length > 0 ? gasGoals.map(goal => {
+    const progress = goal.target > 0 ? Math.round((goal.current / goal.target) * 100) : 0;
+    return `
+      <div class="goal-item">
+        <div class="goal-header">
+          <span class="goal-name">${goal.name}</span>
+          <span class="goal-value">${goal.current}/${goal.target}</span>
+        </div>
+        <div class="goal-bar">
+          <div class="goal-progress" style="width: ${progress}%"></div>
+        </div>
+      </div>
+    `;
+  }).join('') : '';
+
+  // 生成最近治疗记录（最多3条）
+  const recentLogs = treatmentLogs.slice(0, 3);
+  const logsHtml = recentLogs.length > 0 ? recentLogs.map(log => {
+    const items = safeArray(log.items).join('、');
+    return `
+      <div class="log-item">
+        <div class="log-date">${log.date || ''}</div>
+        <div class="log-content">
+          <div class="log-highlight">${log.highlight || ''}</div>
+          <div class="log-items">${items}</div>
+        </div>
+        <div class="log-therapist">${log.therapist || ''}</div>
+      </div>
+    `;
+  }).join('') : '<div class="empty-state">暂无治疗记录</div>';
+
+  // 注意事项
+  const precautionsHtml = precautions.length > 0
+    ? precautions.map(p => `<li>${safeString(p)}</li>`).join('')
+    : '';
+
+  const cardContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>治疗卡片 - ${patient.name}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+          min-height: 100vh;
+          padding: 40px 20px;
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+        }
+        .card-container {
+          width: 100%;
+          max-width: 420px;
+        }
+        .card {
+          background: rgba(255, 255, 255, 0.95);
+          border-radius: 24px;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+          overflow: hidden;
+          backdrop-filter: blur(20px);
+        }
+
+        /* 头部区域 */
+        .card-header {
+          background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+          padding: 24px;
+          color: white;
+          position: relative;
+        }
+        .hospital-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: rgba(255,255,255,0.2);
+          padding: 4px 12px;
+          border-radius: 20px;
+          font-size: 12px;
+          margin-bottom: 12px;
+        }
+        .patient-info {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+        .avatar {
+          width: 64px;
+          height: 64px;
+          background: rgba(255,255,255,0.2);
+          border-radius: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 32px;
+          border: 2px solid rgba(255,255,255,0.3);
+        }
+        .patient-details h1 {
+          font-size: 24px;
+          font-weight: 700;
+          margin-bottom: 4px;
+        }
+        .patient-meta {
+          font-size: 14px;
+          opacity: 0.9;
+        }
+        .diagnosis-badge {
+          display: inline-block;
+          background: rgba(255,255,255,0.2);
+          padding: 6px 14px;
+          border-radius: 20px;
+          font-size: 13px;
+          margin-top: 12px;
+          font-weight: 500;
+        }
+
+        /* 安全提醒 */
+        .alerts-section {
+          padding: 12px 24px;
+          background: #fef2f2;
+          border-bottom: 1px solid #fecaca;
+        }
+        .alert-tag {
+          display: inline-block;
+          background: #dc2626;
+          color: white;
+          padding: 4px 10px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 600;
+          margin-right: 8px;
+          margin-bottom: 4px;
+        }
+
+        /* 内容区域 */
+        .card-body {
+          padding: 24px;
+        }
+        .section {
+          margin-bottom: 24px;
+        }
+        .section:last-child {
+          margin-bottom: 0;
+        }
+        .section-title {
+          font-size: 14px;
+          font-weight: 700;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-bottom: 12px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .section-title::before {
+          content: '';
+          width: 4px;
+          height: 16px;
+          background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+          border-radius: 2px;
+        }
+
+        /* 治疗目标 */
+        .focus-box {
+          background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+          border: 1px solid #c7d2fe;
+          border-radius: 12px;
+          padding: 14px 16px;
+          font-size: 14px;
+          color: #4338ca;
+          line-height: 1.6;
+        }
+
+        /* GAS目标 */
+        .goal-item {
+          margin-bottom: 12px;
+        }
+        .goal-item:last-child {
+          margin-bottom: 0;
+        }
+        .goal-header {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 6px;
+        }
+        .goal-name {
+          font-size: 13px;
+          font-weight: 600;
+          color: #334155;
+        }
+        .goal-value {
+          font-size: 12px;
+          color: #64748b;
+        }
+        .goal-bar {
+          height: 8px;
+          background: #e2e8f0;
+          border-radius: 4px;
+          overflow: hidden;
+        }
+        .goal-progress {
+          height: 100%;
+          background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+          border-radius: 4px;
+          transition: width 0.3s ease;
+        }
+
+        /* 治疗项目 */
+        .treatment-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px;
+          background: #f8fafc;
+          border-radius: 12px;
+          margin-bottom: 8px;
+          border: 1px solid #e2e8f0;
+        }
+        .treatment-item:last-child {
+          margin-bottom: 0;
+        }
+        .treatment-item.completed {
+          background: #f0fdf4;
+          border-color: #bbf7d0;
+        }
+        .item-icon {
+          font-size: 20px;
+        }
+        .item-name {
+          flex: 1;
+          font-size: 14px;
+          font-weight: 600;
+          color: #334155;
+        }
+        .item-duration {
+          font-size: 12px;
+          color: #64748b;
+          background: #e2e8f0;
+          padding: 2px 8px;
+          border-radius: 8px;
+        }
+        .treatment-item.completed .item-duration {
+          background: #bbf7d0;
+          color: #166534;
+        }
+        .item-check {
+          width: 24px;
+          height: 24px;
+          background: #22c55e;
+          color: white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 14px;
+          font-weight: bold;
+        }
+
+        /* 注意事项 */
+        .precautions-list {
+          list-style: none;
+        }
+        .precautions-list li {
+          position: relative;
+          padding-left: 20px;
+          margin-bottom: 8px;
+          font-size: 13px;
+          color: #dc2626;
+          line-height: 1.5;
+        }
+        .precautions-list li::before {
+          content: '⚠';
+          position: absolute;
+          left: 0;
+          top: 0;
+        }
+
+        /* 治疗记录 */
+        .log-item {
+          display: flex;
+          gap: 12px;
+          padding: 12px;
+          background: #f8fafc;
+          border-radius: 12px;
+          margin-bottom: 8px;
+          border-left: 3px solid #3b82f6;
+        }
+        .log-item:last-child {
+          margin-bottom: 0;
+        }
+        .log-date {
+          font-size: 11px;
+          color: #64748b;
+          font-weight: 600;
+          white-space: nowrap;
+        }
+        .log-content {
+          flex: 1;
+        }
+        .log-highlight {
+          font-size: 13px;
+          font-weight: 600;
+          color: #334155;
+          margin-bottom: 4px;
+        }
+        .log-items {
+          font-size: 12px;
+          color: #64748b;
+        }
+        .log-therapist {
+          font-size: 11px;
+          color: #94a3b8;
+        }
+        .empty-state {
+          text-align: center;
+          padding: 20px;
+          color: #94a3b8;
+          font-size: 13px;
+        }
+
+        /* 底部 */
+        .card-footer {
+          padding: 16px 24px;
+          background: #f8fafc;
+          border-top: 1px solid #e2e8f0;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .footer-info {
+          font-size: 11px;
+          color: #94a3b8;
+        }
+        .qr-placeholder {
+          width: 48px;
+          height: 48px;
+          background: #e2e8f0;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 20px;
+        }
+
+        /* 操作按钮 */
+        .action-buttons {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          display: flex;
+          gap: 10px;
+        }
+        .action-btn {
+          padding: 12px 24px;
+          border: none;
+          border-radius: 12px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 600;
+          transition: all 0.2s;
+        }
+        .btn-print {
+          background: white;
+          color: #334155;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .btn-print:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+        }
+        .btn-share {
+          background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+          color: white;
+          box-shadow: 0 4px 12px rgba(59,130,246,0.4);
+        }
+        .btn-share:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(59,130,246,0.5);
+        }
+
+        @media print {
+          body { background: white; padding: 0; }
+          .action-buttons { display: none; }
+          .card { box-shadow: none; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="action-buttons">
+        <button class="action-btn btn-print" onclick="window.print()">🖨️ 打印卡片</button>
+      </div>
+
+      <div class="card-container">
+        <div class="card">
+          <!-- 头部 -->
+          <div class="card-header">
+            <div class="hospital-badge">
+              <span>🏥</span>
+              <span>南京市儿童医院 · 康复科</span>
+            </div>
+            <div class="patient-info">
+              <div class="avatar">${patient.avatar || '👶'}</div>
+              <div class="patient-details">
+                <h1>${patient.name || ''}</h1>
+                <div class="patient-meta">${patient.age || ''} · ${patient.gender || ''} · ${patient.bedNo || ''}</div>
+              </div>
+            </div>
+            <div class="diagnosis-badge">📋 ${patient.diagnosis || ''}</div>
+          </div>
+
+          <!-- 安全提醒 -->
+          ${alertsHtml ? `<div class="alerts-section">${alertsHtml}</div>` : ''}
+
+          <!-- 内容 -->
+          <div class="card-body">
+            <!-- 治疗目标 -->
+            ${patient.treatmentPlan?.focus ? `
+            <div class="section">
+              <div class="section-title">治疗目标</div>
+              <div class="focus-box">🎯 ${patient.treatmentPlan.focus}</div>
+            </div>
+            ` : ''}
+
+            <!-- GAS目标 -->
+            ${goalsHtml ? `
+            <div class="section">
+              <div class="section-title">康复进度</div>
+              ${goalsHtml}
+            </div>
+            ` : ''}
+
+            <!-- 治疗项目 -->
+            ${itemsHtml ? `
+            <div class="section">
+              <div class="section-title">治疗项目</div>
+              ${itemsHtml}
+            </div>
+            ` : ''}
+
+            <!-- 注意事项 -->
+            ${precautionsHtml ? `
+            <div class="section">
+              <div class="section-title">注意事项</div>
+              <ul class="precautions-list">${precautionsHtml}</ul>
+            </div>
+            ` : ''}
+
+            <!-- 最近治疗记录 -->
+            <div class="section">
+              <div class="section-title">最近治疗</div>
+              ${logsHtml}
+            </div>
+          </div>
+
+          <!-- 底部 -->
+          <div class="card-footer">
+            <div class="footer-info">
+              <div>生成日期：${today}</div>
+              <div>入院日期：${patient.admissionDate || '-'}</div>
+            </div>
+            <div class="qr-placeholder">📱</div>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  cardWindow.document.write(cardContent);
+  cardWindow.document.close();
+};
+
 // 打印患者档案 - A4标准医院格式
 export const printPatientRecord = (patient) => {
   const printWindow = window.open('', '_blank');
