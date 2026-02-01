@@ -34,6 +34,7 @@ const {
   buildExtractPrompt,
   buildExtractPromptForMissing,
   buildPlanPrompt,
+  buildLogPrompt,
   buildAnalyzePrompt,
   buildAnalyzePromptForMissing,
   extractJsonFromText,
@@ -945,6 +946,56 @@ function createApp() {
       res.json({ success: true, runId: null, plan });
     } catch (e) {
       jsonError(res, 502, e.message || 'AI plan failed');
+    }
+  });
+
+  // 生成AI治疗日志
+  app.post('/api/patients/:id/generate-log', async (req, res) => {
+    const patientId = Number(req.params.id);
+    if (!patientId) return jsonError(res, 400, 'Invalid patientId');
+
+    const { patient, treatmentPlan, completedItems, previousLogs } = req.body;
+    if (!patient || !treatmentPlan) return jsonError(res, 400, 'patient and treatmentPlan are required');
+
+    try {
+      requiredEnv('DASHSCOPE_API_KEY');
+
+      const today = new Date();
+      const date = today.toISOString().split('T')[0];
+
+      const context = {
+        patient,
+        treatmentPlan,
+        completedItems: completedItems || [],
+        previousLogs: previousLogs || [],
+        date
+      };
+
+      const prompt = buildLogPrompt(context);
+      const { raw, text } = await callQwenVision({
+        imageDataUrls: [],
+        prompt,
+        requestTag: 'generate-log'
+      });
+
+      const parsed = extractJsonFromText(text);
+
+      // 添加日期和治疗师信息
+      const log = {
+        date,
+        highlight: parsed.highlight || '常规康复训练',
+        items: parsed.items || completedItems || [],
+        cooperation: parsed.cooperation || '良好',
+        tolerance: parsed.tolerance || '良好',
+        notes: parsed.notes || '',
+        safety: parsed.safety || treatmentPlan.precautions?.[0] || '注意观察患儿反应',
+        therapist: '吴大勇'
+      };
+
+      res.json({ success: true, log });
+    } catch (e) {
+      console.error('AI generate log failed:', e);
+      jsonError(res, 502, e.message || 'AI generate log failed');
     }
   });
 

@@ -88,11 +88,64 @@ function buildPlanPrompt(profile) {
   ].join('\n');
 }
 
+function buildLogPrompt(context) {
+  const { patient, treatmentPlan, completedItems, previousLogs, date } = context;
+
+  return [
+    '你是儿科医院康复治疗师，正在为患儿撰写今日治疗日志。',
+    '请基于患儿信息、治疗计划和历史记录，生成一份个性化的治疗日志。输出严格 JSON（不要 Markdown，不要多余文本）。',
+    '',
+    '⚠️ 重要要求：',
+    '- 每次生成的内容必须不同，体现治疗过程的自然变化和进展',
+    '- 配合度和耐受性应该有变化（优秀/良好/一般/需改进），不要总是"良好"',
+    '- 观察要具体，反映患儿当天的真实状态（精神、情绪、体力等）',
+    '- 如果有历史记录，要体现进步或变化趋势',
+    '- 语言要专业但自然，像真实的治疗师记录',
+    '',
+    `患儿信息：`,
+    `- 姓名：${patient.name}`,
+    `- 年龄：${patient.age}`,
+    `- 诊断：${patient.diagnosis}`,
+    `- 入院日期：${patient.admissionDate || '未知'}`,
+    '',
+    `治疗计划：`,
+    `- 治疗重点：${treatmentPlan.focus || '功能训练'}`,
+    `- 计划项目：${treatmentPlan.items?.map(i => i.name).join('、') || '无'}`,
+    `- 注意事项：${treatmentPlan.precautions?.join('；') || '无'}`,
+    '',
+    completedItems?.length > 0 ? `今日已完成项目：${completedItems.map(i => i.name).join('、')}` : '今日完成项目：按计划执行',
+    '',
+    previousLogs?.length > 0 ? `最近3次治疗记录（供参考进展）：\n${previousLogs.slice(0, 3).map(log =>
+      `${log.date}: ${log.highlight || log.notes || '常规训练'}`
+    ).join('\n')}` : '这是首次治疗记录',
+    '',
+    '输出格式：',
+    '{',
+    '  "highlight": string,  // 今日治疗重点/亮点，30-50字，要具体且每次不同',
+    '  "items": [{ "name": string, "duration": string }],  // 实际完成的项目',
+    '  "cooperation": string,  // 配合度：优秀/良好/一般/需改进（要有变化）',
+    '  "tolerance": string,  // 耐受性：优秀/良好/一般/较差（要有变化）',
+    '  "notes": string,  // 详细观察记录，80-150字，包括：患儿精神状态、训练表现、特殊情况、进步或问题',
+    '  "safety": string  // 安全提醒或注意事项',
+    '}',
+    '',
+    '示例（仅供参考格式，内容必须根据实际情况生成）：',
+    '{',
+    '  "highlight": "患儿今日精神状态佳，主动配合训练，呼吸训练时间较昨日延长3分钟",',
+    '  "items": [{"name": "呼吸训练", "duration": "15分钟"}, {"name": "运动训练", "duration": "20分钟"}],',
+    '  "cooperation": "优秀",',
+    '  "tolerance": "良好",',
+    '  "notes": "患儿今日精神饱满，情绪稳定。呼吸训练时能主动配合腹式呼吸，较前次明显进步。运动训练中步行距离达50米，血氧维持在97-99%。训练后略感疲劳但无不适主诉。家属反馈夜间睡眠质量改善。",',
+    '  "safety": "继续监测血氧饱和度，如低于94%立即停止训练"',
+    '}',
+  ].join('\n');
+}
+
 function buildAnalyzePrompt() {
   return [
     '你是儿科医院康复治疗师的助手。',
     '请基于用户提供的多张病例图片（可能是不同页），完成两件事：',
-    '1) 抽取患儿结构化资料（profile）；2) 基于该资料生成“今日康复训练方案”（plan）。',
+    '1) 抽取患儿结构化资料（profile）；2) 基于该资料生成"今日康复训练方案"（plan）。',
     '输出严格 JSON（不要 Markdown，不要多余文本）。',
     '',
     '首要任务：尽最大努力从图片中提取 4 个关键字段：姓名(name)、年龄(age)、床号(bedNo)、诊断(diagnosis)。',
@@ -246,6 +299,7 @@ module.exports = {
   buildExtractPrompt,
   buildExtractPromptForMissing,
   buildPlanPrompt,
+  buildLogPrompt,
   buildAnalyzePrompt,
   buildAnalyzePromptForMissing,
   extractJsonFromText,
