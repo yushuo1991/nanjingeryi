@@ -775,21 +775,47 @@ export default function RehabCareLink() {
     const dateStr = today.toISOString().split('T')[0];
     const hour = today.getHours();
 
+    // 为训练时长添加随机微调
+    const adjustDuration = (duration) => {
+      if (!duration) return '5分钟';
+
+      // 提取数字和单位
+      const match = duration.match(/(\d+)(\D+)/);
+      if (!match) return duration;
+
+      const baseMinutes = parseInt(match[1]);
+      const unit = match[2];
+
+      // 随机调整 ±1分钟（50%概率）
+      if (Math.random() > 0.5) {
+        const adjustment = Math.random() > 0.5 ? 1 : -1;
+        const newMinutes = Math.max(1, baseMinutes + adjustment);
+        return `${newMinutes}${unit}`;
+      }
+
+      return duration;
+    };
+
     // 收集已完成的治疗项目
     const completedItems = patient.treatmentPlan.items
       .filter(item => item.completed)
       .map(item => ({
         name: item.name,
-        duration: item.duration || '5分钟'
+        duration: adjustDuration(item.duration || '5分钟')
       }));
 
     // 如果没有完成项目，使用全部计划项目
-    const items = completedItems.length > 0
+    let items = completedItems.length > 0
       ? completedItems
       : patient.treatmentPlan.items.map(item => ({
           name: item.name,
-          duration: item.duration || '5分钟'
+          duration: adjustDuration(item.duration || '5分钟')
         }));
+
+    // 随机调整训练项目顺序（30%概率）
+    if (Math.random() > 0.7 && items.length > 1) {
+      items = [...items].sort(() => Math.random() - 0.5);
+    }
 
     // 随机变化函数
     const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
