@@ -79,10 +79,98 @@ export const generateTreatmentCard = (patient) => {
           display: flex;
           justify-content: center;
           align-items: flex-start;
+          position: relative;
+          overflow: hidden;
+        }
+
+        /* 背景粒子容器 */
+        body::before {
+          content: '';
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        /* 浮动粒子效果 */
+        .floating-particles {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          z-index: 0;
+          overflow: hidden;
+        }
+
+        .particle {
+          position: absolute;
+          border-radius: 50%;
+          pointer-events: none;
+          animation: float-up linear infinite;
+        }
+
+        @keyframes float-up {
+          0% {
+            transform: translateY(0) translateX(0);
+            opacity: 0;
+          }
+          10% {
+            opacity: 1;
+          }
+          90% {
+            opacity: 0.6;
+          }
+          100% {
+            transform: translateY(-100vh) translateX(var(--drift));
+            opacity: 0;
+          }
+        }
+
+        /* 不同大小和颜色的粒子 */
+        .particle.small {
+          width: 3px;
+          height: 3px;
+        }
+
+        .particle.medium {
+          width: 5px;
+          height: 5px;
+        }
+
+        .particle.large {
+          width: 7px;
+          height: 7px;
+        }
+
+        .particle.blue {
+          background: radial-gradient(circle, rgba(147, 197, 253, 0.8), rgba(59, 130, 246, 0.4));
+          box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
+        }
+
+        .particle.purple {
+          background: radial-gradient(circle, rgba(196, 181, 253, 0.8), rgba(139, 92, 246, 0.4));
+          box-shadow: 0 0 8px rgba(139, 92, 246, 0.6);
+        }
+
+        .particle.pink {
+          background: radial-gradient(circle, rgba(251, 207, 232, 0.8), rgba(236, 72, 153, 0.4));
+          box-shadow: 0 0 8px rgba(236, 72, 153, 0.6);
+        }
+
+        .particle.cyan {
+          background: radial-gradient(circle, rgba(103, 232, 249, 0.8), rgba(6, 182, 212, 0.4));
+          box-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
         }
         .card-container {
           width: 100%;
           max-width: 540px;
+          position: relative;
+          z-index: 10;
         }
         .card {
           background: rgba(255, 255, 255, 0.75);
@@ -385,6 +473,9 @@ export const generateTreatmentCard = (patient) => {
       </style>
     </head>
     <body>
+      <!-- 浮动粒子容器 -->
+      <div class="floating-particles" id="particles"></div>
+
       <div class="action-buttons">
         <button class="action-btn btn-save" id="saveBtn" onclick="saveAsImage()">💾 保存图片</button>
       </div>
@@ -474,6 +565,43 @@ export const generateTreatmentCard = (patient) => {
       </div>
 
       <script>
+        // 生成浮动粒子
+        function createParticles() {
+          const container = document.getElementById('particles');
+          const colors = ['blue', 'purple', 'pink', 'cyan'];
+          const sizes = ['small', 'medium', 'large'];
+          const particleCount = 30;
+
+          for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+
+            // 随机颜色和大小
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const size = sizes[Math.floor(Math.random() * sizes.length)];
+            particle.classList.add(color, size);
+
+            // 随机位置
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.bottom = '-10px';
+
+            // 随机动画延迟和持续时间
+            const duration = 8 + Math.random() * 12; // 8-20秒
+            const delay = Math.random() * 5; // 0-5秒延迟
+            particle.style.animationDuration = duration + 's';
+            particle.style.animationDelay = delay + 's';
+
+            // 随机水平漂移
+            const drift = (Math.random() - 0.5) * 100; // -50px 到 50px
+            particle.style.setProperty('--drift', drift + 'px');
+
+            container.appendChild(particle);
+          }
+        }
+
+        // 页面加载时创建粒子
+        window.addEventListener('DOMContentLoaded', createParticles);
+
         async function saveAsImage() {
           const btn = document.getElementById('saveBtn');
           btn.disabled = true;
