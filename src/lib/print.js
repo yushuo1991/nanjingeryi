@@ -79,98 +79,10 @@ export const generateTreatmentCard = (patient) => {
           display: flex;
           justify-content: center;
           align-items: flex-start;
-          position: relative;
-          overflow: hidden;
-        }
-
-        /* 背景粒子容器 */
-        body::before {
-          content: '';
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          pointer-events: none;
-          z-index: 0;
-        }
-
-        /* 浮动粒子效果 */
-        .floating-particles {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          pointer-events: none;
-          z-index: 0;
-          overflow: hidden;
-        }
-
-        .particle {
-          position: absolute;
-          border-radius: 50%;
-          pointer-events: none;
-          animation: float-up linear infinite;
-        }
-
-        @keyframes float-up {
-          0% {
-            transform: translateY(0) translateX(0);
-            opacity: 0;
-          }
-          10% {
-            opacity: 1;
-          }
-          90% {
-            opacity: 0.6;
-          }
-          100% {
-            transform: translateY(-100vh) translateX(var(--drift));
-            opacity: 0;
-          }
-        }
-
-        /* 不同大小和颜色的粒子 */
-        .particle.small {
-          width: 3px;
-          height: 3px;
-        }
-
-        .particle.medium {
-          width: 5px;
-          height: 5px;
-        }
-
-        .particle.large {
-          width: 7px;
-          height: 7px;
-        }
-
-        .particle.blue {
-          background: radial-gradient(circle, rgba(147, 197, 253, 0.8), rgba(59, 130, 246, 0.4));
-          box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
-        }
-
-        .particle.purple {
-          background: radial-gradient(circle, rgba(196, 181, 253, 0.8), rgba(139, 92, 246, 0.4));
-          box-shadow: 0 0 8px rgba(139, 92, 246, 0.6);
-        }
-
-        .particle.pink {
-          background: radial-gradient(circle, rgba(251, 207, 232, 0.8), rgba(236, 72, 153, 0.4));
-          box-shadow: 0 0 8px rgba(236, 72, 153, 0.6);
-        }
-
-        .particle.cyan {
-          background: radial-gradient(circle, rgba(103, 232, 249, 0.8), rgba(6, 182, 212, 0.4));
-          box-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
         }
         .card-container {
           width: 100%;
           max-width: 540px;
-          position: relative;
-          z-index: 10;
         }
         .card {
           background: rgba(255, 255, 255, 0.75);
@@ -434,35 +346,158 @@ export const generateTreatmentCard = (patient) => {
           gap: 12px;
           z-index: 1000;
         }
-        .action-btn {
-          padding: 14px 28px;
-          border: none;
-          border-radius: 16px;
+
+        /* 粒子效果按钮 */
+        .btn-particle {
           cursor: pointer;
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          transition: all 0.25s ease;
+          background: radial-gradient(
+              65.28% 65.28% at 50% 100%,
+              rgba(59, 130, 246, 0.8) 0%,
+              rgba(59, 130, 246, 0) 100%
+            ),
+            linear-gradient(0deg, #3b82f6, #8b5cf6);
+          border-radius: 16px;
+          border: none;
+          outline: none;
+          padding: 14px 28px;
           font-size: 15px;
           font-weight: 700;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow: 0 4px 16px rgba(0,0,0,0.12),
-                      0 2px 8px rgba(0,0,0,0.08);
           letter-spacing: 0.5px;
         }
-        .btn-save {
-          background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-          color: white;
-          border: 2px solid rgba(255, 255, 255, 0.3);
+
+        .btn-particle::before,
+        .btn-particle::after {
+          content: "";
+          position: absolute;
+          inset: var(--space);
+          transition: all 0.5s ease-in-out;
+          border-radius: calc(16px - var(--space));
+          z-index: 0;
         }
-        .btn-save:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 8px 24px rgba(59,130,246,0.4),
-                      0 4px 12px rgba(139,92,246,0.3);
+
+        .btn-particle::before {
+          --space: 1px;
+          background: linear-gradient(
+            177.95deg,
+            rgba(255, 255, 255, 0.19) 0%,
+            rgba(255, 255, 255, 0) 100%
+          );
         }
-        .btn-save:active {
-          transform: translateY(-1px);
+
+        .btn-particle::after {
+          --space: 2px;
+          background: inherit;
         }
-        .btn-save:disabled {
+
+        .btn-particle:active {
+          transform: scale(0.95);
+        }
+
+        .btn-particle:disabled {
           opacity: 0.5;
           cursor: not-allowed;
           transform: none;
+        }
+
+        .btn-particle .points_wrapper {
+          overflow: hidden;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          position: absolute;
+          z-index: 1;
+        }
+
+        .btn-particle .points_wrapper .point {
+          bottom: -10px;
+          position: absolute;
+          animation: floating-points infinite ease-in-out;
+          pointer-events: none;
+          width: 2px;
+          height: 2px;
+          background-color: #fff;
+          border-radius: 9999px;
+        }
+
+        @keyframes floating-points {
+          0% {
+            transform: translateY(0);
+          }
+          85% {
+            opacity: 0;
+          }
+          100% {
+            transform: translateY(-55px);
+            opacity: 0;
+          }
+        }
+
+        .btn-particle .points_wrapper .point:nth-child(1) {
+          left: 10%;
+          opacity: 1;
+          animation-duration: 2.35s;
+          animation-delay: 0.2s;
+        }
+        .btn-particle .points_wrapper .point:nth-child(2) {
+          left: 30%;
+          opacity: 0.7;
+          animation-duration: 2.5s;
+          animation-delay: 0.5s;
+        }
+        .btn-particle .points_wrapper .point:nth-child(3) {
+          left: 25%;
+          opacity: 0.8;
+          animation-duration: 2.2s;
+          animation-delay: 0.1s;
+        }
+        .btn-particle .points_wrapper .point:nth-child(4) {
+          left: 44%;
+          opacity: 0.6;
+          animation-duration: 2.05s;
+        }
+        .btn-particle .points_wrapper .point:nth-child(5) {
+          left: 50%;
+          opacity: 1;
+          animation-duration: 1.9s;
+        }
+        .btn-particle .points_wrapper .point:nth-child(6) {
+          left: 75%;
+          opacity: 0.5;
+          animation-duration: 1.5s;
+          animation-delay: 1.5s;
+        }
+        .btn-particle .points_wrapper .point:nth-child(7) {
+          left: 88%;
+          opacity: 0.9;
+          animation-duration: 2.2s;
+          animation-delay: 0.2s;
+        }
+        .btn-particle .points_wrapper .point:nth-child(8) {
+          left: 58%;
+          opacity: 0.8;
+          animation-duration: 2.25s;
+          animation-delay: 0.2s;
+        }
+
+        .btn-particle .inner {
+          z-index: 2;
+          gap: 6px;
+          position: relative;
+          width: 100%;
+          color: white;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 15px;
+          font-weight: 700;
+          line-height: 1.5;
+          transition: color 0.2s ease-in-out;
         }
 
         @media print {
@@ -473,11 +508,20 @@ export const generateTreatmentCard = (patient) => {
       </style>
     </head>
     <body>
-      <!-- 浮动粒子容器 -->
-      <div class="floating-particles" id="particles"></div>
-
       <div class="action-buttons">
-        <button class="action-btn btn-save" id="saveBtn" onclick="saveAsImage()">💾 保存图片</button>
+        <button class="btn-particle" id="saveBtn" onclick="saveAsImage()">
+          <div class="points_wrapper">
+            <div class="point"></div>
+            <div class="point"></div>
+            <div class="point"></div>
+            <div class="point"></div>
+            <div class="point"></div>
+            <div class="point"></div>
+            <div class="point"></div>
+            <div class="point"></div>
+          </div>
+          <span class="inner">💾 保存图片</span>
+        </button>
       </div>
 
       <div class="card-container">
@@ -565,47 +609,11 @@ export const generateTreatmentCard = (patient) => {
       </div>
 
       <script>
-        // 生成浮动粒子
-        function createParticles() {
-          const container = document.getElementById('particles');
-          const colors = ['blue', 'purple', 'pink', 'cyan'];
-          const sizes = ['small', 'medium', 'large'];
-          const particleCount = 30;
-
-          for (let i = 0; i < particleCount; i++) {
-            const particle = document.createElement('div');
-            particle.className = 'particle';
-
-            // 随机颜色和大小
-            const color = colors[Math.floor(Math.random() * colors.length)];
-            const size = sizes[Math.floor(Math.random() * sizes.length)];
-            particle.classList.add(color, size);
-
-            // 随机位置
-            particle.style.left = Math.random() * 100 + '%';
-            particle.style.bottom = '-10px';
-
-            // 随机动画延迟和持续时间
-            const duration = 8 + Math.random() * 12; // 8-20秒
-            const delay = Math.random() * 5; // 0-5秒延迟
-            particle.style.animationDuration = duration + 's';
-            particle.style.animationDelay = delay + 's';
-
-            // 随机水平漂移
-            const drift = (Math.random() - 0.5) * 100; // -50px 到 50px
-            particle.style.setProperty('--drift', drift + 'px');
-
-            container.appendChild(particle);
-          }
-        }
-
-        // 页面加载时创建粒子
-        window.addEventListener('DOMContentLoaded', createParticles);
-
         async function saveAsImage() {
           const btn = document.getElementById('saveBtn');
+          const btnInner = btn.querySelector('.inner');
           btn.disabled = true;
-          btn.textContent = '⏳ 生成中...';
+          btnInner.textContent = '⏳ 生成中...';
 
           try {
             const card = document.getElementById('treatmentCard');
@@ -622,7 +630,7 @@ export const generateTreatmentCard = (patient) => {
               const link = document.createElement('a');
               link.href = url;
               const patientName = '${patient.name}';
-              const dateStr = '${today}'.replace(/\\//g, '');
+              const dateStr = '${today}'.replace(/\//g, '');
               link.download = '治疗卡片-' + patientName + '-' + dateStr + '.png';
               document.body.appendChild(link);
               link.click();
@@ -630,17 +638,17 @@ export const generateTreatmentCard = (patient) => {
               URL.revokeObjectURL(url);
 
               btn.disabled = false;
-              btn.textContent = '✅ 已保存';
+              btnInner.textContent = '✅ 已保存';
               setTimeout(function() {
-                btn.textContent = '💾 保存图片';
+                btnInner.textContent = '💾 保存图片';
               }, 2000);
             });
           } catch (error) {
             console.error('保存失败:', error);
             btn.disabled = false;
-            btn.textContent = '❌ 保存失败';
+            btnInner.textContent = '❌ 保存失败';
             setTimeout(function() {
-              btn.textContent = '💾 保存图片';
+              btnInner.textContent = '💾 保存图片';
             }, 2000);
           }
         }
