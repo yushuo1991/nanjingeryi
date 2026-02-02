@@ -1678,30 +1678,6 @@ export default function RehabCareLink() {
               </div>
             </div>
 
-            {/* 家庭作业 */}
-            {patient.homework?.length > 0 && (
-              <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-4 border border-white/50 shadow-sm mb-4">
-                <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                  <BookOpen size={16} className="text-amber-500" />
-                  家庭作业 (Home Program)
-                </h4>
-                <div className="space-y-2">
-                  {patient.homework.map(hw => (
-                    <div key={hw.id} className="flex items-center gap-3 p-3 bg-white/50 rounded-xl">
-                      {hw.completed ? (
-                        <CheckCircle2 size={20} className="text-emerald-500" />
-                      ) : (
-                        <Circle size={20} className="text-slate-300" />
-                      )}
-                      <span className={`text-sm flex-1 ${hw.completed ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
-                        {hw.task}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Tab切换 */}
             <div className="flex gap-2 mb-4">
               <TabButton active={detailTab === 'today'} onClick={() => setDetailTab('today')}>
