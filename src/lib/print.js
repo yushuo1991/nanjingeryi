@@ -25,8 +25,9 @@ export const generateTreatmentCard = async (patient) => {
     // 动态导入 html2canvas
     const html2canvas = (await import('html2canvas')).default;
 
-    // 查找患者详情页面的主要内容区域
-    const detailElement = document.querySelector('[class*="bg-white/60"]') ||
+    // 查找患者详情页面的主要内容区域（包含所有治疗记录）
+    const detailElement = document.querySelector('[class*="overflow-y-auto"][class*="hide-scrollbar"]') ||
+                          document.querySelector('.main-glass-container') ||
                           document.querySelector('main') ||
                           document.body;
 
