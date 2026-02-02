@@ -72,6 +72,7 @@ const allPatients = [
     status: 'active', // active | completed
     todayTreated: false,
     safetyAlerts: ['防跌倒'],
+    rehabProblems: '呼吸功能下降，运动耐力不足，需要加强呼吸训练和体能恢复',
     gasScore: 65,
     gasGoals: [
       { name: '呼吸功能', target: 80, current: 70 },
@@ -123,6 +124,7 @@ const allPatients = [
     status: 'active',
     todayTreated: true,
     safetyAlerts: ['过敏体质', '避免冷空气刺激'],
+    rehabProblems: '呼吸控制能力弱，体能较差，情绪不稳定影响训练配合度',
     gasScore: 45,
     gasGoals: [
       { name: '呼吸控制', target: 85, current: 50 },
@@ -1960,7 +1962,21 @@ export default function RehabCareLink() {
 
                           <div className="bg-white/70 rounded-xl p-3 border border-slate-100">
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-bold text-slate-700">{log.date}</span>
+                              {isEditingDetail && editedPatient ? (
+                                <input
+                                  type="date"
+                                  value={editedPatient.treatmentLogs?.[i]?.date || log.date}
+                                  onChange={(e) => {
+                                    const newLogs = [...(editedPatient.treatmentLogs || patient.treatmentLogs.map(l => ({...l})))];
+                                    if (!newLogs[i]) newLogs[i] = { ...log };
+                                    newLogs[i].date = e.target.value;
+                                    setEditedPatient({ ...editedPatient, treatmentLogs: newLogs });
+                                  }}
+                                  className="text-sm font-bold text-slate-700 border-b-2 border-blue-400 focus:border-blue-500 outline-none bg-transparent"
+                                />
+                              ) : (
+                                <span className="text-sm font-bold text-slate-700">{log.date}</span>
+                              )}
                               <div className="flex items-center gap-2">
                                 <span className="text-xs text-slate-400">{log.therapist}</span>
                                 {/* 删除按钮 - 仅治疗师可见 */}
@@ -2376,6 +2392,21 @@ export default function RehabCareLink() {
                       />
                     </div>
                   </div>
+                </div>
+
+                {/* 当下存在的康复问题 */}
+                <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-4 border border-slate-100 shadow-sm mb-4">
+                  <h5 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                    <AlertCircle size={16} className="text-amber-500" />
+                    当下存在的康复问题
+                  </h5>
+                  <textarea
+                    value={aiResult.rehabProblems || ''}
+                    onChange={(e) => setAiResult({ ...aiResult, rehabProblems: e.target.value })}
+                    placeholder="描述患儿当前存在的康复问题，如：呼吸功能下降，运动耐力不足等"
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none bg-white resize-none"
+                    rows="3"
+                  />
                 </div>
 
                 {/* 安全提醒 */}
