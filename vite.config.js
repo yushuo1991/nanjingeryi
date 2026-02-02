@@ -8,6 +8,10 @@ export default defineConfig({
     open: true
   },
   build: {
+    // 设置构建目标为更兼容的浏览器版本
+    target: 'es2015',
+    // 确保CSS也兼容旧版浏览器
+    cssTarget: 'chrome61',
     rollupOptions: {
       output: {
         // 使用时间戳确保文件名始终改变
