@@ -155,8 +155,27 @@ const allPatients = [
 ];
 
 // 交付版：每个模块仅保留 2 条模拟数据
-const initialDepartments = allDepartments.slice(0, 2);
+const defaultDepartments = allDepartments.slice(0, 2);
 const initialPatients = allPatients.slice(0, 2);
+
+// 科室图标映射（用于自动创建新科室时选择图标）
+const departmentIconMap = {
+  '呼吸': { icon: '🫁', color: 'bg-blue-100 text-blue-600' },
+  '新生儿': { icon: '👶', color: 'bg-pink-100 text-pink-600' },
+  '神经': { icon: '🧠', color: 'bg-purple-100 text-purple-600' },
+  '骨科': { icon: '🦴', color: 'bg-amber-100 text-amber-600' },
+  '心脏': { icon: '❤️', color: 'bg-red-100 text-red-600' },
+  '消化': { icon: '🍽️', color: 'bg-green-100 text-green-600' },
+  '肾脏': { icon: '💧', color: 'bg-cyan-100 text-cyan-600' },
+  '内分泌': { icon: '⚗️', color: 'bg-indigo-100 text-indigo-600' },
+  '血液': { icon: '🩸', color: 'bg-rose-100 text-rose-600' },
+  '肿瘤': { icon: '🎗️', color: 'bg-violet-100 text-violet-600' },
+  '感染': { icon: '🦠', color: 'bg-lime-100 text-lime-600' },
+  '重症': { icon: '🏥', color: 'bg-slate-100 text-slate-600' },
+  '康复': { icon: '🏃', color: 'bg-emerald-100 text-emerald-600' },
+  '儿童': { icon: '👧', color: 'bg-orange-100 text-orange-600' },
+  'default': { icon: '🏥', color: 'bg-gray-100 text-gray-600' }
+};
 
 // 治疗模板库
 const treatmentTemplates = [
@@ -299,7 +318,7 @@ export default function RehabCareLink() {
   const [selectedDepartment, setSelectedDepartment] = useState(() => {
     // 如果URL有科室参数，设置该科室
     if (urlParams.deptId) {
-      return initialDepartments.find(d => d.id === urlParams.deptId) || null;
+      return defaultDepartments.find(d => d.id === urlParams.deptId) || null;
     }
     return null;
   });
@@ -323,6 +342,9 @@ export default function RehabCareLink() {
   const [showLogConfirm, setShowLogConfirm] = useState(false); // 显示日志确认对话框
   const [generatedLog, setGeneratedLog] = useState(null); // 生成的日志内容
   const [toast, setToast] = useState(null); // 提示消息
+
+  // 动态科室列表（支持AI识别时自动添加新科室）
+  const [departments, setDepartments] = useState(defaultDepartments);
 
   // AI收治状态
   const [aiStep, setAiStep] = useState(0); // 0:上传, 1:AI识别中, 2:表单填写
@@ -614,6 +636,27 @@ export default function RehabCareLink() {
           // 初始化表单数据
           const safeGender = ['男', '女', '未知'].includes(profile?.patient?.gender) ? profile.patient.gender : '未知';
           const planGasGoals = Array.isArray(plan?.gasGoals) ? plan.gasGoals : [];
+
+          // 获取康复问题（优先使用AI返回的，否则自动生成）
+          const getRehabProblems = () => {
+            // 优先使用AI直接返回的康复问题
+            if (profile?.rehabProblems) {
+              return profile.rehabProblems;
+            }
+            // 否则基于诊断、关键发现和风险自动生成
+            const parts = [];
+            if (profile?.keyFindings?.length) {
+              parts.push(...profile.keyFindings.slice(0, 2));
+            }
+            if (plan?.highlights?.length) {
+              parts.push(...plan.highlights.slice(0, 2));
+            }
+            if (profile?.monitoring?.length) {
+              parts.push(`需监测：${profile.monitoring.slice(0, 2).join('、')}`);
+            }
+            return parts.length > 0 ? parts.join('；') : '';
+          };
+
           setAiResult({
             _caseId: caseId,
             name: profile?.patient?.name || '',
@@ -623,6 +666,7 @@ export default function RehabCareLink() {
             department: profile?.patient?.department || '呼吸内科',
             bedNo: profile?.patient?.bedNo || '',
             medicalRecordImage: reader.result,
+            rehabProblems: getRehabProblems(),
             gasGoals: planGasGoals.length
               ? planGasGoals.slice(0, 2).map((g) => ({
                   name: g.name || '',
@@ -667,6 +711,7 @@ export default function RehabCareLink() {
             department: '呼吸内科',
             bedNo: '',
             medicalRecordImage: reader.result,
+            rehabProblems: '',
             gasGoals: [
               { name: '功能目标1', target: 100, current: 0 },
               { name: '功能目标2', target: 100, current: 0 }
@@ -1060,10 +1105,39 @@ export default function RehabCareLink() {
   const confirmAdmission = () => {
     if (!validateForm()) return;
 
-    // 根据科室名称找到对应的departmentId
-    const getDeptId = (deptName) => {
-      const dept = initialDepartments.find(d => d.name === deptName);
-      return dept ? dept.id : 1;
+    // 根据科室名称找到对应的departmentId，如果不存在则创建新科室
+    const getOrCreateDept = (deptName) => {
+      const existingDept = departments.find(d => d.name === deptName);
+      if (existingDept) {
+        return existingDept.id;
+      }
+
+      // 创建新科室
+      const newDeptId = Math.max(...departments.map(d => d.id), 0) + 1;
+
+      // 根据科室名称匹配图标
+      let iconConfig = departmentIconMap.default;
+      for (const [keyword, config] of Object.entries(departmentIconMap)) {
+        if (keyword !== 'default' && deptName.includes(keyword)) {
+          iconConfig = config;
+          break;
+        }
+      }
+
+      const newDept = {
+        id: newDeptId,
+        name: deptName,
+        icon: iconConfig.icon,
+        color: iconConfig.color,
+        patients: 0,
+        pending: 0
+      };
+
+      // 添加到科室列表
+      setDepartments(prev => [...prev, newDept]);
+      showToast(`已自动创建新科室：${deptName}`, 'success');
+
+      return newDeptId;
     };
 
     // 根据年龄选择头像
@@ -1091,7 +1165,7 @@ export default function RehabCareLink() {
       age: aiResult.age.trim(),
       gender: aiResult.gender,
       bedNo: aiResult.bedNo.trim(),
-      departmentId: getDeptId(aiResult.department),
+      departmentId: getOrCreateDept(aiResult.department),
       department: aiResult.department,
       avatar: getAvatar(aiResult.age),
       diagnosis: aiResult.diagnosis.trim(),
@@ -1099,6 +1173,7 @@ export default function RehabCareLink() {
       status: 'active',
       todayTreated: false,
       medicalRecordImage: aiResult.medicalRecordImage, // 保存病历图片
+      rehabProblems: aiResult.rehabProblems || '', // 当下存在的康复问题
       safetyAlerts: aiResult.safetyAlerts,
       gasScore: gasScore,
       gasGoals: aiResult.gasGoals.filter(g => g.name.trim()),
@@ -1479,7 +1554,7 @@ export default function RehabCareLink() {
           <div className="mb-24">
             <h3 className="text-sm font-bold text-slate-700 mb-4 pl-1">科室患儿分布</h3>
             <div className="space-y-3">
-              {initialDepartments.map(dept => {
+              {departments.map(dept => {
                 const deptPatients = getDepartmentPatients(dept.id);
                 const pending = deptPatients.filter(p => p.status === 'active' && !p.todayTreated).length;
                 return (
@@ -2369,15 +2444,20 @@ export default function RehabCareLink() {
                     </div>
                     <div className="col-span-2">
                       <label className="text-xs text-slate-500 mb-1 block">所属科室 *</label>
-                      <select
+                      <input
+                        type="text"
                         value={aiResult.department}
                         onChange={(e) => updateFormField('department', e.target.value)}
-                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none bg-white"
-                      >
-                        {initialDepartments.map(dept => (
+                        placeholder="输入科室名称，如：呼吸内科"
+                        list="department-list"
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none bg-white"
+                      />
+                      <datalist id="department-list">
+                        {departments.map(dept => (
                           <option key={dept.id} value={dept.name}>{dept.icon} {dept.name}</option>
                         ))}
-                      </select>
+                      </datalist>
+                      <p className="text-xs text-slate-400 mt-1">可选择已有科室或输入新科室名称</p>
                     </div>
                     <div className="col-span-2">
                       <label className="text-xs text-slate-500 mb-1 block">诊断信息 *</label>
