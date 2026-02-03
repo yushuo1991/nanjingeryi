@@ -42,16 +42,35 @@ export const generateTreatmentCard = async (patient) => {
     loadingDiv.textContent = '正在生成图片...';
     document.body.appendChild(loadingDiv);
 
-    // 等待一小段时间确保页面渲染完成
-    await new Promise(resolve => setTimeout(resolve, 300));
+    // 保存原始样式
+    const originalWidth = detailElement.style.width;
+    const originalMaxWidth = detailElement.style.maxWidth;
+    const originalMinWidth = detailElement.style.minWidth;
+    const originalOverflow = detailElement.style.overflow;
+
+    // 设置固定宽度以确保所有设备生成的卡片一致
+    detailElement.style.width = '768px';
+    detailElement.style.maxWidth = '768px';
+    detailElement.style.minWidth = '768px';
+    detailElement.style.overflow = 'visible';
+
+    // 等待一小段时间确保页面重新渲染
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // 截图
     const canvas = await html2canvas(detailElement, {
       scale: 2,
       useCORS: true,
       logging: false,
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff',
+      width: 768
     });
+
+    // 恢复原始样式
+    detailElement.style.width = originalWidth;
+    detailElement.style.maxWidth = originalMaxWidth;
+    detailElement.style.minWidth = originalMinWidth;
+    detailElement.style.overflow = originalOverflow;
 
     // 转换为图片并下载
     canvas.toBlob((blob) => {
