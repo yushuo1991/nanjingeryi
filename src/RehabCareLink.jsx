@@ -53,8 +53,18 @@ const getGreeting = () => {
 
 // ==================== Mock 数据 ====================
 const allDepartments = [
-  { id: 1, name: '呼吸内科', icon: '🫁', color: 'bg-blue-100 text-blue-600', patients: 8, pending: 5 },
-  { id: 6, name: '新生儿科', icon: '👶', color: 'bg-pink-100 text-pink-600', patients: 3, pending: 2 },
+  { id: 1, name: '呼吸内科', icon: '/images/departments/呼吸内科.png', color: 'bg-blue-100 text-blue-600', patients: 0, pending: 0 },
+  { id: 2, name: '消化内科', icon: '/images/departments/消化内科.png', color: 'bg-green-100 text-green-600', patients: 0, pending: 0 },
+  { id: 3, name: '神经内科', icon: '/images/departments/神经内科.png', color: 'bg-purple-100 text-purple-600', patients: 0, pending: 0 },
+  { id: 4, name: '心血管内科', icon: '/images/departments/心血管内科.png', color: 'bg-red-100 text-red-600', patients: 0, pending: 0 },
+  { id: 5, name: '康复科', icon: '/images/departments/康复科.png', color: 'bg-cyan-100 text-cyan-600', patients: 0, pending: 0 },
+  { id: 6, name: '儿保科', icon: '/images/departments/儿保科.png', color: 'bg-pink-100 text-pink-600', patients: 0, pending: 0 },
+  { id: 7, name: '外科', icon: '/images/departments/外科.png', color: 'bg-rose-100 text-rose-600', patients: 0, pending: 0 },
+  { id: 8, name: '骨科', icon: '/images/departments/骨科.png', color: 'bg-amber-100 text-amber-600', patients: 0, pending: 0 },
+  { id: 9, name: '口腔科', icon: '/images/departments/口腔科.png', color: 'bg-yellow-100 text-yellow-600', patients: 0, pending: 0 },
+  { id: 10, name: '眼科', icon: '/images/departments/眼科.png', color: 'bg-sky-100 text-sky-600', patients: 0, pending: 0 },
+  { id: 11, name: '耳鼻喉科', icon: '/images/departments/耳鼻喉科.png', color: 'bg-violet-100 text-violet-600', patients: 0, pending: 0 },
+  { id: 12, name: '皮肤科', icon: '/images/departments/皮肤科.png', color: 'bg-orange-100 text-orange-600', patients: 0, pending: 0 },
 ];
 
 const allPatients = [
@@ -1563,8 +1573,12 @@ export default function RehabCareLink() {
                     onClick={() => navigateTo('patients', dept)}
                     className="w-full bg-white/60 backdrop-blur-xl rounded-2xl p-4 flex items-center gap-3 text-left border border-white/50 shadow-sm hover:bg-white/80 transition-all active:scale-[0.98]"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-xl shadow-sm border border-slate-100">
-                      {dept.icon}
+                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm border border-slate-100 overflow-hidden">
+                      {dept.icon.startsWith('/images/') ? (
+                        <img src={dept.icon} alt={dept.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xl">{dept.icon}</span>
+                      )}
                     </div>
                     <div className="flex-1">
                       <h4 className="font-bold text-slate-700 text-sm">{dept.name}</h4>
@@ -1609,8 +1623,12 @@ export default function RehabCareLink() {
               <h1 className="text-lg font-extrabold text-slate-800">{selectedDepartment.name}</h1>
               <p className="text-xs text-slate-500">{activePatients.length} 位患儿在治</p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-xl shadow-sm border border-slate-100">
-              {selectedDepartment.icon}
+            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm border border-slate-100 overflow-hidden">
+              {selectedDepartment.icon.startsWith('/images/') ? (
+                <img src={selectedDepartment.icon} alt={selectedDepartment.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-xl">{selectedDepartment.icon}</span>
+              )}
             </div>
           </div>
 
