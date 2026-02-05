@@ -356,6 +356,11 @@ export default function RehabCareLink() {
   // 动态科室列表（支持AI识别时自动添加新科室）
   const [departments, setDepartments] = useState(defaultDepartments);
 
+  // 科室编辑状态
+  const [isEditingDepartments, setIsEditingDepartments] = useState(false);
+  const [showAddDepartment, setShowAddDepartment] = useState(false);
+  const [newDepartment, setNewDepartment] = useState({ name: '', icon: '' });
+
   // AI收治状态
   const [aiStep, setAiStep] = useState(0); // 0:上传, 1:AI识别中, 2:表单填写
   const [aiResult, setAiResult] = useState(null);
@@ -1562,41 +1567,88 @@ export default function RehabCareLink() {
 
           {/* 科室患儿分布 */}
           <div className="mb-24">
-            <h3 className="text-sm font-bold text-slate-700 mb-4 pl-1">科室患儿分布</h3>
+            <div className="flex items-center justify-between mb-4 pl-1">
+              <h3 className="text-sm font-bold text-slate-700">科室患儿分布</h3>
+              {userRole === 'therapist' && (
+                <button
+                  onClick={() => setIsEditingDepartments(!isEditingDepartments)}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-white/60 border border-slate-200 text-slate-600 hover:bg-white/80 transition-all flex items-center gap-1"
+                >
+                  {isEditingDepartments ? (
+                    <>
+                      <Check size={14} />
+                      完成
+                    </>
+                  ) : (
+                    <>
+                      <Edit3 size={14} />
+                      编辑
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
             <div className="space-y-3">
               {departments.map(dept => {
                 const deptPatients = getDepartmentPatients(dept.id);
                 const pending = deptPatients.filter(p => p.status === 'active' && !p.todayTreated).length;
                 return (
-                  <button
-                    key={dept.id}
-                    onClick={() => navigateTo('patients', dept)}
-                    className="w-full bg-white/60 backdrop-blur-xl rounded-2xl p-4 flex items-center gap-3 text-left border border-white/50 shadow-sm hover:bg-white/80 transition-all active:scale-[0.98]"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm border border-slate-100 overflow-hidden">
-                      {dept.icon.startsWith('/images/') ? (
-                        <img src={dept.icon} alt={dept.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-xl">{dept.icon}</span>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-slate-700 text-sm">{dept.name}</h4>
-                      <div className="flex gap-2 mt-1">
-                        <span className="bg-blue-100 text-blue-600 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                          {deptPatients.length} 位患儿
-                        </span>
-                        {pending > 0 && (
-                          <span className="bg-rose-100 text-rose-500 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                            {pending} 待治
-                          </span>
+                  <div key={dept.id} className="relative">
+                    <button
+                      onClick={() => !isEditingDepartments && navigateTo('patients', dept)}
+                      disabled={isEditingDepartments}
+                      className={`w-full bg-white/60 backdrop-blur-xl rounded-2xl p-4 flex items-center gap-3 text-left border border-white/50 shadow-sm transition-all ${
+                        isEditingDepartments ? 'opacity-60' : 'hover:bg-white/80 active:scale-[0.98]'
+                      }`}
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm border border-slate-100 overflow-hidden">
+                        {dept.icon.startsWith('/images/') ? (
+                          <img src={dept.icon} alt={dept.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-xl">{dept.icon}</span>
                         )}
                       </div>
-                    </div>
-                    <ChevronRight size={18} className="text-slate-300" />
-                  </button>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-slate-700 text-sm">{dept.name}</h4>
+                        <div className="flex gap-2 mt-1">
+                          <span className="bg-blue-100 text-blue-600 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            {deptPatients.length} 位患儿
+                          </span>
+                          {pending > 0 && (
+                            <span className="bg-rose-100 text-rose-500 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                              {pending} 待治
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {!isEditingDepartments && <ChevronRight size={18} className="text-slate-300" />}
+                    </button>
+                    {isEditingDepartments && (
+                      <button
+                        onClick={() => {
+                          if (confirm(`确定要删除"${dept.name}"吗？`)) {
+                            setDepartments(departments.filter(d => d.id !== dept.id));
+                            showToast('科室已删除');
+                          }
+                        }}
+                        className="absolute top-2 right-2 w-8 h-8 rounded-lg bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-all shadow-sm"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
                 );
               })}
+
+              {isEditingDepartments && (
+                <button
+                  onClick={() => setShowAddDepartment(true)}
+                  className="w-full bg-white/60 backdrop-blur-xl rounded-2xl p-4 flex items-center justify-center gap-2 border-2 border-dashed border-slate-300 text-slate-600 hover:bg-white/80 hover:border-slate-400 transition-all"
+                >
+                  <Plus size={20} />
+                  <span className="font-bold text-sm">添加科室</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -3003,6 +3055,124 @@ export default function RehabCareLink() {
       {showBatchGenerate && <BatchGenerateModal />}
       {showTemplates && <TemplatesModal />}
       {showQuickEntry && <QuickEntryModal />}
+
+      {/* 添加科室弹窗 */}
+      {showAddDepartment && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center" onClick={() => { setShowAddDepartment(false); setNewDepartment({ name: '', icon: '' }); }}>
+          <div className="bg-gradient-to-b from-white/95 to-slate-50/95 backdrop-blur-2xl rounded-t-[32px] w-full max-h-[85vh] overflow-y-auto border-t border-white/80 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white/90 backdrop-blur-xl border-b border-slate-100 px-4 py-3 flex items-center justify-between z-10">
+              <h3 className="text-lg font-bold text-slate-800">添加科室</h3>
+              <button onClick={() => { setShowAddDepartment(false); setNewDepartment({ name: '', icon: '' }); }} className="p-2 hover:bg-slate-100 rounded-full">
+                <X size={20} className="text-slate-500" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* 科室名称 */}
+              <div>
+                <label className="text-sm font-bold text-slate-700 mb-2 block">科室名称 *</label>
+                <input
+                  type="text"
+                  value={newDepartment.name}
+                  onChange={(e) => setNewDepartment({ ...newDepartment, name: e.target.value })}
+                  placeholder="请输入科室名称，如：呼吸内科"
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 placeholder-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none bg-white"
+                />
+              </div>
+
+              {/* 选择图标 */}
+              <div>
+                <label className="text-sm font-bold text-slate-700 mb-2 block">选择图标 *</label>
+                <div className="grid grid-cols-4 gap-3">
+                  {allDepartments.map(dept => (
+                    <button
+                      key={dept.id}
+                      onClick={() => setNewDepartment({ ...newDepartment, icon: dept.icon })}
+                      className={`aspect-square rounded-xl border-2 flex items-center justify-center transition-all ${
+                        newDepartment.icon === dept.icon
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-slate-200 bg-white hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="w-12 h-12 flex items-center justify-center overflow-hidden">
+                        {dept.icon.startsWith('/images/') ? (
+                          <img src={dept.icon} alt={dept.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-2xl">{dept.icon}</span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                {newDepartment.icon && (
+                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center overflow-hidden border border-slate-100">
+                      {newDepartment.icon.startsWith('/images/') ? (
+                        <img src={newDepartment.icon} alt="选中的图标" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xl">{newDepartment.icon}</span>
+                      )}
+                    </div>
+                    <span className="text-sm text-slate-600">已选择图标</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 操作按钮 */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => { setShowAddDepartment(false); setNewDepartment({ name: '', icon: '' }); }}
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-all"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => {
+                    if (!newDepartment.name.trim()) {
+                      showToast('请输入科室名称');
+                      return;
+                    }
+                    if (!newDepartment.icon) {
+                      showToast('请选择图标');
+                      return;
+                    }
+
+                    const colors = [
+                      'bg-blue-100 text-blue-600',
+                      'bg-green-100 text-green-600',
+                      'bg-purple-100 text-purple-600',
+                      'bg-red-100 text-red-600',
+                      'bg-cyan-100 text-cyan-600',
+                      'bg-pink-100 text-pink-600',
+                      'bg-amber-100 text-amber-600',
+                      'bg-orange-100 text-orange-600',
+                    ];
+                    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+                    const newDept = {
+                      id: Math.max(...departments.map(d => d.id)) + 1,
+                      name: newDepartment.name.trim(),
+                      icon: newDepartment.icon,
+                      color: randomColor,
+                      patients: 0,
+                      pending: 0
+                    };
+
+                    setDepartments([...departments, newDept]);
+                    setShowAddDepartment(false);
+                    setNewDepartment({ name: '', icon: '' });
+                    showToast('科室添加成功');
+                  }}
+                  disabled={!newDepartment.name.trim() || !newDepartment.icon}
+                  className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  添加科室
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 全部患者弹窗 */}
       {showAllPatients && (
