@@ -157,6 +157,31 @@ async function migrate() {
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_rehab_plans_patient ON rehab_plans(patient_id);
   `);
+
+  // Users table for authentication
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL UNIQUE,
+      password TEXT NOT NULL,
+      name TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'therapist',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS users_updated_at
+    AFTER UPDATE ON users
+    BEGIN
+      UPDATE users SET updated_at = datetime('now') WHERE id = NEW.id;
+    END;
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+  `);
 }
 
 module.exports = { getPool, migrate };

@@ -1,4 +1,5 @@
 const { getPool } = require('./db');
+const bcrypt = require('bcryptjs');
 
 function twoDemoPatients() {
   return [
@@ -55,8 +56,62 @@ function twoDemoPatients() {
   ];
 }
 
+async function seedDefaultUsers() {
+  const pool = await getPool();
+
+  // Check if users already exist
+  const [rows] = await pool.query('SELECT COUNT(*) AS c FROM users');
+  const count = Number(rows?.[0]?.c || 0);
+  if (count > 0) {
+    console.log('[Seed] Users already exist, skipping user seed');
+    return;
+  }
+
+  console.log('[Seed] Creating default users...');
+
+  // Default users for testing
+  const defaultUsers = [
+    {
+      username: 'doctor',
+      password: 'doctor123',
+      name: '张医生',
+      role: 'doctor'
+    },
+    {
+      username: 'therapist',
+      password: 'therapist123',
+      name: '李治疗师',
+      role: 'therapist'
+    },
+    {
+      username: 'admin',
+      password: 'admin123',
+      name: '管理员',
+      role: 'admin'
+    }
+  ];
+
+  const saltRounds = 10;
+
+  for (const user of defaultUsers) {
+    const hashedPassword = await bcrypt.hash(user.password, saltRounds);
+    await pool.query(
+      'INSERT INTO users (username, password, name, role) VALUES (?, ?, ?, ?)',
+      [user.username, hashedPassword, user.name, user.role]
+    );
+    console.log(`[Seed] Created user: ${user.username} (${user.role})`);
+  }
+
+  console.log('[Seed] Default users created successfully');
+}
+
 async function seedIfEmpty() {
   const pool = await getPool();
+
+  // Seed users first
+  await seedDefaultUsers();
+
+  // Then seed patients
   const [rows] = await pool.query('SELECT COUNT(*) AS c FROM patients');
   const count = Number(rows?.[0]?.c || 0);
   if (count > 0) return;

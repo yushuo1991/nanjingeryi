@@ -15,6 +15,11 @@ import {
 import { api } from './lib/api';
 import { printPatientRecord, printBatchRecords, generateTreatmentCard } from './lib/print';
 
+// UI Components
+import GlassCard from './components/ui/GlassCard';
+import ModalBase from './components/ui/ModalBase';
+import ParticleButton from './components/ui/ParticleButton';
+
 // ==================== 设计系统配色 - 有机科技主题 ====================
 const colors = {
   night: {
@@ -1487,48 +1492,21 @@ export default function RehabCareLink() {
         {/* 快捷操作按钮 */}
         {userRole === 'therapist' && (
           <div className="flex gap-4 mb-8">
-            <button
+            <ParticleButton
               onClick={() => setShowAIModal(true)}
-              className="flex-1 btn-particle btn-particle-cyan h-12 rounded-xl"
+              variant="cyan"
+              className="flex-1 h-12 rounded-xl"
             >
-              <div className="points_wrapper">
-                <div className="point"></div>
-                <div className="point"></div>
-                <div className="point"></div>
-                <div className="point"></div>
-                <div className="point"></div>
-                <div className="point"></div>
-                <div className="point"></div>
-                <div className="point"></div>
-                <div className="point"></div>
-                <div className="point"></div>
-              </div>
-              <span className="inner">
-                <Zap size={18} fill="white" />
-                AI智能收治
-              </span>
-            </button>
-            <button
+              <Zap size={18} fill="white" />
+              AI智能收治
+            </ParticleButton>
+            <ParticleButton
               onClick={initBatchGenerate}
-              className="flex-1 btn-particle h-12 rounded-xl"
+              className="flex-1 h-12 rounded-xl"
             >
-              <div className="points_wrapper">
-                <div className="point"></div>
-                <div className="point"></div>
-                <div className="point"></div>
-                <div className="point"></div>
-                <div className="point"></div>
-                <div className="point"></div>
-                <div className="point"></div>
-                <div className="point"></div>
-                <div className="point"></div>
-                <div className="point"></div>
-              </div>
-              <span className="inner">
-                <Zap size={18} />
-                批量生成日报
-              </span>
-            </button>
+              <Zap size={18} />
+              批量生成日报
+            </ParticleButton>
           </div>
         )}
 
@@ -2301,7 +2279,7 @@ export default function RehabCareLink() {
           </div>
 
           {/* 统计 */}
-          <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-4 border border-white/50 shadow-sm mb-4">
+          <GlassCard className="mb-4">
             <h3 className="text-sm font-semibold text-slate-500 mb-3">本月统计</h3>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
@@ -2317,7 +2295,7 @@ export default function RehabCareLink() {
                 <p className="text-xs text-slate-400">康复出院</p>
               </div>
             </div>
-          </div>
+          </GlassCard>
 
           {/* 菜单 */}
           <div className="bg-white/60 backdrop-blur-xl rounded-2xl overflow-hidden border border-white/50 shadow-sm">
@@ -2348,23 +2326,22 @@ export default function RehabCareLink() {
   const AIModal = () => {
     const [newAlertInput, setNewAlertInput] = useState('');
 
-    return (
-      <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center" onClick={() => { setShowAIModal(false); setAiStep(0); setAiResult(null); setUploadedImage(null); setOcrText(''); setOcrProgress(0); }}>
-        <div
-          className="bg-gradient-to-b from-white/95 to-slate-50/95 backdrop-blur-2xl rounded-t-[32px] w-full max-h-[90vh] overflow-y-auto animate-slide-up border-t border-white/80 shadow-2xl"
-          onClick={e => e.stopPropagation()}
-        >
-          <div className="sticky top-0 bg-white/90 backdrop-blur-xl border-b border-slate-100 px-4 py-3 flex items-center justify-between z-10">
-            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <Sparkles className="text-blue-500" size={20} />
-              AI智能建档
-            </h3>
-            <button onClick={() => { setShowAIModal(false); setAiStep(0); setAiResult(null); setUploadedImage(null); setOcrText(''); setOcrProgress(0); }} className="p-2 hover:bg-slate-100 rounded-full">
-              <X size={20} className="text-slate-500" />
-            </button>
-          </div>
+    const handleClose = () => {
+      setShowAIModal(false);
+      setAiStep(0);
+      setAiResult(null);
+      setUploadedImage(null);
+      setOcrText('');
+      setOcrProgress(0);
+    };
 
-          <div className="p-4">
+    return (
+      <ModalBase
+        isOpen={showAIModal}
+        onClose={handleClose}
+        title="AI智能建档"
+        icon={<Sparkles className="text-blue-500" size={20} />}
+      >
             {/* 步骤0：上传病历图片 */}
             {aiStep === 0 && (
               <div className="text-center py-8">
@@ -2672,38 +2649,23 @@ export default function RehabCareLink() {
                   >
                     取消
                   </button>
-                  <button
+                  <ParticleButton
                     onClick={handleGeneratePlan}
                     disabled={isOcrProcessing}
-                    className="flex-1 btn-particle btn-particle-cyan py-3 rounded-xl disabled:opacity-60"
+                    variant="cyan"
+                    className="flex-1 py-3 rounded-xl disabled:opacity-60"
                   >
-                    <div className="points_wrapper">
-                      <div className="point"></div>
-                      <div className="point"></div>
-                      <div className="point"></div>
-                      <div className="point"></div>
-                      <div className="point"></div>
-                    </div>
-                    <span className="inner">
-                      <Sparkles size={18} />
-                      生成方案
-                    </span>
-                  </button>
-                  <button
+                    <Sparkles size={18} />
+                    生成方案
+                  </ParticleButton>
+                  <ParticleButton
                     onClick={confirmAdmission}
                     disabled={isSavingPatient || isOcrProcessing}
-                    className={`flex-1 btn-particle btn-particle-emerald py-3 rounded-xl ${
+                    variant="emerald"
+                    className={`flex-1 py-3 rounded-xl ${
                       isSavingPatient ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
-                    <div className="points_wrapper">
-                      <div className="point"></div>
-                      <div className="point"></div>
-                      <div className="point"></div>
-                      <div className="point"></div>
-                      <div className="point"></div>
-                    </div>
-                    <span className="inner">
                     {isSavingPatient ? (
                       <>
                         <Loader2 size={18} className="animate-spin" />
@@ -2715,14 +2677,11 @@ export default function RehabCareLink() {
                         确认建档
                       </>
                     )}
-                    </span>
-                  </button>
+                  </ParticleButton>
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      </div>
+          </ModalBase>
     );
   };
 

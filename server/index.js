@@ -41,6 +41,8 @@ const {
   extractJsonFromText,
 } = require('./qwen');
 const { seedIfEmpty } = require('./seed');
+const { authMiddleware, roleMiddleware } = require('./middleware/auth');
+const { registerAuthRoutes } = require('./routes/auth');
 
 function requiredEnv(name) {
   const value = process.env[name];
@@ -66,6 +68,9 @@ function createApp() {
   app.use(corsOrigin ? cors({ origin: corsOrigin, credentials: true }) : cors());
   app.use(express.json({ limit: '50mb' }));
 
+  // Register authentication routes
+  registerAuthRoutes(app);
+
   app.get('/api/health', async (_req, res) => {
     try {
       const pool = await getPool();
@@ -73,6 +78,16 @@ function createApp() {
       res.json({ status: 'ok', db: 'ok' });
     } catch (e) {
       res.status(500).json({ status: 'error', db: 'error', error: e.message });
+    }
+  });
+
+  // Cache statistics endpoint
+  app.get('/api/cache/stats', async (_req, res) => {
+    try {
+      const stats = getCacheStats();
+      res.json({ success: true, stats });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
     }
   });
 
@@ -1001,10 +1016,73 @@ function createApp() {
   });
 
   // ---------------- Patients (JSON blob) ----------------
-  app.get('/api/patients', async (_req, res) => {
+  // GET /api/patients - Requires authentication
+  app.get('/api/patients', authMiddleware, async (req, res) => {
     try {
+      // Parse pagination parameters
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20)); // Max 100 per page
+      const offset = (page - 1) * limit;
+
+      // Parse search and filter parameters
+      const search = req.query.search ? String(req.query.search).trim() : '';
+      const department = req.query.department ? String(req.query.department).trim() : '';
+      const status = req.query.status ? String(req.query.status).trim() : '';
+
+      // Generate cache key based on all query parameters (include user role for cache isolation)
+      const cacheKey = `patients:${req.user.role}:${page}:${limit}:${search}:${department}:${status}`;
+
+      // Check cache first
+      const cached = cacheGet(cacheKey);
+      if (cached) {
+        console.log(`[Cache] HIT for key: ${cacheKey}`);
+        return res.json(cached);
+      }
+
+      console.log(`[Cache] MISS for key: ${cacheKey}`);
+
       const pool = await getPool();
-      const [rows] = await pool.query('SELECT id, data, created_at, updated_at FROM patients ORDER BY id ASC');
+
+      // Build WHERE clause for filtering
+      let whereConditions = [];
+      let queryParams = [];
+
+      // Note: SQLite json_extract is not as efficient as proper columns, but works for now
+      if (search) {
+        // Search by patient name (case-insensitive)
+        whereConditions.push("(json_extract(data, '$.name') LIKE ? OR json_extract(data, '$.bedNo') LIKE ?)");
+        const searchPattern = `%${search}%`;
+        queryParams.push(searchPattern, searchPattern);
+      }
+
+      if (department) {
+        whereConditions.push("json_extract(data, '$.department') = ?");
+        queryParams.push(department);
+      }
+
+      if (status) {
+        whereConditions.push("json_extract(data, '$.status') = ?");
+        queryParams.push(status);
+      }
+
+      const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+      // Get total count for pagination metadata
+      const countQuery = `SELECT COUNT(*) as total FROM patients ${whereClause}`;
+      const [[countRow]] = await pool.query(countQuery, queryParams);
+      const total = Number(countRow.total);
+      const totalPages = Math.ceil(total / limit);
+
+      // Get paginated results
+      const dataQuery = `
+        SELECT id, data, created_at, updated_at
+        FROM patients
+        ${whereClause}
+        ORDER BY id DESC
+        LIMIT ? OFFSET ?
+      `;
+      const [rows] = await pool.query(dataQuery, [...queryParams, limit, offset]);
+
       const items = rows.map((r) => {
         try {
           const data = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
@@ -1014,14 +1092,37 @@ function createApp() {
           return { id: Number(r.id), name: 'Error', error: 'Invalid data', createdAt: r.created_at, updatedAt: r.updated_at };
         }
       });
-      res.json({ success: true, items });
+
+      const response = {
+        success: true,
+        items,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1,
+        },
+        filters: {
+          search: search || null,
+          department: department || null,
+          status: status || null,
+        },
+      };
+
+      // Cache the response for 5 minutes
+      cacheSet(cacheKey, response);
+
+      res.json(response);
     } catch (error) {
       console.error('GET /api/patients error:', error);
       return jsonError(res, 500, 'Failed to fetch patients: ' + error.message);
     }
   });
 
-  app.post('/api/patients', async (req, res) => {
+  // POST /api/patients - Requires authentication and doctor role
+  app.post('/api/patients', authMiddleware, roleMiddleware('doctor'), async (req, res) => {
     const patient = req.body?.patient;
     const plan = req.body?.plan || null;
     const caseId = req.body?.caseId ? Number(req.body.caseId) : null;
@@ -1086,10 +1187,15 @@ function createApp() {
     }
     // 返回完整的患者数据，避免前端额外请求
     const createdPatient = { ...payload, id: patientId };
+
+    // Clear cache after creating patient
+    clearPatientsCache();
+
     res.status(201).json({ success: true, patientId, patient: createdPatient });
   });
 
-  app.put('/api/patients/:id', async (req, res) => {
+  // PUT /api/patients/:id - Requires authentication
+  app.put('/api/patients/:id', authMiddleware, async (req, res) => {
     const patientId = Number(req.params.id);
     if (!patientId) return jsonError(res, 400, 'Invalid patientId');
     const patient = req.body?.patient;
@@ -1100,14 +1206,23 @@ function createApp() {
     if (!exists) return jsonError(res, 404, 'Patient not found');
 
     await pool.query('UPDATE patients SET data=? WHERE id=?', [JSON.stringify({ ...patient, id: patientId }), patientId]);
+
+    // Clear cache after updating patient
+    clearPatientsCache();
+
     res.json({ success: true });
   });
 
-  app.delete('/api/patients/:id', async (req, res) => {
+  // DELETE /api/patients/:id - Requires authentication and doctor role
+  app.delete('/api/patients/:id', authMiddleware, roleMiddleware('doctor'), async (req, res) => {
     const patientId = Number(req.params.id);
     if (!patientId) return jsonError(res, 400, 'Invalid patientId');
     const pool = await getPool();
     await pool.query('DELETE FROM patients WHERE id=?', [patientId]);
+
+    // Clear cache after deleting patient
+    clearPatientsCache();
+
     res.status(204).end();
   });
 
