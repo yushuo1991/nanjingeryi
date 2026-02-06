@@ -186,6 +186,182 @@ Pure Nginx (no control panel) configured in deploy workflow:
 4. **better-sqlite3 binary**: Native module, requires rebuild on server architecture
 5. **Git push failures**: Frequent timeouts to GitHub (use retry loops in workflows)
 
+## 部署工作流指导 (Deployment Workflow Guidance)
+
+When troubleshooting deployment issues, follow this systematic approach:
+
+### Pre-Deployment Checklist
+1. **Verify all deployment scripts and CI/CD configurations first**
+   - Check `.github/workflows/*.yml` for GitHub Actions configuration
+   - Review `package.json` scripts (build, deploy, server commands)
+   - Validate PM2 configuration (ecosystem.config.js or inline config)
+   - Confirm environment variables are properly set in GitHub Secrets
+
+2. **For this project specifically**
+   - Verify GitHub Actions workflow files in `.github/workflows/`
+   - Check `package.json` for correct build and server scripts
+   - Ensure PM2 process name matches: `rehab-care-link-server`
+   - Validate `.env` creation from `${{ secrets.SERVER_ENV }}`
+
+3. **After fixing deployment configuration**
+   - Always verify the fix has been successfully pushed to the repository
+   - Check GitHub Actions logs to confirm workflow execution
+   - Never mark a deployment task as complete until changes are committed and pushed
+   - Run test suite at http://ey.yushuo.click/test-suite.html to verify deployment
+
+### Common Deployment Issues Checklist
+
+**Build Failures:**
+- [ ] Check Node.js version compatibility (frontend vs backend)
+- [ ] Verify all dependencies are in package.json
+- [ ] Confirm build script exists and is correct
+- [ ] Check for TypeScript/ESLint errors blocking build
+
+**Deployment Failures:**
+- [ ] Verify SSH credentials in GitHub Secrets
+- [ ] Check server disk space (should be under 80%)
+- [ ] Confirm target directory exists on server
+- [ ] Validate file permissions on server
+
+**Runtime Failures:**
+- [ ] Check PM2 process status: `pm2 status`
+- [ ] Review PM2 logs: `pm2 logs rehab-care-link-server`
+- [ ] Verify .env file exists and contains required variables
+- [ ] Confirm database file is accessible
+- [ ] Check Nginx configuration and restart if needed
+
+**Post-Deployment Verification:**
+- [ ] Frontend loads without console errors
+- [ ] API health check returns 200: `GET /api/health`
+- [ ] Database queries work correctly
+- [ ] File uploads function properly
+- [ ] AI endpoints respond (if applicable)
+
+## 授权与访问控制调试 (Authorization & Access Control Debugging)
+
+When debugging membership/subscription access issues:
+
+### Dual-Layer Verification
+1. **Backend permission logic**
+   - Check API route middleware for authentication checks
+   - Verify JWT token validation and user session handling
+   - Review database queries for user roles and permissions
+   - Confirm subscription status checks in API endpoints
+
+2. **Frontend route guards**
+   - Inspect React Router guards or protected route components
+   - Check localStorage/sessionStorage for auth tokens
+   - Verify authentication state management (Context/hooks)
+   - Review conditional rendering based on user permissions
+
+### Race Condition Detection
+Look for authentication state race conditions that cause page flashing:
+- Component mounting before auth state is loaded
+- Multiple simultaneous auth checks
+- Async token validation not awaited
+- Redirect logic executing before permission checks complete
+
+**Common patterns to check:**
+```javascript
+// Bad: Race condition
+useEffect(() => {
+  if (!user) navigate('/login');
+}, []); // Runs before user loads
+
+// Good: Wait for auth state
+useEffect(() => {
+  if (authLoaded && !user) navigate('/login');
+}, [authLoaded, user]);
+```
+
+### Full Authentication Flow Testing
+Test the complete flow, not isolated checks:
+1. Login → Token generation → Storage
+2. Page load → Token retrieval → Validation
+3. API request → Token attachment → Backend verification
+4. Token expiry → Refresh flow → Re-authentication
+5. Logout → Token removal → Redirect
+
+### Subscription Status Caching
+Check for caching issues:
+- Browser localStorage/sessionStorage caching stale subscription data
+- Backend caching subscription status without invalidation
+- CDN caching authenticated API responses
+- Service worker caching protected resources
+
+**Debug checklist:**
+- [ ] Clear all browser storage and test fresh login
+- [ ] Verify subscription status API returns current data
+- [ ] Check cache headers on subscription endpoints
+- [ ] Test subscription upgrade/downgrade flow
+- [ ] Verify permission changes reflect immediately
+
+## 网络弹性处理 (Network Resilience Handling)
+
+### Automatic Retry Strategy for Git Operations
+
+When `git push` fails due to network issues, implement automatic retry with exponential backoff:
+
+**Retry Policy:**
+- Automatically retry up to 3 times before asking the user
+- Use exponential backoff: 2 seconds, 4 seconds, 8 seconds
+- Only retry on network-related errors (timeout, connection refused, etc.)
+- Do not retry on authentication or permission errors
+
+**Implementation pattern:**
+```bash
+for i in 1 2 3; do
+  git push && break || {
+    if [ $i -lt 3 ]; then
+      sleep $((2 ** i))
+      echo "Retry attempt $((i + 1))/3..."
+    else
+      echo "Failed after 3 attempts. Please check network connection."
+      exit 1
+    fi
+  }
+done
+```
+
+### Batch Operations for Network Efficiency
+
+When network errors occur, batch remaining operations to reduce round trips:
+
+**Instead of:**
+```bash
+git add file1.js
+git add file2.js
+git add file3.js
+git commit -m "message"
+git push
+```
+
+**Use:**
+```bash
+git add file1.js file2.js file3.js && git commit -m "message" && git push
+```
+
+**For multiple independent operations:**
+- Group related file operations together
+- Combine git commands with `&&` for sequential execution
+- Use parallel tool calls for truly independent operations
+- Minimize the number of separate network requests
+
+### Network Error Detection
+
+Recognize these as retriable network errors:
+- `fatal: unable to access`: Connection timeout
+- `Connection reset by peer`: Network interruption
+- `Could not resolve host`: DNS issues
+- `Operation timed out`: Request timeout
+- `Failed to connect`: Connection refused
+
+Do NOT retry these errors:
+- `Authentication failed`: Credential issues
+- `Permission denied`: Authorization problems
+- `Repository not found`: Invalid repository
+- `rejected`: Push conflicts or branch protection
+
 ## Development Workflow
 
 1. Make changes locally

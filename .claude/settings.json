@@ -1,0 +1,276 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
+  "description": "Claude Code settings for RehabCareLink project",
+
+  "git": {
+    "preCommitHooks": [
+      {
+        "name": "check-sensitive-files",
+        "description": "Prevent committing sensitive files like .env and credentials",
+        "command": "git diff --cached --name-only | grep -E '\\.(env|pem|key|p12|pfx|credentials)$|credentials\\.json|secrets\\.' && echo 'ERROR: Sensitive files detected in commit' && exit 1 || exit 0",
+        "continueOnError": false
+      },
+      {
+        "name": "validate-frontend-build",
+        "description": "Ensure frontend builds successfully before commit",
+        "command": "npm run build",
+        "continueOnError": false,
+        "skipPatterns": [
+          "*.md",
+          "*.txt",
+          ".github/**",
+          "server/**"
+        ]
+      },
+      {
+        "name": "check-package-lock",
+        "description": "Ensure package-lock.json is committed when package.json changes",
+        "command": "git diff --cached --name-only | grep -q 'package\\.json' && git diff --cached --name-only | grep -q 'package-lock\\.json' || (git diff --cached --name-only | grep -q 'package\\.json' && echo 'ERROR: package.json changed but package-lock.json not updated' && exit 1) || exit 0",
+        "continueOnError": false
+      },
+      {
+        "name": "lint-staged-files",
+        "description": "Run ESLint on staged JavaScript/JSX files",
+        "command": "git diff --cached --name-only --diff-filter=ACM | grep -E '\\.(js|jsx)$' | xargs -r npx eslint --max-warnings=0 || exit 0",
+        "continueOnError": true
+      },
+      {
+        "name": "check-console-logs",
+        "description": "Warn about console.log statements in production code",
+        "command": "git diff --cached --name-only --diff-filter=ACM | grep -E 'src/.*\\.(js|jsx)$' | xargs -r grep -n 'console\\.log' && echo 'WARNING: console.log found in staged files' || exit 0",
+        "continueOnError": true
+      }
+    ],
+
+    "config": {
+      "retryStrategy": {
+        "enabled": true,
+        "maxRetries": 3,
+        "retryDelay": 2000,
+        "operations": ["push", "pull", "fetch", "clone"]
+      },
+      "timeout": {
+        "push": 300000,
+        "pull": 180000,
+        "fetch": 120000,
+        "clone": 600000
+      },
+      "autoStash": false,
+      "autoRebase": false
+    },
+
+    "commitMessageTemplate": {
+      "enabled": true,
+      "format": "<type>: <subject>\n\n<body>\n\n<footer>",
+      "types": [
+        "feat",
+        "fix",
+        "docs",
+        "style",
+        "refactor",
+        "perf",
+        "test",
+        "chore",
+        "build",
+        "ci"
+      ]
+    }
+  },
+
+  "workflow": {
+    "parallelToolCalls": {
+      "enabled": true,
+      "maxConcurrent": 5,
+      "preferredOperations": [
+        "read",
+        "grep",
+        "glob",
+        "bash-independent"
+      ]
+    },
+
+    "modelSelection": {
+      "strategy": "adaptive",
+      "preferences": {
+        "codeGeneration": "claude-opus-4-5",
+        "codeReview": "claude-opus-4-5",
+        "documentation": "claude-sonnet-3-5",
+        "simpleQueries": "claude-sonnet-3-5"
+      }
+    },
+
+    "autoSave": {
+      "enabled": true,
+      "debounceMs": 1000
+    },
+
+    "codeStyle": {
+      "indentation": "spaces",
+      "indentSize": 2,
+      "lineEndings": "lf",
+      "trailingComma": "es5",
+      "singleQuote": true,
+      "semicolons": true
+    }
+  },
+
+  "project": {
+    "type": "fullstack",
+    "framework": {
+      "frontend": "react-vite",
+      "backend": "express",
+      "database": "sqlite"
+    },
+
+    "buildCommands": {
+      "frontend": "npm run build",
+      "backend": "npm run server",
+      "test": "npm run test:e2e"
+    },
+
+    "deploymentStrategy": {
+      "method": "github-actions",
+      "autoDeployBranches": ["main"],
+      "requiresApproval": false
+    },
+
+    "ignorePaths": [
+      "node_modules/**",
+      "dist/**",
+      "uploads/**",
+      "*.db",
+      "*.db-journal",
+      ".env",
+      ".env.*",
+      "*.log",
+      "temp-icons/**",
+      "nul"
+    ],
+
+    "watchPaths": [
+      "src/**/*.{js,jsx,css}",
+      "server/**/*.js",
+      "public/**/*",
+      "package.json",
+      "vite.config.js"
+    ]
+  },
+
+  "testing": {
+    "autoRunTests": false,
+    "testCommand": "npm run test:e2e:headless",
+    "testTimeout": 60000,
+    "runOnCommit": false,
+    "runOnPush": false
+  },
+
+  "ai": {
+    "contextWindow": {
+      "maxFiles": 50,
+      "maxLinesPerFile": 2000,
+      "prioritizeRecent": true
+    },
+
+    "codeAnalysis": {
+      "deepInspection": true,
+      "followImports": true,
+      "maxDepth": 3
+    },
+
+    "suggestions": {
+      "autoComplete": true,
+      "inlineHints": true,
+      "refactoringHints": true
+    }
+  },
+
+  "security": {
+    "scanForSecrets": true,
+    "preventSecretsInCommits": true,
+    "sensitivePatterns": [
+      "DASHSCOPE_API_KEY",
+      "API_KEY",
+      "SECRET",
+      "PASSWORD",
+      "TOKEN",
+      "PRIVATE_KEY",
+      ".*_KEY=.*",
+      ".*_SECRET=.*",
+      ".*_TOKEN=.*"
+    ],
+
+    "allowedSecretFiles": [
+      ".env.example",
+      ".env.template"
+    ]
+  },
+
+  "notifications": {
+    "buildSuccess": true,
+    "buildFailure": true,
+    "deploymentStatus": true,
+    "testResults": true,
+    "gitOperations": false
+  },
+
+  "performance": {
+    "cacheEnabled": true,
+    "cacheTTL": 3600000,
+    "lazyLoadFiles": true,
+    "incrementalBuilds": true
+  },
+
+  "debugging": {
+    "verboseLogging": false,
+    "logLevel": "info",
+    "preserveLogs": true,
+    "maxLogSize": 10485760
+  },
+
+  "customCommands": {
+    "deploy": {
+      "description": "Trigger GitHub Actions deployment",
+      "command": "git push origin main",
+      "requiresConfirmation": true
+    },
+
+    "emergency-fix": {
+      "description": "Trigger emergency server rebuild workflow",
+      "command": "gh workflow run '超级紧急修复 - 强制重建'",
+      "requiresConfirmation": true
+    },
+
+    "restart-ai": {
+      "description": "Restart AI service via GitHub Actions",
+      "command": "gh workflow run '修复AI服务'",
+      "requiresConfirmation": false
+    },
+
+    "check-server": {
+      "description": "Check AI service configuration",
+      "command": "gh workflow run '检查AI服务配置'",
+      "requiresConfirmation": false
+    },
+
+    "fix-mime": {
+      "description": "Fix corrupted mime-db package",
+      "command": "gh workflow run '修复损坏的mime-db包'",
+      "requiresConfirmation": false
+    },
+
+    "test-suite": {
+      "description": "Open test suite in browser",
+      "command": "start http://ey.yushuo.click/test-suite.html",
+      "requiresConfirmation": false
+    }
+  },
+
+  "editor": {
+    "formatOnSave": true,
+    "trimTrailingWhitespace": true,
+    "insertFinalNewline": true,
+    "tabSize": 2,
+    "detectIndentation": true
+  }
+}
