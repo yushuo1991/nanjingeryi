@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Zap, X, Check, CheckCircle2, Star, Printer } from 'lucide-react';
+import PropTypes from 'prop-types';
+import { Zap, X, Check, CheckCircle2, Star, Printer } from '../components/icons';
 
 /**
  * BatchReportModal - Modal for batch generating daily reports
@@ -190,6 +191,27 @@ const BatchReportModal = ({
       </div>
     </div>
   );
+};
+
+BatchReportModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  batchPatients: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    name: PropTypes.string,
+    avatar: PropTypes.string,
+    bedNo: PropTypes.string,
+    diagnosis: PropTypes.string,
+    generatedRecord: PropTypes.shape({
+      items: PropTypes.arrayOf(PropTypes.string),
+      notes: PropTypes.string,
+      confirmed: PropTypes.bool,
+    }),
+  })).isRequired,
+  currentBatchIndex: PropTypes.number.isRequired,
+  setCurrentBatchIndex: PropTypes.func.isRequired,
+  confirmBatchItem: PropTypes.func.isRequired,
+  printBatchRecords: PropTypes.func.isRequired,
 };
 
 export default BatchReportModal;

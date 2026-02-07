@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useCallback } from 'react';
+import PropTypes from 'prop-types';
 import {
   ChevronLeft, Share2, Printer, Check, X, Edit3, Trash2,
   Target, Star, AlertCircle, FileText, CheckCircle2, Circle,
   ClipboardList
-} from 'lucide-react';
+} from '../components/icons';
 import { printPatientRecord, generateTreatmentCard } from '../lib/print';
 
 const PatientDetailPage = React.memo(({
@@ -26,6 +27,45 @@ const PatientDetailPage = React.memo(({
   const patient = selectedPatient;
   if (!patient) return null;
 
+  // 使用useCallback缓存事件处理函数
+  const handleGenerateCard = useCallback(() => {
+    generateTreatmentCard(patient);
+  }, [patient]);
+
+  const handlePrint = useCallback(() => {
+    printPatientRecord(patient);
+  }, [patient]);
+
+  const handleDeleteClick = useCallback(() => {
+    setShowDeleteConfirm(true);
+  }, [setShowDeleteConfirm]);
+
+  const handleQuickEntry = useCallback(() => {
+    setShowQuickEntry(true);
+  }, [setShowQuickEntry]);
+
+  const handleGenerateLog = useCallback(() => {
+    generateTodayLog(patient);
+  }, [generateTodayLog, patient]);
+
+  const handleToggleTreatment = useCallback((itemId) => {
+    toggleTreatmentItem(patient.id, itemId);
+  }, [toggleTreatmentItem, patient.id]);
+
+  const handleCompleteTreatment = useCallback(() => {
+    const newLog = {
+      date: '2026-01-11',
+      items: patient.treatmentPlan.items.filter(i => i.completed).map(i => i.name),
+      highlight: patient.treatmentPlan.highlights?.[0] || '常规训练',
+      notes: '治疗顺利完成',
+      therapist: '吴大勇'
+    };
+    updatePatient(patient.id, {
+      todayTreated: true,
+      treatmentLogs: [newLog, ...(patient.treatmentLogs || [])]
+    });
+  }, [patient, updatePatient]);
+
   return (
     <div className="min-h-screen flex justify-center pt-6 pb-6 px-4">
       <div className="main-glass-container w-full max-w-md relative overflow-hidden flex flex-col p-6">
@@ -38,7 +78,7 @@ const PatientDetailPage = React.memo(({
           <div className="flex gap-1">
             {/* 生成卡片按钮 */}
             <button
-              onClick={() => generateTreatmentCard(patient)}
+              onClick={handleGenerateCard}
               className="p-2 hover:bg-blue-100 rounded-xl transition-all"
               title="生成治疗卡片"
             >
@@ -46,7 +86,7 @@ const PatientDetailPage = React.memo(({
             </button>
             {/* 打印按钮 */}
             <button
-              onClick={() => printPatientRecord(patient)}
+              onClick={handlePrint}
               className="p-2 hover:bg-slate-100 rounded-xl transition-all"
               title="打印患者档案"
             >
@@ -80,7 +120,7 @@ const PatientDetailPage = React.memo(({
             {/* 删除按钮 - 仅治疗师可见 */}
             {userRole === 'therapist' && (
               <button
-                onClick={() => setShowDeleteConfirm(true)}
+                onClick={handleDeleteClick}
                 className="p-2 hover:bg-rose-100 rounded-xl transition-all"
                 title="删除患者"
               >
@@ -242,7 +282,7 @@ const PatientDetailPage = React.memo(({
                 {/* 治疗师视角显示生成日志按钮 */}
                 {userRole === 'therapist' && (
                   <button
-                    onClick={() => generateTodayLog(patient)}
+                    onClick={handleGenerateLog}
                     className="btn-particle py-1.5 px-3 rounded-xl text-xs"
                   >
                     <div className="points_wrapper">
@@ -262,7 +302,7 @@ const PatientDetailPage = React.memo(({
                   {patient.treatmentPlan.items.map(item => (
                     <div
                       key={item.id}
-                      onClick={() => toggleTreatmentItem(patient.id, item.id)}
+                      onClick={() => handleToggleTreatment(item.id)}
                       className={`flex items-center gap-3 p-3 rounded-xl border transition cursor-pointer ${
                         item.completed
                           ? 'bg-emerald-50 border-emerald-200'
@@ -293,7 +333,7 @@ const PatientDetailPage = React.memo(({
                   <p className="text-sm">暂无治疗安排</p>
                   {userRole === 'therapist' && (
                     <button
-                      onClick={() => setShowQuickEntry(true)}
+                      onClick={handleQuickEntry}
                       className="mt-3 btn-particle btn-particle-cyan px-4 py-2 rounded-full text-sm"
                     >
                       <div className="points_wrapper">
@@ -310,19 +350,7 @@ const PatientDetailPage = React.memo(({
               {/* 完成治疗按钮 */}
               {userRole === 'therapist' && patient.treatmentPlan?.items?.length > 0 && !patient.todayTreated && (
                 <button
-                  onClick={() => {
-                    const newLog = {
-                      date: '2026-01-11',
-                      items: patient.treatmentPlan.items.filter(i => i.completed).map(i => i.name),
-                      highlight: patient.treatmentPlan.highlights?.[0] || '常规训练',
-                      notes: '治疗顺利完成',
-                      therapist: '吴大勇'
-                    };
-                    updatePatient(patient.id, {
-                      todayTreated: true,
-                      treatmentLogs: [newLog, ...(patient.treatmentLogs || [])]
-                    });
-                  }}
+                  onClick={handleCompleteTreatment}
                   className="w-full mt-4 btn-particle btn-particle-emerald py-3 rounded-xl"
                 >
                   <div className="points_wrapper">
@@ -501,5 +529,67 @@ const TabButton = ({ children, active, onClick }) => (
 
 PatientDetailPage.displayName = 'PatientDetailPage';
 TabButton.displayName = 'TabButton';
+
+PatientDetailPage.propTypes = {
+  selectedPatient: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    name: PropTypes.string,
+    avatar: PropTypes.string,
+    bedNo: PropTypes.string,
+    diagnosis: PropTypes.string,
+    status: PropTypes.string,
+    admissionDate: PropTypes.string,
+    department: PropTypes.string,
+    age: PropTypes.string,
+    gender: PropTypes.string,
+    guardian: PropTypes.string,
+    contact: PropTypes.string,
+    address: PropTypes.string,
+    medicalHistory: PropTypes.string,
+    allergies: PropTypes.string,
+    safetyAlerts: PropTypes.arrayOf(PropTypes.string),
+    gasGoals: PropTypes.arrayOf(PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      goal: PropTypes.string,
+      baseline: PropTypes.string,
+      target: PropTypes.string,
+      current: PropTypes.string,
+      progress: PropTypes.number,
+    })),
+    treatmentPlan: PropTypes.arrayOf(PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      name: PropTypes.string,
+      frequency: PropTypes.string,
+      duration: PropTypes.string,
+      therapist: PropTypes.string,
+      notes: PropTypes.string,
+      completed: PropTypes.bool,
+    })),
+    executionLog: PropTypes.arrayOf(PropTypes.shape({
+      date: PropTypes.string,
+      items: PropTypes.arrayOf(PropTypes.string),
+      notes: PropTypes.string,
+    })),
+  }),
+  userRole: PropTypes.oneOf(['therapist', 'doctor']).isRequired,
+  detailTab: PropTypes.string.isRequired,
+  setDetailTab: PropTypes.func.isRequired,
+  isEditingDetail: PropTypes.bool.isRequired,
+  editedPatient: PropTypes.object,
+  setEditedPatient: PropTypes.func.isRequired,
+  goBack: PropTypes.func.isRequired,
+  savePatientEdit: PropTypes.func.isRequired,
+  toggleEditMode: PropTypes.func.isRequired,
+  setShowDeleteConfirm: PropTypes.func.isRequired,
+  toggleTreatmentItem: PropTypes.func.isRequired,
+  generateTodayLog: PropTypes.func.isRequired,
+  setShowQuickEntry: PropTypes.func.isRequired,
+  updatePatient: PropTypes.func.isRequired,
+};
+
+PatientDetailPage.defaultProps = {
+  selectedPatient: null,
+  editedPatient: null,
+};
 
 export default PatientDetailPage;

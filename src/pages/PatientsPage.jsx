@@ -1,5 +1,6 @@
-import React from 'react';
-import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
+import React, { useMemo, useCallback } from 'react';
+import PropTypes from 'prop-types';
+import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Clock } from '../components/icons';
 
 const PatientsPage = React.memo(({
   selectedDepartment,
@@ -7,9 +8,26 @@ const PatientsPage = React.memo(({
   goBack,
   navigateTo
 }) => {
-  const deptPatients = getDepartmentPatients(selectedDepartment.id);
-  const activePatients = deptPatients.filter(p => p.status === 'active');
-  const completedPatients = deptPatients.filter(p => p.status === 'completed');
+  // 使用useMemo缓存过滤结果
+  const deptPatients = useMemo(() =>
+    getDepartmentPatients(selectedDepartment.id),
+    [getDepartmentPatients, selectedDepartment.id]
+  );
+
+  const activePatients = useMemo(() =>
+    deptPatients.filter(p => p.status === 'active'),
+    [deptPatients]
+  );
+
+  const completedPatients = useMemo(() =>
+    deptPatients.filter(p => p.status === 'completed'),
+    [deptPatients]
+  );
+
+  // 使用useCallback缓存事件处理函数
+  const handlePatientClick = useCallback((patient) => {
+    navigateTo('patientDetail', patient);
+  }, [navigateTo]);
 
   return (
     <div className="min-h-screen flex justify-center pt-6 pb-6 px-4">
@@ -42,7 +60,7 @@ const PatientsPage = React.memo(({
             </h3>
             <div className="space-y-3">
               {activePatients.map(patient => (
-                <PatientCard key={patient.id} patient={patient} onClick={() => navigateTo('patientDetail', patient)} />
+                <PatientCard key={patient.id} patient={patient} onClick={handlePatientClick} />
               ))}
             </div>
           </div>
@@ -56,7 +74,7 @@ const PatientsPage = React.memo(({
               </h3>
               <div className="space-y-3 opacity-70">
                 {completedPatients.map(patient => (
-                  <PatientCard key={patient.id} patient={patient} onClick={() => navigateTo('patientDetail', patient)} />
+                  <PatientCard key={patient.id} patient={patient} onClick={handlePatientClick} />
                 ))}
               </div>
             </div>
@@ -67,50 +85,68 @@ const PatientsPage = React.memo(({
   );
 });
 
-const PatientCard = React.memo(({ patient, onClick }) => (
-  <button
-    onClick={onClick}
-    className="w-full bg-white/60 backdrop-blur-xl rounded-2xl p-4 text-left border border-white/50 shadow-sm hover:bg-white/80 transition-all active:scale-[0.98]"
-  >
-    <div className="flex items-start gap-3">
-      <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center text-2xl border-2 border-white shadow-sm flex-shrink-0">
-        {patient.avatar}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <h4 className="font-bold text-slate-800">{patient.name}</h4>
-          <span className="text-xs text-slate-400">{patient.age} · {patient.gender}</span>
-          <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">{patient.bedNo}</span>
-        </div>
-        <p className="text-sm text-blue-600 font-medium mb-2 truncate">{patient.diagnosis}</p>
+const PatientCard = React.memo(({ patient, onClick }) => {
+  // 使用useCallback缓存点击处理函数
+  const handleClick = useCallback(() => {
+    onClick(patient);
+  }, [onClick, patient]);
 
-        {/* 标签区 */}
-        <div className="flex flex-wrap gap-1.5">
-          {patient.safetyAlerts?.map((alert, i) => (
-            <span key={i} className="bg-rose-100 text-rose-600 text-[10px] px-2 py-0.5 rounded-full flex items-center font-medium">
-              <AlertTriangle size={10} className="mr-0.5" />
-              {alert}
-            </span>
-          ))}
-          {patient.todayTreated ? (
-            <span className="bg-emerald-100 text-emerald-600 text-[10px] px-2 py-0.5 rounded-full flex items-center font-medium">
-              <CheckCircle2 size={10} className="mr-0.5" />
-              今日已治疗
-            </span>
-          ) : patient.status === 'active' && (
-            <span className="bg-amber-100 text-amber-600 text-[10px] px-2 py-0.5 rounded-full flex items-center font-medium">
-              <Clock size={10} className="mr-0.5" />
-              待治疗
-            </span>
-          )}
+  return (
+    <button
+      onClick={handleClick}
+      className="w-full bg-white/60 backdrop-blur-xl rounded-2xl p-4 text-left border border-white/50 shadow-sm hover:bg-white/80 transition-all active:scale-[0.98]"
+    >
+      <div className="flex items-start gap-3">
+        <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center text-2xl border-2 border-white shadow-sm flex-shrink-0">
+          {patient.avatar}
         </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h4 className="font-bold text-slate-800">{patient.name}</h4>
+            <span className="text-xs text-slate-400">{patient.age} · {patient.gender}</span>
+            <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">{patient.bedNo}</span>
+          </div>
+          <p className="text-sm text-blue-600 font-medium mb-2 truncate">{patient.diagnosis}</p>
+
+          {/* 标签区 */}
+          <div className="flex flex-wrap gap-1.5">
+            {patient.safetyAlerts?.map((alert, i) => (
+              <span key={i} className="bg-rose-100 text-rose-600 text-[10px] px-2 py-0.5 rounded-full flex items-center font-medium">
+                <AlertTriangle size={10} className="mr-0.5" />
+                {alert}
+              </span>
+            ))}
+            {patient.todayTreated ? (
+              <span className="bg-emerald-100 text-emerald-600 text-[10px] px-2 py-0.5 rounded-full flex items-center font-medium">
+                <CheckCircle2 size={10} className="mr-0.5" />
+                今日已治疗
+              </span>
+            ) : patient.status === 'active' && (
+              <span className="bg-amber-100 text-amber-600 text-[10px] px-2 py-0.5 rounded-full flex items-center font-medium">
+                <Clock size={10} className="mr-0.5" />
+                待治疗
+              </span>
+            )}
+          </div>
+        </div>
+        <ChevronRight size={18} className="text-slate-300 mt-2 flex-shrink-0" />
       </div>
-      <ChevronRight size={18} className="text-slate-300 mt-2 flex-shrink-0" />
-    </div>
-  </button>
-));
+    </button>
+  );
+});
 
 PatientsPage.displayName = 'PatientsPage';
 PatientCard.displayName = 'PatientCard';
+
+PatientsPage.propTypes = {
+  selectedDepartment: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    name: PropTypes.string.isRequired,
+    icon: PropTypes.string.isRequired,
+  }).isRequired,
+  getDepartmentPatients: PropTypes.func.isRequired,
+  goBack: PropTypes.func.isRequired,
+  navigateTo: PropTypes.func.isRequired,
+};
 
 export default PatientsPage;

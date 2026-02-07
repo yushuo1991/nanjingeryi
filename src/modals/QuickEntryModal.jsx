@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ClipboardList, X } from 'lucide-react';
+import PropTypes from 'prop-types';
+import { ClipboardList, X } from '../components/icons';
 
 /**
  * QuickEntryModal - Modal for quick treatment entry
@@ -106,6 +107,20 @@ const QuickEntryModal = ({ isOpen, onClose, treatmentTemplates }) => {
       </div>
     </div>
   );
+};
+
+QuickEntryModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  treatmentTemplates: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    category: PropTypes.string,
+    icon: PropTypes.string,
+    items: PropTypes.arrayOf(PropTypes.shape({
+      name: PropTypes.string,
+      icon: PropTypes.string,
+    })),
+  })).isRequired,
 };
 
 export default QuickEntryModal;

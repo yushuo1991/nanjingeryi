@@ -1,5 +1,6 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import PropTypes from 'prop-types';
+import { X } from '../icons';
 
 /**
  * ModalBase - Reusable modal/dialog component
@@ -77,5 +78,24 @@ const ModalBase = React.memo(({
 });
 
 ModalBase.displayName = 'ModalBase';
+
+ModalBase.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  title: PropTypes.string,
+  icon: PropTypes.node,
+  children: PropTypes.node.isRequired,
+  className: PropTypes.string,
+  centered: PropTypes.bool,
+  showCloseButton: PropTypes.bool,
+};
+
+ModalBase.defaultProps = {
+  title: undefined,
+  icon: undefined,
+  className: '',
+  centered: false,
+  showCloseButton: true,
+};
 
 export default ModalBase;

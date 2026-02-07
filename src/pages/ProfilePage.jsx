@@ -1,5 +1,6 @@
 import React from 'react';
-import { ChevronRight, Edit3, Eye, BookOpen, Bell, Settings, Info } from 'lucide-react';
+import PropTypes from 'prop-types';
+import { ChevronRight, Edit3, Eye, BookOpen, Bell, Settings, Info } from '../components/icons';
 import GlassCard from '../components/ui/GlassCard';
 
 const ProfilePage = React.memo(({ userRole, setUserRole, setShowTemplates }) => (
@@ -104,5 +105,11 @@ const MenuItem = ({ icon, label, onClick }) => (
 );
 
 ProfilePage.displayName = 'ProfilePage';
+
+ProfilePage.propTypes = {
+  userRole: PropTypes.oneOf(['therapist', 'doctor']).isRequired,
+  setUserRole: PropTypes.func.isRequired,
+  setShowTemplates: PropTypes.func.isRequired,
+};
 
 export default ProfilePage;

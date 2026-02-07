@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
-import { ChevronRight, Zap, Edit3, Check, Plus, Trash2 } from 'lucide-react';
+import React, { useMemo, useCallback } from 'react';
+import PropTypes from 'prop-types';
+import { ChevronRight, Zap, Edit3, Check, Plus, Trash2 } from '../components/icons';
 import ParticleButton from '../components/ui/ParticleButton';
 
 const HomePage = React.memo(({
@@ -28,6 +29,26 @@ const HomePage = React.memo(({
 
   const recentPatients = useMemo(() =>
     activePatients.slice(-3).reverse(), [activePatients]);
+
+  // 使用useCallback缓存事件处理函数
+  const handleAIModalOpen = useCallback(() => {
+    setShowAIModal(true);
+  }, [setShowAIModal]);
+
+  const handleToggleEditDepartments = useCallback(() => {
+    setIsEditingDepartments(!isEditingDepartments);
+  }, [isEditingDepartments, setIsEditingDepartments]);
+
+  const handleAddDepartment = useCallback(() => {
+    setShowAddDepartment(true);
+  }, [setShowAddDepartment]);
+
+  const handleDeleteDepartment = useCallback((deptId, deptName) => {
+    if (confirm(`确定要删除"${deptName}"吗？`)) {
+      setDepartments(departments.filter(d => d.id !== deptId));
+      showToast('科室已删除');
+    }
+  }, [departments, setDepartments, showToast]);
 
   // 3D嫩芽图标组件
   const SproutIcon = () => (
@@ -68,7 +89,7 @@ const HomePage = React.memo(({
       {userRole === 'therapist' && (
         <div className="flex gap-4 mb-8">
           <ParticleButton
-            onClick={() => setShowAIModal(true)}
+            onClick={handleAIModalOpen}
             variant="cyan"
             className="flex-1 h-12 rounded-xl"
           >
@@ -124,7 +145,7 @@ const HomePage = React.memo(({
             <h3 className="text-sm font-bold text-slate-700">科室患儿分布</h3>
             {userRole === 'therapist' && (
               <button
-                onClick={() => setIsEditingDepartments(!isEditingDepartments)}
+                onClick={handleToggleEditDepartments}
                 className="text-xs px-3 py-1.5 rounded-lg bg-white/60 border border-slate-200 text-slate-600 hover:bg-white/80 transition-all flex items-center gap-1"
               >
                 {isEditingDepartments ? (
@@ -178,12 +199,7 @@ const HomePage = React.memo(({
                   </button>
                   {isEditingDepartments && (
                     <button
-                      onClick={() => {
-                        if (confirm(`确定要删除"${dept.name}"吗？`)) {
-                          setDepartments(departments.filter(d => d.id !== dept.id));
-                          showToast('科室已删除');
-                        }
-                      }}
+                      onClick={() => handleDeleteDepartment(dept.id, dept.name)}
                       className="absolute top-2 right-2 w-8 h-8 rounded-lg bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-all shadow-sm"
                     >
                       <Trash2 size={16} />
@@ -195,7 +211,7 @@ const HomePage = React.memo(({
 
             {isEditingDepartments && (
               <button
-                onClick={() => setShowAddDepartment(true)}
+                onClick={handleAddDepartment}
                 className="w-full bg-white/60 backdrop-blur-xl rounded-2xl p-4 flex items-center justify-center gap-2 border-2 border-dashed border-slate-300 text-slate-600 hover:bg-white/80 hover:border-slate-400 transition-all"
               >
                 <Plus size={20} />
@@ -211,5 +227,33 @@ const HomePage = React.memo(({
 });
 
 HomePage.displayName = 'HomePage';
+
+HomePage.propTypes = {
+  userRole: PropTypes.oneOf(['therapist', 'doctor']).isRequired,
+  patients: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    name: PropTypes.string,
+    avatar: PropTypes.string,
+    bedNo: PropTypes.string,
+    diagnosis: PropTypes.string,
+    status: PropTypes.string,
+    department: PropTypes.string,
+    todayTreated: PropTypes.bool,
+  })).isRequired,
+  departments: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    name: PropTypes.string,
+    icon: PropTypes.string,
+  })).isRequired,
+  getDepartmentPatients: PropTypes.func.isRequired,
+  navigateTo: PropTypes.func.isRequired,
+  setShowAIModal: PropTypes.func.isRequired,
+  initBatchGenerate: PropTypes.func.isRequired,
+  isEditingDepartments: PropTypes.bool.isRequired,
+  setIsEditingDepartments: PropTypes.func.isRequired,
+  setDepartments: PropTypes.func.isRequired,
+  showToast: PropTypes.func.isRequired,
+  setShowAddDepartment: PropTypes.func.isRequired,
+};
 
 export default HomePage;

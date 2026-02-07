@@ -1,5 +1,6 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import PropTypes from 'prop-types';
+import { X } from '../components/icons';
 
 /**
  * DepartmentModal - Modal for adding a new department
@@ -122,6 +123,23 @@ const DepartmentModal = ({
       </div>
     </div>
   );
+};
+
+DepartmentModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  newDepartment: PropTypes.shape({
+    name: PropTypes.string,
+    icon: PropTypes.string,
+  }).isRequired,
+  setNewDepartment: PropTypes.func.isRequired,
+  allDepartments: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    name: PropTypes.string,
+    icon: PropTypes.string,
+  })).isRequired,
+  onSave: PropTypes.func.isRequired,
+  showToast: PropTypes.func.isRequired,
 };
 
 export default DepartmentModal;

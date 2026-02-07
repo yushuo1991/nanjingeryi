@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import {
   Sparkles, Upload, Camera, Loader2, CheckCircle2, FileText,
   User, AlertCircle, AlertTriangle, ClipboardList, X, Trash2, Check
-} from 'lucide-react';
+} from '../components/icons';
 import ModalBase from '../components/ui/ModalBase';
 import ParticleButton from '../components/ui/ParticleButton';
 
@@ -420,6 +421,42 @@ const AIIntakeModal = ({
       )}
     </ModalBase>
   );
+};
+
+AIIntakeModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  aiStep: PropTypes.number.isRequired,
+  setAiStep: PropTypes.func.isRequired,
+  aiResult: PropTypes.object,
+  setAiResult: PropTypes.func.isRequired,
+  uploadedImage: PropTypes.string,
+  setUploadedImage: PropTypes.func.isRequired,
+  ocrText: PropTypes.string.isRequired,
+  setOcrText: PropTypes.func.isRequired,
+  ocrProgress: PropTypes.number.isRequired,
+  setOcrProgress: PropTypes.func.isRequired,
+  handleImageUpload: PropTypes.func.isRequired,
+  updateFormField: PropTypes.func.isRequired,
+  addSafetyAlert: PropTypes.func.isRequired,
+  removeSafetyAlert: PropTypes.func.isRequired,
+  addTreatmentItem: PropTypes.func.isRequired,
+  updateTreatmentItem: PropTypes.func.isRequired,
+  removeTreatmentItem: PropTypes.func.isRequired,
+  handleGeneratePlan: PropTypes.func.isRequired,
+  confirmAdmission: PropTypes.func.isRequired,
+  isOcrProcessing: PropTypes.bool.isRequired,
+  isSavingPatient: PropTypes.bool.isRequired,
+  departments: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    name: PropTypes.string,
+    icon: PropTypes.string,
+  })).isRequired,
+};
+
+AIIntakeModal.defaultProps = {
+  aiResult: null,
+  uploadedImage: null,
 };
 
 export default AIIntakeModal;

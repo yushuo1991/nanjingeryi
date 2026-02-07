@@ -1,5 +1,5 @@
-// Version: 2.0.2 - Performance optimization
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+// Version: 2.0.3 - Code splitting optimization
+import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import {
   Home, Calendar, MessageSquare, User, Plus, ChevronRight, ChevronLeft,
   AlertTriangle, Shield, Baby, Stethoscope, Brain, Bone, Heart,
@@ -10,7 +10,7 @@ import {
   Users, Building2, Bed, ClipboardList, Timer, Coffee, Utensils,
   Moon, Sun, Award, Flag, AlertCircle, Info, ThumbsUp, MessageCircle,
   Share2, Link, ExternalLink, Loader2, Printer, Download
-} from 'lucide-react';
+} from './components/icons';
 
 import { api } from './lib/api';
 import { printPatientRecord, printBatchRecords, generateTreatmentCard } from './lib/print';
@@ -19,19 +19,20 @@ import { printPatientRecord, printBatchRecords, generateTreatmentCard } from './
 import GlassCard from './components/ui/GlassCard';
 import ModalBase from './components/ui/ModalBase';
 import ParticleButton from './components/ui/ParticleButton';
+import LoadingSpinner from './components/ui/LoadingSpinner';
 
-// Modal Components
-import AIIntakeModal from './modals/AIIntakeModal';
-import BatchReportModal from './modals/BatchReportModal';
-import TemplatesModal from './modals/TemplatesModal';
-import QuickEntryModal from './modals/QuickEntryModal';
-import DepartmentModal from './modals/DepartmentModal';
+// Lazy load Modal Components
+const AIIntakeModal = lazy(() => import('./modals/AIIntakeModal'));
+const BatchReportModal = lazy(() => import('./modals/BatchReportModal'));
+const TemplatesModal = lazy(() => import('./modals/TemplatesModal'));
+const QuickEntryModal = lazy(() => import('./modals/QuickEntryModal'));
+const DepartmentModal = lazy(() => import('./modals/DepartmentModal'));
 
-// Page Components
-import HomePage from './pages/HomePage';
-import PatientsPage from './pages/PatientsPage';
-import PatientDetailPage from './pages/PatientDetailPage';
-import ProfilePage from './pages/ProfilePage';
+// Lazy load Page Components
+const HomePage = lazy(() => import('./pages/HomePage'));
+const PatientsPage = lazy(() => import('./pages/PatientsPage'));
+const PatientDetailPage = lazy(() => import('./pages/PatientDetailPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 
 // ==================== 设计系统配色 - 有机科技主题 ====================
 const colors = {
@@ -1470,17 +1471,66 @@ export default function RehabCareLink() {
   // ==================== 主渲染 ====================
   return (
     <div className="max-w-md mx-auto min-h-screen relative gradient-bg-soft">
-      {/* 页面路由 */}
-      {currentPage === 'home' && <HomePage />}
-      {currentPage === 'patients' && <PatientsPage />}
-      {currentPage === 'patientDetail' && <PatientDetailPage />}
-      {currentPage === 'profile' && <ProfilePage />}
+      {/* 页面路由 - Wrapped with Suspense for code splitting */}
+      <Suspense fallback={<LoadingSpinner />}>
+        {currentPage === 'home' && (
+          <HomePage
+            userRole={userRole}
+            patients={patients}
+            departments={departments}
+            getDepartmentPatients={getDepartmentPatients}
+            navigateTo={navigateTo}
+            setShowAIModal={setShowAIModal}
+            initBatchGenerate={initBatchGenerate}
+            isEditingDepartments={isEditingDepartments}
+            setIsEditingDepartments={setIsEditingDepartments}
+            setDepartments={setDepartments}
+            showToast={showToast}
+            setShowAddDepartment={setShowAddDepartment}
+          />
+        )}
+        {currentPage === 'patients' && (
+          <PatientsPage
+            selectedDepartment={selectedDepartment}
+            getDepartmentPatients={getDepartmentPatients}
+            goBack={goBack}
+            navigateTo={navigateTo}
+          />
+        )}
+        {currentPage === 'patientDetail' && (
+          <PatientDetailPage
+            selectedPatient={selectedPatient}
+            userRole={userRole}
+            detailTab={detailTab}
+            setDetailTab={setDetailTab}
+            isEditingDetail={isEditingDetail}
+            editedPatient={editedPatient}
+            setEditedPatient={setEditedPatient}
+            goBack={goBack}
+            savePatientEdit={savePatientEdit}
+            toggleEditMode={toggleEditMode}
+            setShowDeleteConfirm={setShowDeleteConfirm}
+            toggleTreatmentItem={toggleTreatmentItem}
+            generateTodayLog={generateTodayLog}
+            setShowQuickEntry={setShowQuickEntry}
+            updatePatient={updatePatient}
+          />
+        )}
+        {currentPage === 'profile' && (
+          <ProfilePage
+            userRole={userRole}
+            setUserRole={setUserRole}
+            setShowTemplates={setShowTemplates}
+          />
+        )}
+      </Suspense>
 
       {/* 底部导航 */}
       <BottomNav />
 
-      {/* 弹窗 */}
-      <AIIntakeModal
+      {/* 弹窗 - Wrapped with Suspense for code splitting */}
+      <Suspense fallback={null}>
+        <AIIntakeModal
         isOpen={showAIModal}
         onClose={() => setShowAIModal(false)}
         aiStep={aiStep}
@@ -1507,30 +1557,30 @@ export default function RehabCareLink() {
         departments={departments}
       />
 
-      <BatchReportModal
-        isOpen={showBatchGenerate}
-        onClose={() => setShowBatchGenerate(false)}
-        batchPatients={batchPatients}
-        currentBatchIndex={currentBatchIndex}
-        setCurrentBatchIndex={setCurrentBatchIndex}
-        confirmBatchItem={confirmBatchItem}
-        printBatchRecords={printBatchRecords}
-      />
+        <BatchReportModal
+          isOpen={showBatchGenerate}
+          onClose={() => setShowBatchGenerate(false)}
+          batchPatients={batchPatients}
+          currentBatchIndex={currentBatchIndex}
+          setCurrentBatchIndex={setCurrentBatchIndex}
+          confirmBatchItem={confirmBatchItem}
+          printBatchRecords={printBatchRecords}
+        />
 
-      <TemplatesModal
-        isOpen={showTemplates}
-        onClose={() => setShowTemplates(false)}
-        treatmentTemplates={treatmentTemplates}
-      />
+        <TemplatesModal
+          isOpen={showTemplates}
+          onClose={() => setShowTemplates(false)}
+          treatmentTemplates={treatmentTemplates}
+        />
 
-      <QuickEntryModal
-        isOpen={showQuickEntry}
-        onClose={() => setShowQuickEntry(false)}
-        treatmentTemplates={treatmentTemplates}
-      />
+        <QuickEntryModal
+          isOpen={showQuickEntry}
+          onClose={() => setShowQuickEntry(false)}
+          treatmentTemplates={treatmentTemplates}
+        />
 
-      {/* 添加科室弹窗 */}
-      <DepartmentModal
+        {/* 添加科室弹窗 */}
+        <DepartmentModal
         isOpen={showAddDepartment}
         onClose={() => setShowAddDepartment(false)}
         newDepartment={newDepartment}
@@ -1563,6 +1613,7 @@ export default function RehabCareLink() {
         }}
         showToast={showToast}
       />
+      </Suspense>
 
       {/* 全部患者弹窗 */}
       {showAllPatients && (

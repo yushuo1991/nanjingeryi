@@ -1,5 +1,6 @@
 import React from 'react';
-import { BookOpen, X } from 'lucide-react';
+import PropTypes from 'prop-types';
+import { BookOpen, X } from '../components/icons';
 
 /**
  * TemplatesModal - Modal for displaying treatment templates library
@@ -52,6 +53,21 @@ const TemplatesModal = ({ isOpen, onClose, treatmentTemplates }) => {
       </div>
     </div>
   );
+};
+
+TemplatesModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  treatmentTemplates: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    category: PropTypes.string,
+    icon: PropTypes.string,
+    items: PropTypes.arrayOf(PropTypes.shape({
+      name: PropTypes.string,
+      icon: PropTypes.string,
+      duration: PropTypes.string,
+    })),
+  })).isRequired,
 };
 
 export default TemplatesModal;
