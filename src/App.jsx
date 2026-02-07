@@ -1,6 +1,10 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import RehabCareLink from './RehabCareLink'
 import { AuthProvider, PatientProvider, UIProvider } from './contexts'
+import LoadingSpinner from './components/ui/LoadingSpinner'
+
+// Lazy load main component
+const RehabCareLink = lazy(() => import('./RehabCareLink'))
 
 // 404 Not Found Page Component
 function NotFoundPage() {
@@ -26,17 +30,19 @@ function App() {
       <AuthProvider defaultRole="therapist">
         <UIProvider defaultPage="home">
           <PatientProvider onError={(error) => console.error('Patient error:', error)}>
-            <Routes>
-              {/* Main application routes */}
-              <Route path="/" element={<RehabCareLink />} />
-              <Route path="/patients" element={<RehabCareLink />} />
-              <Route path="/patients/:id" element={<RehabCareLink />} />
-              <Route path="/profile" element={<RehabCareLink />} />
+            <Suspense fallback={<LoadingSpinner />}>
+              <Routes>
+                {/* Main application routes */}
+                <Route path="/" element={<RehabCareLink />} />
+                <Route path="/patients" element={<RehabCareLink />} />
+                <Route path="/patients/:id" element={<RehabCareLink />} />
+                <Route path="/profile" element={<RehabCareLink />} />
 
-              {/* 404 Not Found */}
-              <Route path="/404" element={<NotFoundPage />} />
-              <Route path="*" element={<Navigate to="/404" replace />} />
-            </Routes>
+                {/* 404 Not Found */}
+                <Route path="/404" element={<NotFoundPage />} />
+                <Route path="*" element={<Navigate to="/404" replace />} />
+              </Routes>
+            </Suspense>
           </PatientProvider>
         </UIProvider>
       </AuthProvider>

@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 
 /**
  * ParticleButton - Animated button with particle effects
@@ -53,5 +54,22 @@ const ParticleButton = React.memo(({
 });
 
 ParticleButton.displayName = 'ParticleButton';
+
+ParticleButton.propTypes = {
+  children: PropTypes.node.isRequired,
+  onClick: PropTypes.func,
+  className: PropTypes.string,
+  variant: PropTypes.oneOf(['default', 'cyan', 'emerald', 'red']),
+  disabled: PropTypes.bool,
+  type: PropTypes.string,
+};
+
+ParticleButton.defaultProps = {
+  onClick: undefined,
+  className: '',
+  variant: 'default',
+  disabled: false,
+  type: 'button',
+};
 
 export default ParticleButton;

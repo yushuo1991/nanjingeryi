@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 
 /**
  * GlassCard - Reusable glass morphism card component
@@ -32,5 +33,18 @@ const GlassCard = React.memo(({
 });
 
 GlassCard.displayName = 'GlassCard';
+
+GlassCard.propTypes = {
+  children: PropTypes.node.isRequired,
+  className: PropTypes.string,
+  onClick: PropTypes.func,
+  style: PropTypes.object,
+};
+
+GlassCard.defaultProps = {
+  className: '',
+  onClick: undefined,
+  style: undefined,
+};
 
 export default GlassCard;
