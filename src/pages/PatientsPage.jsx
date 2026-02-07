@@ -8,6 +8,11 @@ const PatientsPage = React.memo(({
   goBack,
   navigateTo
 }) => {
+  // 安全检查：如果没有选中科室，返回null
+  if (!selectedDepartment) {
+    return null;
+  }
+
   // 使用useMemo缓存过滤结果
   const deptPatients = useMemo(() =>
     getDepartmentPatients(selectedDepartment.id),
@@ -147,6 +152,10 @@ PatientsPage.propTypes = {
   getDepartmentPatients: PropTypes.func.isRequired,
   goBack: PropTypes.func.isRequired,
   navigateTo: PropTypes.func.isRequired,
+};
+
+PatientsPage.defaultProps = {
+  selectedDepartment: null,
 };
 
 export default PatientsPage;

@@ -256,4 +256,9 @@ HomePage.propTypes = {
   setShowAddDepartment: PropTypes.func.isRequired,
 };
 
+HomePage.defaultProps = {
+  patients: [],
+  departments: [],
+};
+
 export default HomePage;

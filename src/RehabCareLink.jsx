@@ -352,7 +352,7 @@ export default function RehabCareLink() {
     return null;
   });
   const [selectedPatient, setSelectedPatient] = useState(null);
-  const [patients, setPatients] = useState([]);
+  const [patients, setPatients] = useState(initialPatients); // 使用初始数据而不是空数组
   // 如果URL有readonly参数，设置为医生模式
   const [userRole, setUserRole] = useState(urlParams.readonly ? 'doctor' : 'therapist');
   // 分享模式：只能查看特定科室
