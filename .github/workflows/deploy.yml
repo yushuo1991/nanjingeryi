@@ -61,12 +61,16 @@ jobs:
           echo "${{ secrets.SERVER_ENV }}" > .env
           chmod 600 .env
 
-          # 修复损坏的dpkg状态并安装Nginx（非交互模式，自动接受配置文件）
+          # 彻底修复nginx：清除损坏的安装，重新安装
           export DEBIAN_FRONTEND=noninteractive
-          dpkg --configure -a --force-confdef --force-confold || true
+          # 停止nginx（如果在运行）
+          systemctl stop nginx 2>/dev/null || true
+          # 强制清除所有nginx包（解决conffile冲突）
+          dpkg --purge --force-all nginx nginx-common nginx-core libnginx-mod-http-xslt-filter libnginx-mod-http-geoip2 libnginx-mod-stream-geoip2 libnginx-mod-mail libnginx-mod-http-image-filter libnginx-mod-stream python3-certbot-nginx 2>/dev/null || true
+          apt-get autoremove -y 2>/dev/null || true
+          # 重新安装
           apt-get update -qq
-          apt-get install -y -f -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"
-          apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" nginx
+          apt-get install -y nginx
 
           # 创建mime.types
           cat > /etc/nginx/mime.types << 'EOF'
