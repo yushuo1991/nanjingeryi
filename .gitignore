@@ -30,6 +30,7 @@ Thumbs.db
 # 临时文件
 *.tmp
 *.temp
+temp-icons/
 
 # 上传的文件（如果包含用户数据）
 uploads/

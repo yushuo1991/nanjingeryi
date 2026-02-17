@@ -3,6 +3,20 @@
   "version": "1.0.0",
   "description": "Claude Code settings for RehabCareLink project",
 
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE=\"$CLAUDE_FILE_PATH\"; if [ -n \"$FILE\" ]; then case \"$FILE\" in *.jsx) npx esbuild --bundle=false --loader=jsx \"$FILE\" > /dev/null 2>&1 || echo \"Syntax error in $FILE\" ;; *.js) node --check \"$FILE\" 2>&1 || echo \"Syntax error in $FILE\" ;; esac; fi"
+          }
+        ]
+      }
+    ]
+  },
+
   "git": {
     "preCommitHooks": [
       {

@@ -18,7 +18,9 @@
       "Bash(do git push origin main)",
       "Bash(break)",
       "Bash(done)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(wc:*)",
+      "Bash(find \"C:\\\\Users\\\\yushu\\\\Desktop\\\\rehab-care-link\" -maxdepth 1 -type f -name \"*.md\" -exec wc -l {} +)"
     ]
   }
 }

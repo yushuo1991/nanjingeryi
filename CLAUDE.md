@@ -41,6 +41,12 @@ Use GitHub Actions workflows instead of direct SSH for all server operations:
 
 Access workflows at: https://github.com/yushuo1991/nanjingeryi/actions
 
+## Deployment Rules
+This project deploys via GitHub Actions CI/CD. Never attempt to fix production issues by modifying the database or server directly. Instead, create migration scripts, commit, and push to GitHub to trigger the CI/CD pipeline. See workflows at https://github.com/yushuo1991/nanjingeryi/actions
+
+## Change Scope
+Keep changes minimal and incremental. Never refactor broadly or restyle multiple components in one pass. If a task touches more than 3 files, pause and confirm the plan before proceeding. Avoid spawning many background tasks — limit to 2-3 concurrent sub-agents max.
+
 ## Architecture
 
 ### Frontend (React + Vite)
@@ -297,6 +303,8 @@ Check for caching issues:
 - [ ] Verify permission changes reflect immediately
 
 ## 网络弹性处理 (Network Resilience Handling)
+
+Git push and external API calls frequently fail due to network issues in this environment. On network failure, retry up to 3 times with a short delay. Do not treat a single network timeout as a blocking error — just retry quietly.
 
 ### Automatic Retry Strategy for Git Operations
 
