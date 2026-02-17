@@ -61,8 +61,10 @@ jobs:
           echo "${{ secrets.SERVER_ENV }}" > .env
           chmod 600 .env
 
-          # 安装Nginx
+          # 修复可能损坏的dpkg状态，然后安装Nginx
+          dpkg --configure -a || true
           apt-get update -qq
+          apt-get install -y -f
           apt-get install -y nginx
 
           # 创建mime.types
