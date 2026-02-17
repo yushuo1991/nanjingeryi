@@ -352,7 +352,7 @@ export default function RehabCareLink() {
     return null;
   });
   const [selectedPatient, setSelectedPatient] = useState(null);
-  const [patients, setPatients] = useState(initialPatients); // 使用初始数据而不是空数组
+  const [patients, setPatients] = useState([]); // 从后端加载，不使用硬编码数据
   // 如果URL有readonly参数，设置为医生模式
   const [userRole, setUserRole] = useState(urlParams.readonly ? 'doctor' : 'therapist');
   // 分享模式：只能查看特定科室
@@ -396,7 +396,7 @@ export default function RehabCareLink() {
   const [batchPatients, setBatchPatients] = useState([]);
   const [currentBatchIndex, setCurrentBatchIndex] = useState(0);
 
-  // 从后端加载患者数据（MySQL）
+  // 从后端加载患者数据
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -404,17 +404,19 @@ export default function RehabCareLink() {
         const res = await api('/api/patients');
         if (cancelled) return;
         const list = Array.isArray(res?.items) ? res.items : [];
-        if (list.length) setPatients(list);
+        setPatients(list);
       } catch (e) {
-        // 后端不可用时仍允许使用前端演示数据
-        console.warn(e);
+        console.error('加载患者数据失败:', e);
+        if (!cancelled) {
+          showToast('无法连接后端服务，请确认服务器已启动', 'error');
+        }
       }
     }
     load();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [showToast]);
 
   // 显示Toast提示
   const showToast = useCallback((message, type = 'success') => {

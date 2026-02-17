@@ -5,7 +5,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    open: true
+    open: true,
+    proxy: {
+      '/api': 'http://localhost:3201',
+      '/uploads': 'http://localhost:3201'
+    }
   },
   build: {
     // 设置构建目标为更兼容的浏览器版本
