@@ -396,6 +396,12 @@ export default function RehabCareLink() {
   const [batchPatients, setBatchPatients] = useState([]);
   const [currentBatchIndex, setCurrentBatchIndex] = useState(0);
 
+  // 显示Toast提示
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  }, []);
+
   // 从后端加载患者数据
   useEffect(() => {
     let cancelled = false;
@@ -417,12 +423,6 @@ export default function RehabCareLink() {
       cancelled = true;
     };
   }, [showToast]);
-
-  // 显示Toast提示
-  const showToast = useCallback((message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  }, []);
 
   // 生成分享链接
   const generateShareLink = (deptId) => {
