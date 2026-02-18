@@ -54,7 +54,7 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         password: ${{ secrets.SERVER_PASSWORD }}
         port: ${{ secrets.SERVER_PORT || 22 }}
-        command_timeout: 5m
+        command_timeout: 10m
         script: |
           # 创建.env
           cd /var/www/rehab-care-link/server
@@ -65,12 +65,15 @@ jobs:
           export DEBIAN_FRONTEND=noninteractive
           # 停止nginx（如果在运行）
           systemctl stop nginx 2>/dev/null || true
-          # 强制清除所有nginx包（解决conffile冲突）
+          killall nginx 2>/dev/null || true
+          # 强制清除所有nginx包
           dpkg --purge --force-all nginx nginx-common nginx-core libnginx-mod-http-xslt-filter libnginx-mod-http-geoip2 libnginx-mod-stream-geoip2 libnginx-mod-mail libnginx-mod-http-image-filter libnginx-mod-stream python3-certbot-nginx 2>/dev/null || true
           apt-get autoremove -y 2>/dev/null || true
-          # 重新安装
+          apt-get clean
+          # 重新安装nginx
           apt-get update -qq
-          apt-get install -y nginx
+          apt-get install -y --reinstall nginx
+          echo "Nginx安装完成"
 
           # 创建mime.types
           cat > /etc/nginx/mime.types << 'EOF'
