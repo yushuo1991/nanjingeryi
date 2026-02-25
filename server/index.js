@@ -43,6 +43,7 @@ const {
 const { seedIfEmpty } = require('./seed');
 const { authMiddleware, roleMiddleware } = require('./middleware/auth');
 const { registerAuthRoutes } = require('./routes/auth');
+const { get: cacheGet, set: cacheSet, getStats: getCacheStats, clearPatientsCache } = require('./utils/cache');
 
 function requiredEnv(name) {
   const value = process.env[name];
