@@ -33,7 +33,11 @@ jobs:
         password: ${{ secrets.SERVER_PASSWORD }}
         port: ${{ secrets.SERVER_PORT || 22 }}
         script: |
-          rm -rf /var/www/*
+          # 只清理代码文件，保留数据库和上传文件
+          rm -rf /var/www/rehab-care-link/dist
+          rm -rf /var/www/rehab-care-link/server/*.js /var/www/rehab-care-link/server/*.json
+          rm -rf /var/www/rehab-care-link/server/middleware /var/www/rehab-care-link/server/routes /var/www/rehab-care-link/server/utils
+          # 保留: server/.env, server/rehab_care.db, server/node_modules, uploads/
 
     - name: 部署到服务器
       uses: appleboy/scp-action@v0.1.7
@@ -61,79 +65,74 @@ jobs:
           echo "${{ secrets.SERVER_ENV }}" > .env
           chmod 600 .env
 
-          # 彻底修复nginx：清除损坏的安装，重新安装
+          # 安装nginx（仅在未安装时）
           export DEBIAN_FRONTEND=noninteractive
-          # 停止nginx（如果在运行）
-          systemctl stop nginx 2>/dev/null || true
-          killall nginx 2>/dev/null || true
-          # 强制清除所有nginx包
-          dpkg --purge --force-all nginx nginx-common nginx-core libnginx-mod-http-xslt-filter libnginx-mod-http-geoip2 libnginx-mod-stream-geoip2 libnginx-mod-mail libnginx-mod-http-image-filter libnginx-mod-stream python3-certbot-nginx 2>/dev/null || true
-          apt-get autoremove -y 2>/dev/null || true
-          apt-get clean
-          # 重新安装nginx
-          apt-get update -qq
-          apt-get install -y --reinstall nginx
-          echo "Nginx安装完成"
+          if ! command -v nginx &>/dev/null; then
+            echo "Nginx未安装，正在安装..."
+            apt-get update -qq
+            apt-get install -y nginx
+          fi
+          echo "Nginx版本: $(nginx -v 2>&1)"
 
-          # 创建mime.types
-          cat > /etc/nginx/mime.types << 'EOF'
+          # 创建mime.types（无缩进）
+          cat > /etc/nginx/mime.types <<'MIMEEOF'
           types {
-              text/html html htm;
-              text/css css;
-              application/javascript js;
-              application/json json;
-              image/jpeg jpeg jpg;
-              image/png png;
-              image/gif gif;
-              image/webp webp;
-              image/svg+xml svg;
+            text/html html htm;
+            text/css css;
+            application/javascript js;
+            application/json json;
+            image/jpeg jpeg jpg;
+            image/png png;
+            image/gif gif;
+            image/webp webp;
+            image/svg+xml svg;
           }
-          EOF
+          MIMEEOF
 
-          # 创建nginx.conf
-          cat > /etc/nginx/nginx.conf << 'EOF'
+          # 创建nginx.conf（无缩进）
+          cat > /etc/nginx/nginx.conf <<'CONFEOF'
           user www-data;
           worker_processes auto;
           pid /run/nginx.pid;
           events { worker_connections 1024; }
           http {
-              sendfile on;
-              keepalive_timeout 65;
-              client_max_body_size 100M;
-              include /etc/nginx/mime.types;
-              default_type application/octet-stream;
-              access_log /var/log/nginx/access.log;
-              error_log /var/log/nginx/error.log;
-              include /etc/nginx/sites-enabled/*;
+            sendfile on;
+            keepalive_timeout 65;
+            client_max_body_size 100M;
+            include /etc/nginx/mime.types;
+            default_type application/octet-stream;
+            access_log /var/log/nginx/access.log;
+            error_log /var/log/nginx/error.log;
+            include /etc/nginx/sites-enabled/*;
           }
-          EOF
+          CONFEOF
 
-          # 创建站点配置
+          # 创建站点配置（无缩进）
           mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
-          cat > /etc/nginx/sites-available/default << 'EOF'
+          cat > /etc/nginx/sites-available/default <<'SITEEOF'
           server {
-              listen 80 default_server;
-              server_name _;
-              root /var/www/rehab-care-link/dist;
-              index index.html;
-              location / { try_files $uri $uri/ /index.html; }
-              location /api/ {
-                  proxy_pass http://127.0.0.1:3201;
-                  proxy_http_version 1.1;
-                  proxy_set_header Host $host;
-                  proxy_set_header X-Real-IP $remote_addr;
-                  proxy_connect_timeout 300s;
-                  proxy_read_timeout 300s;
-                  proxy_buffering off;
-              }
-              location /uploads/ { alias /var/www/rehab-care-link/uploads/; }
+            listen 80 default_server;
+            server_name _;
+            root /var/www/rehab-care-link/dist;
+            index index.html;
+            location / { try_files $uri $uri/ /index.html; }
+            location /api/ {
+              proxy_pass http://127.0.0.1:3201;
+              proxy_http_version 1.1;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_connect_timeout 300s;
+              proxy_read_timeout 300s;
+              proxy_buffering off;
+            }
+            location /uploads/ { alias /var/www/rehab-care-link/uploads/; }
           }
-          EOF
+          SITEEOF
 
           ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
           rm -f /etc/nginx/sites-enabled/ey.yushuo.click 2>/dev/null
 
-          # 启动Nginx
+          # 测试并启动Nginx
           nginx -t && systemctl restart nginx
 
           # 安装依赖并启动PM2
