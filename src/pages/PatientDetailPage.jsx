@@ -1,11 +1,12 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import PropTypes from 'prop-types';
 import {
   ChevronLeft, Share2, Printer, Check, X, Edit3, Trash2,
   Target, Star, AlertCircle, FileText, CheckCircle2, Circle,
-  ClipboardList
+  ClipboardList, Sparkles, Loader2, ChevronRight
 } from '../components/icons';
 import { printPatientRecord, generateTreatmentCard } from '../lib/print';
+import { api } from '../lib/api';
 
 const PatientDetailPage = React.memo(({
   selectedPatient,
@@ -26,6 +27,12 @@ const PatientDetailPage = React.memo(({
 }) => {
   const patient = selectedPatient;
   if (!patient) return null;
+
+  // 补充说明状态
+  const [supplementNotes, setSupplementNotes] = useState('');
+  const [showSupplementInput, setShowSupplementInput] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [previewPlan, setPreviewPlan] = useState(null);
 
   // 使用useCallback缓存事件处理函数
   const handleGenerateCard = useCallback(() => {
@@ -65,6 +72,55 @@ const PatientDetailPage = React.memo(({
       treatmentLogs: [newLog, ...(patient.treatmentLogs || [])]
     });
   }, [patient, updatePatient]);
+
+  // AI重新生成方案
+  const handleRegeneratePlan = useCallback(async () => {
+    if (!supplementNotes.trim()) return;
+    setIsRegenerating(true);
+    setPreviewPlan(null);
+    try {
+      const profile = {
+        patient: {
+          name: patient.name,
+          gender: patient.gender,
+          age: patient.age,
+          bedNo: patient.bedNo,
+          department: patient.department,
+          diagnosis: patient.diagnosis,
+          admissionDate: patient.admissionDate,
+        },
+        risks: patient.risks || [],
+        contraindications: patient.contraindications || [],
+        monitoring: patient.monitoring || [],
+        keyFindings: patient.keyFindings || [],
+      };
+      const res = await api(`/api/patients/${patient.id}/regenerate-plan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ supplementNotes: supplementNotes.trim(), profile }),
+      });
+      if (res?.success && res.plan) {
+        setPreviewPlan(res.plan);
+      }
+    } catch (e) {
+      console.error('AI regenerate plan failed:', e);
+      alert('AI重新生成方案失败: ' + (e.message || '未知错误'));
+    } finally {
+      setIsRegenerating(false);
+    }
+  }, [supplementNotes, patient]);
+
+  // 确认采用新方案
+  const handleAcceptPlan = useCallback(() => {
+    if (!previewPlan) return;
+    updatePatient(patient.id, {
+      treatmentPlan: { ...patient.treatmentPlan, ...previewPlan },
+      supplementNotes: supplementNotes.trim(),
+    });
+    setPreviewPlan(null);
+    setShowSupplementInput(false);
+    setSupplementNotes('');
+  }, [previewPlan, patient, updatePatient, supplementNotes]);
 
   return (
     <div className="min-h-screen flex justify-center pt-6 pb-6 px-4">
@@ -273,6 +329,122 @@ const PatientDetailPage = React.memo(({
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {/* 补充说明 & AI重新生成方案 */}
+              {userRole === 'therapist' && patient.treatmentPlan && (
+                <div className="mb-4">
+                  {/* 已保存的补充说明 */}
+                  {patient.supplementNotes && !showSupplementInput && (
+                    <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 mb-2">
+                      <p className="text-xs text-indigo-400 mb-1">补充说明</p>
+                      <p className="text-sm text-slate-600">{patient.supplementNotes}</p>
+                    </div>
+                  )}
+
+                  {!showSupplementInput ? (
+                    <button
+                      onClick={() => setShowSupplementInput(true)}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-indigo-300 text-indigo-500 text-sm hover:bg-indigo-50 transition-all"
+                    >
+                      <Edit3 size={14} />
+                      补充说明 / AI重新生成方案
+                      <ChevronRight size={14} />
+                    </button>
+                  ) : (
+                    <div className="bg-indigo-50/50 border border-indigo-200 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                          <Edit3 size={14} className="text-indigo-500" />
+                          补充说明
+                        </h5>
+                        <button
+                          onClick={() => { setShowSupplementInput(false); setPreviewPlan(null); }}
+                          className="p-1 rounded-full hover:bg-slate-200 transition-all"
+                        >
+                          <X size={16} className="text-slate-400" />
+                        </button>
+                      </div>
+                      <p className="text-xs text-slate-400 mb-2">
+                        输入收治后发现的新情况、病情补充或纠正信息，AI将据此重新生成治疗方案
+                      </p>
+                      <textarea
+                        value={supplementNotes}
+                        onChange={(e) => setSupplementNotes(e.target.value)}
+                        className="w-full bg-white border border-indigo-200 rounded-lg p-3 text-sm text-slate-700 focus:border-indigo-400 outline-none resize-none"
+                        rows={3}
+                        placeholder="例如：患儿左侧肢体肌张力偏高，需加强左侧被动活动..."
+                        disabled={isRegenerating}
+                      />
+                      <button
+                        onClick={handleRegeneratePlan}
+                        disabled={!supplementNotes.trim() || isRegenerating}
+                        className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      >
+                        {isRegenerating ? (
+                          <>
+                            <Loader2 size={16} className="animate-spin" />
+                            AI正在重新生成方案...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles size={16} />
+                            AI重新生成方案
+                          </>
+                        )}
+                      </button>
+
+                      {/* 新方案预览 */}
+                      {previewPlan && (
+                        <div className="mt-3 bg-white border border-emerald-200 rounded-xl p-3">
+                          <h6 className="text-sm font-bold text-emerald-700 mb-2 flex items-center gap-1">
+                            <Sparkles size={14} />
+                            AI生成的新方案
+                          </h6>
+                          {previewPlan.focus && (
+                            <p className="text-xs text-slate-600 mb-2">
+                              <span className="font-semibold">治疗目标：</span>{previewPlan.focus}
+                            </p>
+                          )}
+                          {previewPlan.items?.length > 0 && (
+                            <div className="mb-2">
+                              <p className="text-xs font-semibold text-slate-500 mb-1">训练项目：</p>
+                              {previewPlan.items.map((item, i) => (
+                                <p key={i} className="text-xs text-slate-600 ml-2">
+                                  {i + 1}. {item.name} ({item.duration})
+                                </p>
+                              ))}
+                            </div>
+                          )}
+                          {previewPlan.precautions?.length > 0 && (
+                            <div className="mb-2">
+                              <p className="text-xs font-semibold text-slate-500 mb-1">注意事项：</p>
+                              {previewPlan.precautions.map((p, i) => (
+                                <p key={i} className="text-xs text-slate-600 ml-2">⚠ {p}</p>
+                              ))}
+                            </div>
+                          )}
+                          <div className="flex gap-2 mt-3">
+                            <button
+                              onClick={handleAcceptPlan}
+                              className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-600 transition-all"
+                            >
+                              <Check size={16} />
+                              采用此方案
+                            </button>
+                            <button
+                              onClick={() => setPreviewPlan(null)}
+                              className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all"
+                            >
+                              <X size={16} />
+                              放弃
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

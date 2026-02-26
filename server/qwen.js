@@ -205,6 +205,46 @@ function buildLogTemplatesPrompt(context) {
   ].join('\n');
 }
 
+function buildRegeneratePlanPrompt(profile, supplementNotes) {
+  return [
+    '你是儿科医院康复治疗师的助手。',
+    '基于给定的结构化患者资料以及医生/治疗师的补充说明，为患儿重新制定"今日康复训练方案"和"注意事项/禁忌/监测项"。输出严格 JSON（不要 Markdown，不要多余文本）。',
+    '目标：体现治疗师的专业判断与个体化（根据诊断、年龄、主诉/关键发现、风险、禁忌、监测要求来调整）。',
+    '',
+    '⚠️ 重要：以下是医生/治疗师在收治后补充的说明，包含对患儿病情的重要补充、纠正或新发现，请务必在制定方案时充分考虑：',
+    '--- 补充说明开始 ---',
+    supplementNotes,
+    '--- 补充说明结束 ---',
+    '',
+    '⚠️ 重要：康复目标必须从康复治疗角度设定，而非单纯疾病治疗角度。',
+    '- 错误示例（疾病角度）："控制血糖"、"减少发热次数"、"提高免疫力"',
+    '- 正确示例（康复角度）："改善步态对称性"、"提高肩关节外展角度至90度"、"增强核心稳定性"、"改善精细动作协调性"',
+    '- 康复目标应聚焦于：功能改善（运动、感知、认知）、能力提升（ADL、社交）、身体结构优化（关节活动度、肌力、平衡）',
+    '',
+    '输入资料如下（JSON）：',
+    JSON.stringify(profile),
+    '输出必须包含字段：',
+    '{',
+    '  "gasGoals": [ { "name": string, "target": number, "current": number } ],',
+    '  "highlights": string[],',
+    '  "focus": string,',
+    '  "items": [ { "name": string, "duration": string, "frequency": string, "intensity": string, "steps": string[], "monitoring": string[], "stopCriteria": string[], "notes": string } ],',
+    '  "precautions": string[],',
+    '  "familyEducation": string[],',
+    '  "review": { "when": string, "metrics": string[] }',
+    '}',
+    '要求：',
+    '- gasGoals：只给 2 个目标，必须是可量化的康复功能目标（如"肘关节屈曲90度→120度"、"独立站立时间5秒→30秒"），不能是疾病指标（如血压、血糖）。',
+    '- highlights：只给 2 条"今日个体化重点"（例如：为什么这样安排/重点防什么风险/要监测什么）。',
+    '- items：只给 3 个训练项目；每个项目必须可执行，steps <= 4 条；monitoring <= 2 条；stopCriteria <= 2 条。',
+    '- 今日训练总时长不超过 20 分钟；请在 duration 中明确写"X分钟"。',
+    '- precautions：只给 2 条，必须和患者风险/禁忌/监测匹配，避免泛泛而谈。',
+    '- familyEducation：只给 2 条（家属怎么配合/家庭注意事项）。',
+    '- 补充说明中提到的新情况、纠正信息必须体现在方案中（如新增风险、调整训练强度、更换训练项目等）。',
+    '- 明确监测项（如血氧/疼痛/心率/疲劳）和停止条件，不能编造无法从资料推出的检查结果；不确定则写"需复核/遵医嘱"。',
+  ].join('\n');
+}
+
 function buildAnalyzePrompt() {
   return [
     '你是儿科医院康复治疗师的助手。',
@@ -381,6 +421,7 @@ module.exports = {
   buildPlanPrompt,
   buildLogPrompt,
   buildLogTemplatesPrompt,
+  buildRegeneratePlanPrompt,
   buildAnalyzePrompt,
   buildAnalyzePromptForMissing,
   extractJsonFromText,

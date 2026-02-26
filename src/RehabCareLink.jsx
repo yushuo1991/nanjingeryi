@@ -345,9 +345,14 @@ export default function RehabCareLink() {
     return 'home';
   });
   const [selectedDepartment, setSelectedDepartment] = useState(() => {
-    // 如果URL有科室参数，设置该科室
+    // 如果URL有科室参数，设置该科室（从完整列表+localStorage中查找）
     if (urlParams.deptId) {
-      return defaultDepartments.find(d => d.id === urlParams.deptId) || null;
+      const found = allDepartments.find(d => d.id === urlParams.deptId);
+      if (found) return found;
+      try {
+        const saved = JSON.parse(localStorage.getItem('rehab_departments') || '[]');
+        return saved.find(d => d.id === urlParams.deptId) || null;
+      } catch { return null; }
     }
     return null;
   });
@@ -372,8 +377,22 @@ export default function RehabCareLink() {
   const [generatedLog, setGeneratedLog] = useState(null); // 生成的日志内容
   const [toast, setToast] = useState(null); // 提示消息
 
-  // 动态科室列表（支持AI识别时自动添加新科室）
-  const [departments, setDepartments] = useState(defaultDepartments);
+  // 动态科室列表（支持AI识别时自动添加新科室，从localStorage恢复）
+  const [departments, setDepartments] = useState(() => {
+    try {
+      const saved = localStorage.getItem('rehab_departments');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return defaultDepartments;
+  });
+
+  // 科室变更时持久化到localStorage
+  useEffect(() => {
+    localStorage.setItem('rehab_departments', JSON.stringify(departments));
+  }, [departments]);
 
   // 科室编辑状态
   const [isEditingDepartments, setIsEditingDepartments] = useState(false);
@@ -402,6 +421,9 @@ export default function RehabCareLink() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
+  // 刷新计数器 - 递增触发患者列表重新加载
+  const [refreshCounter, setRefreshCounter] = useState(0);
+
   // 从后端加载患者数据
   useEffect(() => {
     let cancelled = false;
@@ -413,16 +435,13 @@ export default function RehabCareLink() {
         setPatients(list);
       } catch (e) {
         console.error('加载患者数据失败:', e);
-        if (!cancelled) {
-          showToast('无法连接后端服务，请确认服务器已启动', 'error');
-        }
       }
     }
     load();
     return () => {
       cancelled = true;
     };
-  }, [showToast]);
+  }, [refreshCounter]);
 
   // 生成分享链接
   const generateShareLink = (deptId) => {
@@ -470,6 +489,17 @@ export default function RehabCareLink() {
   const navigateTo = (page, data = null) => {
     setCurrentPage(page);
 
+    // 通用清理：编辑、AI、批量状态
+    setIsEditingDetail(false);
+    setEditedPatient(null);
+    setAiResult(null);
+    setAiStep(0);
+    setUploadedImage(null);
+    setOcrProgress(0);
+    setOcrText('');
+    setBatchPatients([]);
+    setCurrentBatchIndex(0);
+
     // 清理旧状态，防止状态残留
     if (page === 'home') {
       setSelectedDepartment(null);
@@ -494,6 +524,17 @@ export default function RehabCareLink() {
   };
 
   const goBack = () => {
+    // 通用清理：编辑、AI、批量状态
+    setIsEditingDetail(false);
+    setEditedPatient(null);
+    setAiResult(null);
+    setAiStep(0);
+    setUploadedImage(null);
+    setOcrProgress(0);
+    setOcrText('');
+    setBatchPatients([]);
+    setCurrentBatchIndex(0);
+
     if (currentPage === 'patientDetail') {
       // 智能返回：有选中科室时返回患者列表，否则返回首页
       if (selectedDepartment) {
@@ -588,6 +629,7 @@ export default function RehabCareLink() {
       const res = await api(`/api/patients/${patientId}`, { method: 'DELETE' });
       // 删除成功（204状态码不返回JSON）
       setPatients(prev => prev.filter(p => p.id !== patientId));
+      setRefreshCounter(c => c + 1);
       setSelectedPatient(null);
       setShowDeleteConfirm(false);
       navigateTo('home');
@@ -1239,8 +1281,9 @@ export default function RehabCareLink() {
         // 直接使用返回的患者数据，避免额外的列表请求
         const created = res.patient || { ...newPatient, id: res.patientId };
 
-        // 更新本地列表（不再请求服务器）
+        // 更新本地列表并触发后台刷新确保数据一致
         setPatients(prev => [...prev, created]);
+        setRefreshCounter(c => c + 1);
 
         // 一次性关闭弹窗并重置所有状态
         setShowAIModal(false);

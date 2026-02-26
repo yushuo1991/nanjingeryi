@@ -34,6 +34,7 @@ const {
   buildExtractPrompt,
   buildExtractPromptForMissing,
   buildPlanPrompt,
+  buildRegeneratePlanPrompt,
   buildLogPrompt,
   buildLogTemplatesPrompt,
   buildAnalyzePrompt,
@@ -1013,6 +1014,27 @@ function createApp() {
     } catch (e) {
       console.error('AI generate log failed:', e);
       jsonError(res, 502, e.message || 'AI generate log failed');
+    }
+  });
+
+  // 根据补充说明重新生成治疗方案
+  app.post('/api/patients/:id/regenerate-plan', async (req, res) => {
+    const patientId = Number(req.params.id);
+    if (!patientId) return jsonError(res, 400, 'Invalid patientId');
+
+    const { supplementNotes, profile } = req.body;
+    if (!supplementNotes || typeof supplementNotes !== 'string') return jsonError(res, 400, 'supplementNotes is required');
+    if (!profile || typeof profile !== 'object') return jsonError(res, 400, 'profile is required');
+
+    try {
+      requiredEnv('DASHSCOPE_API_KEY');
+      const prompt = buildRegeneratePlanPrompt(profile, supplementNotes);
+      const parsed = await callVisionJson({ imageDataUrls: [], prompt, requestTag: 'regenerate-plan' });
+      const plan = clampPlan(parsed);
+      res.json({ success: true, plan });
+    } catch (e) {
+      console.error('AI regenerate plan failed:', e);
+      jsonError(res, 502, e.message || 'AI regenerate plan failed');
     }
   });
 
