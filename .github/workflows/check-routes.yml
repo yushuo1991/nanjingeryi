@@ -13,23 +13,27 @@ jobs:
         password: ${{ secrets.SERVER_PASSWORD }}
         port: ${{ secrets.SERVER_PORT || 22 }}
         script: |
-          echo "=== 1. 检查jsonwebtoken是否安装 ==="
+          echo "=== 1. 完全重启PM2 ==="
           cd /var/www/rehab-care-link/server
-          node -e "require('jsonwebtoken'); console.log('jsonwebtoken OK')" || echo "jsonwebtoken MISSING"
-          
+          pm2 delete all || true
+          sleep 1
+          PORT=3201 pm2 start index.js --name rehab-care-link-server
+          sleep 5
+
           echo ""
-          echo "=== 2. 检查package.json内容 ==="
-          cat package.json
-          
-          echo ""
-          echo "=== 3. 检查regenerate-plan路由是否存在 ==="
-          grep -n "regenerate-plan" index.js || echo "regenerate-plan NOT FOUND in index.js"
-          
-          echo ""
-          echo "=== 4. 测试regenerate-plan端点 ==="
-          curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3201/api/patients/1/regenerate-plan -H "Content-Type: application/json" -d '{"supplementNotes":"test","profile":{"patient":{"name":"test"}}}'
-          echo ""
-          
-          echo ""
-          echo "=== 5. PM2状态 ==="
+          echo "=== 2. PM2状态 ==="
           pm2 list
+
+          echo ""
+          echo "=== 3. 最新PM2日志 ==="
+          pm2 logs rehab-care-link-server --lines 30 --nostream
+
+          echo ""
+          echo "=== 4. 测试health端点 ==="
+          curl -s http://localhost:3201/api/health
+          echo ""
+
+          echo ""
+          echo "=== 5. 测试regenerate-plan端点（含响应体）==="
+          curl -s -w "\nHTTP_CODE:%{http_code}" -X POST http://localhost:3201/api/patients/1/regenerate-plan -H "Content-Type: application/json" -d '{"supplementNotes":"test","profile":{"patient":{"name":"test"}}}'
+          echo ""
