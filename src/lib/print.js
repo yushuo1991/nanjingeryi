@@ -165,7 +165,7 @@ export const printPatientRecord = (patient) => {
       <meta charset="UTF-8">
       <title>治疗记录 - ${patient.name}</title>
       <style>
-        @page { size: A4; margin: 15mm 20mm; }
+        @page { size: A4; margin: 0; }
         @media print { body { margin: 0; } .no-print { display: none !important; } }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: "SimSun", "宋体", serif; font-size: 10.5pt; line-height: 1.8; color: #000; background: #fff; }
@@ -260,7 +260,7 @@ export const printBatchRecords = (batchPatients) => {
       <meta charset="UTF-8">
       <title>治疗日报 - ${today}</title>
       <style>
-        @page { size: A4; margin: 15mm 20mm; }
+        @page { size: A4; margin: 0; }
         @media print { body { margin: 0; } .no-print { display: none !important; } }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: "SimSun", "宋体", serif; font-size: 10.5pt; line-height: 1.8; color: #000; background: #fff; }

@@ -89,7 +89,7 @@ function buildPlanPrompt(profile) {
 }
 
 function buildLogPrompt(context) {
-  const { patient, treatmentPlan, completedItems, previousLogs, date } = context;
+  const { patient, treatmentPlan, completedItems, previousLogs, date, supplementNotes } = context;
 
   return [
     '你是儿科医院康复治疗师，正在为患儿撰写今日治疗日志。',
@@ -101,6 +101,9 @@ function buildLogPrompt(context) {
     '- 观察要具体，反映患儿当天的真实状态（精神、情绪、体力等）',
     '- 如果有历史记录，要体现进步或变化趋势',
     '- 语言要专业但自然，像真实的治疗师记录',
+    '- 不要出现"上午时段"、"下午时段"等时段区分，每天只进行一次训练',
+    '- 每个训练项目需要有细致的当天执行描述（如具体重复次数、持续时间、患儿反应、动作质量等）',
+    '- 不同天的日志必须有明显差异：训练数据不同、患儿状态不同、观察重点不同',
     '',
     `患儿信息：`,
     `- 姓名：${patient.name}`,
@@ -108,6 +111,13 @@ function buildLogPrompt(context) {
     `- 诊断：${patient.diagnosis}`,
     `- 入院日期：${patient.admissionDate || '未知'}`,
     '',
+    supplementNotes ? [
+      '⚠️ 治疗师补充说明（请务必参考以下内容生成更贴合实际的日志）：',
+      `--- 补充说明 ---`,
+      supplementNotes,
+      `--- 补充说明结束 ---`,
+      '',
+    ].join('\n') : '',
     `治疗计划：`,
     `- 治疗重点：${treatmentPlan.focus || '功能训练'}`,
     `- 计划项目：${treatmentPlan.items?.map(i => i.name).join('、') || '无'}`,
@@ -115,28 +125,18 @@ function buildLogPrompt(context) {
     '',
     completedItems?.length > 0 ? `今日已完成项目：${completedItems.map(i => i.name).join('、')}` : '今日完成项目：按计划执行',
     '',
-    previousLogs?.length > 0 ? `最近3次治疗记录（供参考进展）：\n${previousLogs.slice(0, 3).map(log =>
+    previousLogs?.length > 0 ? `最近3次治疗记录（供参考进展，新日志必须与这些记录有明显差异）：\n${previousLogs.slice(0, 3).map(log =>
       `${log.date}: ${log.highlight || log.notes || '常规训练'}`
     ).join('\n')}` : '这是首次治疗记录',
     '',
     '输出格式：',
     '{',
     '  "highlight": string,  // 今日治疗重点/亮点，30-50字，要具体且每次不同',
-    '  "items": [{ "name": string, "duration": string }],  // 实际完成的项目',
+    '  "items": [{ "name": string, "duration": string, "detail": string }],  // 实际完成的项目，detail为当天执行的细致描述（如"肩关节屈曲重复10次，活动度达115度，较前次提升5度"）',
     '  "cooperation": string,  // 配合度：优秀/良好/一般/需改进（要有变化）',
     '  "tolerance": string,  // 耐受性：优秀/良好/一般/较差（要有变化）',
-    '  "notes": string,  // 详细观察记录，80-150字，包括：患儿精神状态、训练表现、特殊情况、进步或问题',
+    '  "notes": string,  // 详细观察记录，100-180字，包括：患儿精神状态、各项训练的具体表现和数据、特殊情况、进步或问题',
     '  "safety": string  // 安全提醒或注意事项',
-    '}',
-    '',
-    '示例（仅供参考格式，内容必须根据实际情况生成）：',
-    '{',
-    '  "highlight": "患儿今日精神状态佳，主动配合训练，呼吸训练时间较昨日延长3分钟",',
-    '  "items": [{"name": "呼吸训练", "duration": "15分钟"}, {"name": "运动训练", "duration": "20分钟"}],',
-    '  "cooperation": "优秀",',
-    '  "tolerance": "良好",',
-    '  "notes": "患儿今日精神饱满，情绪稳定。呼吸训练时能主动配合腹式呼吸，较前次明显进步。运动训练中步行距离达50米，血氧维持在97-99%。训练后略感疲劳但无不适主诉。家属反馈夜间睡眠质量改善。",',
-    '  "safety": "继续监测血氧饱和度，如低于94%立即停止训练"',
     '}',
   ].join('\n');
 }
@@ -155,6 +155,8 @@ function buildLogTemplatesPrompt(context) {
     '- 体现治疗过程的自然变化（有进步、有波动、有稳定期）',
     '- 每个模板的训练细节要有差异（如重复次数、持续时间、患儿反应等）',
     '- 语言要专业但自然，像真实的治疗师记录',
+    '- 不要出现"上午时段"、"下午时段"等时段区分，每天只进行一次训练',
+    '- 每个训练项目需要有细致的当天执行描述',
     '',
     `患儿信息：`,
     `- 姓名：${patient.name}`,
@@ -172,35 +174,10 @@ function buildLogTemplatesPrompt(context) {
     '    "highlight": string,  // 今日治疗重点/亮点，30-50字，要体现具体的训练细节变化',
     '    "cooperation": string,  // 配合度：优秀/良好/一般/需改进',
     '    "tolerance": string,  // 耐受性：优秀/良好/一般/较差',
-    '    "notes": string,  // 详细观察记录，100-180字，包括：患儿精神状态、训练表现（具体数据如重复次数、持续时间）、特殊情况、进步或问题',
+    '    "notes": string,  // 详细观察记录，100-180字，包括：患儿精神状态、各项训练的具体表现和数据（重复次数、持续时间、动作质量）、特殊情况、进步或问题',
     '    "safety": string  // 安全提醒或注意事项',
     '  },',
     '  ... (共5个不同的模板)',
-    ']',
-    '',
-    '示例（仅供参考格式，实际内容必须根据患儿情况生成）：',
-    '[',
-    '  {',
-    '    "highlight": "患儿今日精神状态佳，主动配合训练，关节活动度训练时每侧重复8次，较前次增加2次",',
-    '    "cooperation": "优秀",',
-    '    "tolerance": "良好",',
-    '    "notes": "患儿今日精神饱满，情绪稳定。关节活动度训练时能主动配合，肩关节屈曲达120度，肘关节屈伸顺畅，每侧重复8次，较前次明显进步。呼吸肌按摩持续3分钟，患儿面部表情平静，呼吸机参数稳定。训练后略感疲劳但无不适主诉，血氧维持在97-99%。家属反馈夜间睡眠质量改善。",',
-    '    "safety": "继续监测血氧饱和度，如低于94%立即停止训练"',
-    '  },',
-    '  {',
-    '    "highlight": "患儿配合度一般，需要鼓励和引导，关节活动度训练每侧重复5次，完成基础训练项目",',
-    '    "cooperation": "一般",',
-    '    "tolerance": "良好",',
-    '    "notes": "患儿今日情绪略显低落，训练初期配合度不高，经鼓励后逐渐投入。关节活动度训练时动作较为被动，肩关节屈曲达100度，每侧重复5次。呼吸肌按摩时偶有躁动，缩短至2分钟。训练过程中血氧稳定在95-97%，心率波动在正常范围。建议家属多给予正面鼓励，增强患儿信心。",',
-    '    "safety": "注意观察患儿情绪变化，适时调整训练强度"',
-    '  },',
-    '  {',
-    '    "highlight": "患儿今日耐受性较好，训练时间延长至22分钟，关节活动度训练每侧重复7次，呼吸肌按摩4分钟",',
-    '    "cooperation": "良好",',
-    '    "tolerance": "优秀",',
-    '    "notes": "患儿今日状态良好，训练积极性高。关节活动度训练时主动配合，肩关节屈曲达115度，肘关节活动流畅，每侧重复7次。呼吸肌按摩延长至4分钟，患儿耐受良好，呼吸节律平稳。训练总时长22分钟，较前次延长3分钟，全程血氧维持在98-100%，未见不适。家属表示患儿食欲有所改善。",',
-    '    "safety": "继续观察训练后恢复情况，如有疲劳及时休息"',
-    '  }',
     ']',
   ].join('\n');
 }
@@ -329,7 +306,6 @@ async function callQwenVision({ imageDataUrls, prompt, requestTag, timeoutMs }) 
 
   const url = `${getDashscopeBaseUrl()}/api/v1/services/aigc/multimodal-generation/generation`;
   const images = Array.isArray(imageDataUrls) ? imageDataUrls.filter(Boolean) : [];
-  if (!images.length) throw new Error('No image provided');
   const maxImages = Number(process.env.MAX_AI_IMAGES || 3);
   const selected = images.slice(0, maxImages);
 
@@ -345,6 +321,7 @@ async function callQwenVision({ imageDataUrls, prompt, requestTag, timeoutMs }) 
     },
     parameters: {
       result_format: 'message',
+      ...(selected.length === 0 ? { enable_search: false } : {}),
     },
   };
 

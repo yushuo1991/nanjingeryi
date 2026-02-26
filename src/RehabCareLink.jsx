@@ -890,145 +890,97 @@ export default function RehabCareLink() {
     }));
   };
 
-  // 生成今日治疗日志（从预生成的日志模板中随机选择并添加个性化变化）
-  const generateTodayLog = useCallback((patient) => {
+  // 生成今日治疗日志（调用AI生成个性化日志，支持补充说明）
+  const generateTodayLog = useCallback(async (patient) => {
     if (!patient) return;
 
     const today = new Date();
     const dateStr = today.toISOString().split('T')[0];
-    const hour = today.getHours();
-
-    // 为训练时长添加随机微调
-    const adjustDuration = (duration) => {
-      if (!duration) return '5分钟';
-
-      // 提取数字和单位
-      const match = duration.match(/(\d+)(\D+)/);
-      if (!match) return duration;
-
-      const baseMinutes = parseInt(match[1]);
-      const unit = match[2];
-
-      // 随机调整 ±1分钟（50%概率）
-      if (Math.random() > 0.5) {
-        const adjustment = Math.random() > 0.5 ? 1 : -1;
-        const newMinutes = Math.max(1, baseMinutes + adjustment);
-        return `${newMinutes}${unit}`;
-      }
-
-      return duration;
-    };
 
     // 收集已完成的治疗项目
     const completedItems = patient.treatmentPlan.items
       .filter(item => item.completed)
-      .map(item => ({
-        name: item.name,
-        duration: adjustDuration(item.duration || '5分钟')
-      }));
+      .map(item => ({ name: item.name, duration: item.duration || '5分钟' }));
 
-    // 如果没有完成项目，使用全部计划项目
-    let items = completedItems.length > 0
+    const itemsForLog = completedItems.length > 0
       ? completedItems
-      : patient.treatmentPlan.items.map(item => ({
-          name: item.name,
-          duration: adjustDuration(item.duration || '5分钟')
-        }));
+      : patient.treatmentPlan.items.map(item => ({ name: item.name, duration: item.duration || '5分钟' }));
 
-    // 随机调整训练项目顺序（30%概率）
-    if (Math.random() > 0.7 && items.length > 1) {
-      items = [...items].sort(() => Math.random() - 0.5);
+    try {
+      const res = await api(`/api/patients/${patient.id}/generate-log`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patient: { name: patient.name, age: patient.age, diagnosis: patient.diagnosis, admissionDate: patient.admissionDate },
+          treatmentPlan: patient.treatmentPlan,
+          completedItems: itemsForLog,
+          previousLogs: (patient.treatmentLogs || []).slice(0, 3),
+          supplementNotes: patient.supplementNotes || '',
+        }),
+      });
+
+      if (res?.success && res.log) {
+        const log = res.log;
+        const itemDetails = (log.items || itemsForLog).map(i => `• ${i.name}（${i.duration}）${i.detail ? '：' + i.detail : ''}`).join('\n');
+        const detailRecord = `【训练重点】\n${log.highlight}\n\n【完成项目】\n${itemDetails}\n\n【配合情况】\n配合度：${log.cooperation} | 耐受性：${log.tolerance}\n\n【观察记录】\n${log.notes}\n\n【安全提醒】\n${log.safety}`;
+
+        const newLog = {
+          date: dateStr,
+          highlight: log.highlight,
+          items: log.items || itemsForLog,
+          cooperation: log.cooperation,
+          tolerance: log.tolerance,
+          notes: log.notes,
+          safety: log.safety,
+          detailRecord,
+          therapist: '吴大勇'
+        };
+
+        setGeneratedLog(newLog);
+        setShowLogConfirm(true);
+        return;
+      }
+    } catch (e) {
+      console.warn('AI生成日志失败，使用本地模板:', e);
     }
 
-    // 随机变化函数
+    // AI失败时的本地降级方案
     const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
-
-    // 时间段描述
-    const timeDescriptions = hour < 12 ? ['上午精神状态较好', '晨间训练', '上午时段'] :
-                            hour < 18 ? ['下午配合良好', '午后训练', '下午时段'] :
-                            ['傍晚训练', '晚间时段', '傍晚配合'];
-
-    // 配合度选项（带权重，良好和优秀出现概率更高）
     const cooperationOptions = ['优秀', '优秀', '良好', '良好', '良好', '一般'];
     const toleranceOptions = ['优秀', '优秀', '良好', '良好', '良好', '一般'];
 
-    // 从预生成的日志模板中随机选择一个
     const logTemplates = patient.logTemplates || [];
     let selectedTemplate;
 
     if (logTemplates.length > 0) {
-      // 随机选择一个模板
       const randomIndex = Math.floor(Math.random() * logTemplates.length);
       selectedTemplate = { ...logTemplates[randomIndex] };
-
-      // 在模板基础上添加随机变化
-      // 1. 随机调整配合度和耐受性（30%概率改变）
-      if (Math.random() > 0.7) {
-        selectedTemplate.cooperation = getRandomElement(cooperationOptions);
-      }
-      if (Math.random() > 0.7) {
-        selectedTemplate.tolerance = getRandomElement(toleranceOptions);
-      }
-
-      // 2. 在观察记录中添加时间相关描述（50%概率）
-      if (Math.random() > 0.5) {
-        const timeDesc = getRandomElement(timeDescriptions);
-        selectedTemplate.notes = `${timeDesc}。${selectedTemplate.notes}`;
-      }
-
-      // 3. 随机添加额外观察细节（40%概率）
-      if (Math.random() > 0.6) {
-        const extraDetails = [
-          '家属在旁陪伴，患儿情绪稳定。',
-          '训练过程中患儿主动性较好。',
-          '较前次训练有所进步。',
-          '患儿对训练项目逐渐熟悉。',
-          '训练后患儿表现轻松。'
-        ];
-        selectedTemplate.notes += getRandomElement(extraDetails);
-      }
-
+      if (Math.random() > 0.7) selectedTemplate.cooperation = getRandomElement(cooperationOptions);
+      if (Math.random() > 0.7) selectedTemplate.tolerance = getRandomElement(toleranceOptions);
     } else {
-      // 如果没有预生成模板，生成多样化的默认模板
       const cooperation = getRandomElement(cooperationOptions);
       const tolerance = getRandomElement(toleranceOptions);
-      const timeDesc = getRandomElement(timeDescriptions);
-
-      const highlights = [
-        `${timeDesc}，患儿${cooperation === '优秀' ? '主动' : ''}配合训练，完成计划项目`,
-        `患儿今日${cooperation === '优秀' ? '积极' : ''}参与训练，${tolerance === '优秀' ? '耐受性好' : '完成基础项目'}`,
-        `${timeDesc}训练，患儿状态${cooperation === '优秀' ? '良好' : '平稳'}，按计划执行`
-      ];
-
-      const notes = [
-        `患儿今日精神${cooperation === '优秀' ? '饱满' : '尚可'}，情绪${tolerance === '优秀' ? '稳定' : '平稳'}。训练时${cooperation === '优秀' ? '主动配合' : '基本配合'}，完成计划项目。训练后${tolerance === '优秀' ? '无明显疲劳' : '略感疲劳'}，未见不适主诉。`,
-        `${timeDesc}，患儿配合度${cooperation}。训练过程顺利，${tolerance === '优秀' ? '耐受性良好' : '耐受性尚可'}。完成既定训练项目，生命体征平稳。`,
-        `患儿今日状态${cooperation === '优秀' ? '良好' : '平稳'}，${timeDesc}进行训练。${cooperation === '优秀' ? '主动参与' : '在鼓励下参与'}各项训练，${tolerance === '优秀' ? '表现积极' : '完成基础项目'}。`
-      ];
-
       selectedTemplate = {
-        highlight: getRandomElement(highlights),
-        cooperation: cooperation,
-        tolerance: tolerance,
-        notes: getRandomElement(notes),
+        highlight: `患儿今日${cooperation === '优秀' ? '主动' : ''}配合训练，完成计划项目`,
+        cooperation,
+        tolerance,
+        notes: `患儿今日精神${cooperation === '优秀' ? '饱满' : '尚可'}，情绪${tolerance === '优秀' ? '稳定' : '平稳'}。训练时${cooperation === '优秀' ? '主动配合' : '基本配合'}，完成计划项目。训练后${tolerance === '优秀' ? '无明显疲劳' : '略感疲劳'}，未见不适主诉。`,
         safety: patient.treatmentPlan.precautions?.[0] || '继续观察患儿反应，如有不适及时调整'
       };
     }
 
-    // 生成详细记录
-    const itemDetails = items.map(i => `• ${i.name}（${i.duration}）`).join('\n');
+    const itemDetails = itemsForLog.map(i => `• ${i.name}（${i.duration}）`).join('\n');
     const detailRecord = `【训练重点】\n${selectedTemplate.highlight}\n\n【完成项目】\n${itemDetails}\n\n【配合情况】\n配合度：${selectedTemplate.cooperation} | 耐受性：${selectedTemplate.tolerance}\n\n【观察记录】\n${selectedTemplate.notes}\n\n【安全提醒】\n${selectedTemplate.safety}`;
 
-    // 生成新日志
     const newLog = {
       date: dateStr,
       highlight: selectedTemplate.highlight,
-      items: items,
+      items: itemsForLog,
       cooperation: selectedTemplate.cooperation,
       tolerance: selectedTemplate.tolerance,
       notes: selectedTemplate.notes,
       safety: selectedTemplate.safety,
-      detailRecord: detailRecord,
+      detailRecord,
       therapist: '吴大勇'
     };
 

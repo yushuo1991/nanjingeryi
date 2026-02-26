@@ -972,7 +972,7 @@ function createApp() {
     const patientId = Number(req.params.id);
     if (!patientId) return jsonError(res, 400, 'Invalid patientId');
 
-    const { patient, treatmentPlan, completedItems, previousLogs } = req.body;
+    const { patient, treatmentPlan, completedItems, previousLogs, supplementNotes } = req.body;
     if (!patient || !treatmentPlan) return jsonError(res, 400, 'patient and treatmentPlan are required');
 
     try {
@@ -986,6 +986,7 @@ function createApp() {
         treatmentPlan,
         completedItems: completedItems || [],
         previousLogs: previousLogs || [],
+        supplementNotes: supplementNotes || '',
         date
       };
 
