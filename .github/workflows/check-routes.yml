@@ -5,7 +5,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-    - name: 深度诊断
+    - name: 强制重启并测试
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.SERVER_HOST }}
@@ -16,42 +16,35 @@ jobs:
         script: |
           cd /var/www/rehab-care-link/server
 
-          echo "=== 1. 检查index.js中regenerate-plan附近代码 ==="
-          grep -n -A2 "regenerate-plan" index.js
+          echo "=== 1. 彻底杀掉PM2和所有node进程 ==="
+          pm2 kill || true
+          sleep 2
 
           echo ""
-          echo "=== 2. 检查index.js行数和md5 ==="
-          wc -l index.js
-          md5sum index.js
+          echo "=== 2. 确认.env存在 ==="
+          ls -la .env
+          grep -c DASHSCOPE .env || echo "DASHSCOPE not in .env"
+          grep -c JWT_SECRET .env || echo "JWT_SECRET not in .env"
 
           echo ""
-          echo "=== 3. 用node直接测试createApp ==="
-          timeout 15 node -e "
-            process.env.DASHSCOPE_API_KEY = 'test';
-            process.env.JWT_SECRET = 'test';
-            require('dotenv').config();
-            const { createApp } = require('./index.js');
-            const app = createApp();
-            const http = require('http');
-            const server = http.createServer(app);
-            server.listen(9876, () => {
-              console.log('Test server on 9876');
+          echo "=== 3. 重新启动PM2 ==="
+          PORT=3201 pm2 start index.js --name rehab-care-link-server
+          pm2 save
+          sleep 8
 
-              // Test regenerate-plan
-              const postData = JSON.stringify({supplementNotes:'test',profile:{patient:{name:'test'}}});
-              const req = http.request('http://localhost:9876/api/patients/1/regenerate-plan', {
-                method: 'POST',
-                headers: {'Content-Type':'application/json','Content-Length':Buffer.byteLength(postData)}
-              }, (res) => {
-                let d='';
-                res.on('data',c=>d+=c);
-                res.on('end',()=>{
-                  console.log('regenerate-plan:', res.statusCode, d.substring(0,200));
-                  server.close();
-                  process.exit(0);
-                });
-              });
-              req.write(postData);
-              req.end();
-            });
-          " 2>&1 || echo "Test failed"
+          echo ""
+          echo "=== 4. PM2状态 ==="
+          pm2 list
+
+          echo ""
+          echo "=== 5. PM2最新日志 ==="
+          pm2 logs rehab-care-link-server --lines 15 --nostream
+
+          echo ""
+          echo "=== 6. 测试端点 ==="
+          echo "Health:"
+          curl -s http://localhost:3201/api/health
+          echo ""
+          echo "Regenerate-plan:"
+          curl -s -w "\nHTTP:%{http_code}" -X POST http://localhost:3201/api/patients/1/regenerate-plan -H "Content-Type: application/json" -d '{"supplementNotes":"test","profile":{"patient":{"name":"test"}}}'
+          echo ""
