@@ -1,5 +1,11 @@
 require('dotenv').config();
 
+// Ensure JWT_SECRET exists (generate a random one if not configured)
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = require('crypto').randomBytes(32).toString('hex');
+  console.warn('[WARN] JWT_SECRET not configured in .env, using auto-generated secret (sessions will not persist across restarts)');
+}
+
 const cors = require('cors');
 const express = require('express');
 const fs = require('fs');
