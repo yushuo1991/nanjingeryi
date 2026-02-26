@@ -9,8 +9,7 @@ function toIsoDate(date) {
 }
 
 function twoDemoPatients() {
-  const today = new Date();
-  const daysAgo = (n) => { const d = new Date(today); d.setDate(d.getDate() - n); return toIsoDate(d); };
+  const today = toIsoDate(new Date());
 
   return [
     {
@@ -20,7 +19,7 @@ function twoDemoPatients() {
       bedNo: '301-1',
       department: '呼吸内科',
       diagnosis: '支气管肺炎恢复期',
-      admissionDate: daysAgo(21),
+      admissionDate: today,
       status: 'active',
       todayTreated: false,
       safetyAlerts: ['防跌倒'],
@@ -48,7 +47,7 @@ function twoDemoPatients() {
       bedNo: '302-2',
       department: '呼吸内科',
       diagnosis: '哮喘急性发作恢复期',
-      admissionDate: daysAgo(18),
+      admissionDate: today,
       status: 'active',
       todayTreated: true,
       safetyAlerts: ['过敏体质', '避免冷空气刺激'],
