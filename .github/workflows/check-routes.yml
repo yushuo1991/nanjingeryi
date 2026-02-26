@@ -5,7 +5,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-    - name: 修复并测试
+    - name: 深度诊断
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.SERVER_HOST }}
@@ -20,34 +20,49 @@ jobs:
           pm2 delete all || true
 
           echo ""
-          echo "=== 2. 清除node_modules并重装 ==="
-          rm -rf node_modules package-lock.json
-          npm install --production 2>&1
+          echo "=== 2. 测试完整加载index.js ==="
+          node -e "
+            process.env.PORT = '3299';
+            process.env.DASHSCOPE_API_KEY = 'test';
+            process.env.JWT_SECRET = 'test';
+            const m = require('./index.js');
+            console.log('index.js loaded OK, exports:', Object.keys(m || {}));
+          " 2>&1 || echo "index.js LOAD FAILED"
 
           echo ""
-          echo "=== 3. 验证jsonwebtoken ==="
-          node -e "require('jsonwebtoken'); console.log('jsonwebtoken OK')"
-          node -e "require('./middleware/auth'); console.log('middleware/auth OK')"
-          node -e "require('./routes/auth'); console.log('routes/auth OK')"
+          echo "=== 3. 检查Express版本 ==="
+          node -e "console.log('express version:', require('express/package.json').version)"
 
           echo ""
-          echo "=== 4. 创建.env ==="
-          echo "${{ secrets.SERVER_ENV }}" > .env
-          chmod 600 .env
+          echo "=== 4. 列出所有注册的路由 ==="
+          node -e "
+            process.env.PORT = '0';
+            process.env.DASHSCOPE_API_KEY = 'test';
+            process.env.JWT_SECRET = 'test';
+            require('dotenv').config();
+            const { createApp } = require('./index.js');
+            if (createApp) {
+              const app = createApp();
+              const routes = [];
+              if (app._router) {
+                app._router.stack.forEach(r => {
+                  if (r.route) routes.push(r.route.path + ' [' + Object.keys(r.route.methods).join(',') + ']');
+                });
+              }
+              console.log('Routes found:', routes.length);
+              routes.forEach(r => console.log(' ', r));
+            } else {
+              console.log('createApp not exported');
+            }
+          " 2>&1 | head -50
 
           echo ""
-          echo "=== 5. 启动PM2 ==="
+          echo "=== 5. 重启PM2并测试 ==="
           PORT=3201 pm2 start index.js --name rehab-care-link-server
-          pm2 save
           sleep 5
-
-          echo ""
-          echo "=== 6. PM2日志 ==="
-          pm2 logs rehab-care-link-server --lines 10 --nostream
-
-          echo ""
-          echo "=== 7. 测试端点 ==="
+          echo "Health:"
           curl -s http://localhost:3201/api/health
           echo ""
+          echo "Regenerate:"
           curl -s -w "\nHTTP:%{http_code}" -X POST http://localhost:3201/api/patients/1/regenerate-plan -H "Content-Type: application/json" -d '{"supplementNotes":"test","profile":{"patient":{"name":"test"}}}'
           echo ""
