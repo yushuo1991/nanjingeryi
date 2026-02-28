@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Clock } from '../components/icons';
+import TruckLoader from '../components/ui/TruckLoader';
 
 const PatientsPage = React.memo(({
   selectedDepartment,
@@ -60,10 +61,7 @@ const PatientsPage = React.memo(({
         <div className="flex-1 overflow-y-auto hide-scrollbar">
           {/* 加载状态 */}
           {isLoadingPatients ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin mb-4"></div>
-              <p className="text-sm text-slate-500">加载患者数据中...</p>
-            </div>
+            <TruckLoader message="加载患者数据中..." />
           ) : (
             <>
               {/* 进行中 */}
