@@ -6,6 +6,7 @@ import {
 } from '../components/icons';
 import ModalBase from '../components/ui/ModalBase';
 import ParticleButton from '../components/ui/ParticleButton';
+import BoxLoader from '../components/ui/BoxLoader';
 
 /**
  * AIIntakeModal - Modal for AI-powered patient intake
@@ -113,40 +114,7 @@ const AIIntakeModal = ({
 
       {/* Step 1: AI processing */}
       {aiStep === 1 && (
-        <div className="text-center py-12">
-          <div className="relative w-24 h-24 mx-auto mb-6">
-            {/* Image preview */}
-            {uploadedImage && (
-              <img
-                src={uploadedImage}
-                alt="病历"
-                className="w-full h-full object-cover rounded-2xl opacity-50"
-              />
-            )}
-            {/* Loading animation overlay */}
-            <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-2xl">
-              <Loader2 size={32} className="text-blue-500 animate-spin" />
-            </div>
-          </div>
-
-          <h4 className="text-lg font-bold text-slate-800 mb-2">AI识别中...</h4>
-          <p className="text-sm text-slate-500 mb-4">正在识别病例图片，请稍候</p>
-
-          {/* Progress bar */}
-          <div className="max-w-xs mx-auto">
-            <div className="w-full bg-slate-100 rounded-full h-2.5 mb-2 overflow-hidden">
-              <div
-                className="bg-gradient-to-r from-blue-400 to-purple-400 h-2.5 rounded-full animate-pulse"
-                style={{ width: '100%', opacity: 0.8 }}
-              />
-            </div>
-            <p className="text-xs text-slate-400">识别中，请耐心等待...</p>
-          </div>
-
-          <p className="text-xs text-slate-400 mt-6">
-            AI智能识别 · 图片理解
-          </p>
-        </div>
+        <BoxLoader message="AI正在识别病例图片，请稍候..." />
       )}
 
       {/* Step 2: Fill patient information form */}
