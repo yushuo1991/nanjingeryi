@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import {
   Sparkles, Upload, Camera, Loader2, CheckCircle2, FileText,
-  User, AlertCircle, AlertTriangle, ClipboardList, X, Trash2, Check
+  User, AlertCircle, AlertTriangle, ClipboardList, X, Trash2, Check, RotateCcw
 } from '../components/icons';
 import ModalBase from '../components/ui/ModalBase';
 import ParticleButton from '../components/ui/ParticleButton';
 import BoxLoader from '../components/ui/BoxLoader';
+import ReplaceItemModal from './ReplaceItemModal';
 
 /**
  * AIIntakeModal - Modal for AI-powered patient intake
@@ -64,6 +65,9 @@ const AIIntakeModal = ({
   departments
 }) => {
   const [newAlertInput, setNewAlertInput] = useState('');
+  const [showReplaceModal, setShowReplaceModal] = useState(false);
+  const [replacingItemIndex, setReplacingItemIndex] = useState(null);
+  const [alternatives, setAlternatives] = useState([]);
 
   const handleClose = () => {
     onClose();
@@ -72,6 +76,51 @@ const AIIntakeModal = ({
     setUploadedImage(null);
     setOcrText('');
     setOcrProgress(0);
+  };
+
+  // 打开替换弹窗
+  const handleReplaceClick = async (index) => {
+    const item = aiResult.treatmentPlan.items[index];
+    setReplacingItemIndex(index);
+
+    // 调用API获取备选项目
+    try {
+      const response = await fetch('/api/treatment/alternatives', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentItemId: item.id,
+          category: item.category || 'active',
+          currentPlan: aiResult.treatmentPlan.items
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setAlternatives(data.alternatives);
+        setShowReplaceModal(true);
+      }
+    } catch (error) {
+      console.error('获取备选项目失败:', error);
+      setAlternatives([]);
+      setShowReplaceModal(true);
+    }
+  };
+
+  // 执行替换
+  const handleReplace = (newItem) => {
+    const updatedItems = [...aiResult.treatmentPlan.items];
+    updatedItems[replacingItemIndex] = {
+      ...newItem,
+      id: Date.now(), // 生成新ID
+      completed: false
+    };
+    setAiResult(prev => ({
+      ...prev,
+      treatmentPlan: {
+        ...prev.treatmentPlan,
+        items: updatedItems
+      }
+    }));
   };
 
   return (
@@ -222,6 +271,21 @@ const AIIntakeModal = ({
                   className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none resize-none bg-white"
                 />
               </div>
+              <div className="col-span-2">
+                <label className="text-xs text-slate-500 mb-1 block">患儿状态 *</label>
+                <select
+                  value={aiResult.patientState || '配合度良好'}
+                  onChange={(e) => updateFormField('patientState', e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none bg-white"
+                >
+                  <option value="配合度良好">配合度良好 - 意识清醒，能主动配合训练</option>
+                  <option value="配合度一般">配合度一般 - 意识清醒，需要引导配合</option>
+                  <option value="配合度差">配合度差 - 意识清醒但抗拒训练</option>
+                  <option value="意识障碍">意识障碍 - 嗜睡或意识模糊</option>
+                  <option value="昏迷">昏迷 - 无意识反应</option>
+                </select>
+                <p className="text-xs text-slate-400 mt-1">患儿状态将影响治疗方案的选择</p>
+              </div>
             </div>
           </div>
 
@@ -337,6 +401,13 @@ const AIIntakeModal = ({
                     className="w-20 border border-slate-200 rounded-lg px-2 py-1 text-sm text-slate-700 placeholder-slate-400 bg-white"
                   />
                   <button
+                    onClick={() => handleReplaceClick(i)}
+                    className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
+                    title="替换项目"
+                  >
+                    <RotateCcw size={14} />
+                  </button>
+                  <button
                     onClick={() => removeTreatmentItem(i)}
                     className="p-1 text-slate-400 hover:text-rose-500"
                   >
@@ -387,6 +458,15 @@ const AIIntakeModal = ({
           </div>
         </div>
       )}
+
+      {/* 替换项目弹窗 */}
+      <ReplaceItemModal
+        isOpen={showReplaceModal}
+        onClose={() => setShowReplaceModal(false)}
+        currentItem={replacingItemIndex !== null ? aiResult?.treatmentPlan?.items[replacingItemIndex] : null}
+        alternatives={alternatives}
+        onReplace={handleReplace}
+      />
     </ModalBase>
   );
 };

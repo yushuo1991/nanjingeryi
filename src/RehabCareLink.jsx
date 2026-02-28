@@ -822,19 +822,45 @@ export default function RehabCareLink() {
     }
     setIsOcrProcessing(true);
     try {
-      const profile = {
-        patient: {
-          name: aiResult.name,
-          gender: aiResult.gender,
-          age: aiResult.age,
-          bedNo: aiResult.bedNo,
-          department: aiResult.department,
-          diagnosis: aiResult.diagnosis,
-          admissionDate: null,
-        },
-        risks: aiResult.safetyAlerts || [],
-      };
-      const { plan } = await generatePlan(aiResult._caseId, profile);
+      // 优先使用模板库智能匹配
+      let plan = null;
+      try {
+        const matchResponse = await api('/api/treatment/match-plan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            diagnosis: aiResult.diagnosis,
+            patientState: aiResult.patientState || '配合度良好',
+            age: parseInt(aiResult.age) || 60
+          })
+        });
+        if (matchResponse.success && matchResponse.plan) {
+          plan = matchResponse.plan;
+          showToast('已根据患儿状态智能匹配治疗方案', 'success');
+        }
+      } catch (matchError) {
+        console.warn('模板匹配失败，尝试AI生成:', matchError);
+      }
+
+      // 如果模板匹配失败，使用AI生成
+      if (!plan) {
+        const profile = {
+          patient: {
+            name: aiResult.name,
+            gender: aiResult.gender,
+            age: aiResult.age,
+            bedNo: aiResult.bedNo,
+            department: aiResult.department,
+            diagnosis: aiResult.diagnosis,
+            admissionDate: null,
+          },
+          risks: aiResult.safetyAlerts || [],
+        };
+        const result = await generatePlan(aiResult._caseId, profile);
+        plan = result.plan;
+        showToast('AI生成方案完成', 'success');
+      }
+
       setAiResult((prev) => ({
         ...prev,
         treatmentPlan: {
@@ -842,12 +868,15 @@ export default function RehabCareLink() {
           highlights: [],
           items: Array.isArray(plan.items)
             ? plan.items.map((it, idx) => ({
-                id: Date.now() + idx,
+                id: it.id || Date.now() + idx,
                 name: it.name || '',
-                icon: '🎯',
+                icon: it.icon || '🎯',
                 duration: it.duration || '',
                 completed: false,
-                note: it.notes || '',
+                note: it.note || it.notes || '',
+                category: it.category || 'active',
+                适用状态: it.适用状态 || [],
+                禁忌: it.禁忌 || []
               }))
             : prev.treatmentPlan.items,
           precautions: Array.isArray(plan.precautions) ? plan.precautions : prev.treatmentPlan.precautions,

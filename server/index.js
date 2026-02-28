@@ -50,6 +50,11 @@ const {
 const { seedIfEmpty } = require('./seed');
 const { authMiddleware, roleMiddleware } = require('./middleware/auth');
 const { registerAuthRoutes } = require('./routes/auth');
+const {
+  matchTreatmentPlan,
+  getAlternativeItems,
+  getAllItemsByCategory
+} = require('./treatment-library');
 const { get: cacheGet, set: cacheSet, getStats: getCacheStats, clearPatientsCache } = require('./utils/cache');
 
 function requiredEnv(name) {
@@ -1042,6 +1047,66 @@ function createApp() {
     } catch (e) {
       console.error('AI regenerate plan failed:', e);
       jsonError(res, 502, e.message || 'AI regenerate plan failed');
+    }
+  });
+
+  // 智能匹配治疗方案（基于模板库）
+  app.post('/api/treatment/match-plan', async (req, res) => {
+    try {
+      const { diagnosis, patientState, age } = req.body;
+      if (!diagnosis) return jsonError(res, 400, 'diagnosis is required');
+
+      const plan = matchTreatmentPlan(
+        diagnosis,
+        patientState || '配合度良好',
+        age || 60
+      );
+
+      res.json({
+        success: true,
+        plan: {
+          focus: `针对${diagnosis}的个性化康复方案（患儿状态：${patientState || '配合度良好'}）`,
+          items: plan,
+          precautions: ['训练前评估患儿状态', '密切监测生命体征', '如有不适立即停止']
+        }
+      });
+    } catch (e) {
+      console.error('Match treatment plan failed:', e);
+      jsonError(res, 500, e.message || 'Failed to match treatment plan');
+    }
+  });
+
+  // 获取可替换的治疗项目
+  app.post('/api/treatment/alternatives', async (req, res) => {
+    try {
+      const { currentItemId, category, currentPlan } = req.body;
+      if (!currentItemId || !category) {
+        return jsonError(res, 400, 'currentItemId and category are required');
+      }
+
+      const alternatives = getAlternativeItems(currentItemId, category, currentPlan || []);
+
+      res.json({
+        success: true,
+        alternatives
+      });
+    } catch (e) {
+      console.error('Get alternatives failed:', e);
+      jsonError(res, 500, e.message || 'Failed to get alternatives');
+    }
+  });
+
+  // 获取所有治疗项目（按类别）
+  app.get('/api/treatment/library', async (req, res) => {
+    try {
+      const library = getAllItemsByCategory();
+      res.json({
+        success: true,
+        library
+      });
+    } catch (e) {
+      console.error('Get treatment library failed:', e);
+      jsonError(res, 500, e.message || 'Failed to get treatment library');
     }
   });
 
