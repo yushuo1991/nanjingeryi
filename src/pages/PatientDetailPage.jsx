@@ -34,6 +34,10 @@ const PatientDetailPage = React.memo(({
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [previewPlan, setPreviewPlan] = useState(null);
 
+  // 今日日志生成状态
+  const [showLogInput, setShowLogInput] = useState(false);
+  const [todayNotes, setTodayNotes] = useState('');
+
   // 使用useCallback缓存事件处理函数
   const handleGenerateCard = useCallback(() => {
     generateTreatmentCard(patient);
@@ -52,8 +56,14 @@ const PatientDetailPage = React.memo(({
   }, [setShowQuickEntry]);
 
   const handleGenerateLog = useCallback(() => {
-    generateTodayLog(patient);
-  }, [generateTodayLog, patient]);
+    setShowLogInput(true);
+  }, []);
+
+  const handleConfirmGenerateLog = useCallback(() => {
+    generateTodayLog(patient, todayNotes.trim());
+    setShowLogInput(false);
+    setTodayNotes('');
+  }, [generateTodayLog, patient, todayNotes]);
 
   const handleToggleTreatment = useCallback((itemId) => {
     toggleTreatmentItem(patient.id, itemId);
@@ -469,6 +479,41 @@ const PatientDetailPage = React.memo(({
                   </button>
                 )}
               </div>
+
+              {/* 今日状态输入框 */}
+              {showLogInput && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    今日状态（选填）
+                  </label>
+                  <textarea
+                    value={todayNotes}
+                    onChange={(e) => setTodayNotes(e.target.value)}
+                    placeholder="输入今日患儿的特殊情况、配合度、反应等，AI将参考这些信息生成日志。留空则按常规方式生成。"
+                    className="w-full p-3 border border-blue-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    rows={3}
+                  />
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={handleConfirmGenerateLog}
+                      className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-sm font-semibold text-white bg-blue-500 hover:bg-blue-600 transition-all"
+                    >
+                      <Sparkles size={16} />
+                      生成日志
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowLogInput(false);
+                        setTodayNotes('');
+                      }}
+                      className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all"
+                    >
+                      取消
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {patient.treatmentPlan?.items?.length > 0 ? (
                 <div className="space-y-2">
                   {patient.treatmentPlan.items.map(item => (

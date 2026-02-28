@@ -6,6 +6,7 @@ import ParticleButton from '../components/ui/ParticleButton';
 const HomePage = React.memo(({
   userRole,
   patients,
+  isLoadingPatients,
   departments,
   getDepartmentPatients,
   navigateTo,
@@ -108,8 +109,16 @@ const HomePage = React.memo(({
 
       {/* 列表区域 */}
       <div className="flex-1 overflow-y-auto hide-scrollbar">
-        {/* 最近建档 - 仅治疗师可见 */}
-        {userRole === 'therapist' && recentPatients.length > 0 && (
+        {/* 加载状态 */}
+        {isLoadingPatients ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+            <p className="text-sm text-slate-500">加载患者数据中...</p>
+          </div>
+        ) : (
+          <>
+            {/* 最近建档 - 仅治疗师可见 */}
+            {userRole === 'therapist' && recentPatients.length > 0 && (
           <div className="mb-6">
             <h3 className="text-sm font-bold text-slate-700 mb-4 pl-1">最近建档</h3>
             <div className="space-y-3">
@@ -220,6 +229,8 @@ const HomePage = React.memo(({
             )}
           </div>
         </div>
+          </>
+        )}
       </div>
     </div>
   </div>
@@ -240,6 +251,7 @@ HomePage.propTypes = {
     department: PropTypes.string,
     todayTreated: PropTypes.bool,
   })).isRequired,
+  isLoadingPatients: PropTypes.bool,
   departments: PropTypes.arrayOf(PropTypes.shape({
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     name: PropTypes.string,

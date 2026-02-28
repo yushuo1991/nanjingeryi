@@ -358,6 +358,7 @@ export default function RehabCareLink() {
   });
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [patients, setPatients] = useState([]); // 从后端加载，不使用硬编码数据
+  const [isLoadingPatients, setIsLoadingPatients] = useState(true); // 数据加载状态
   // 如果URL有readonly参数，设置为医生模式
   const [userRole, setUserRole] = useState(urlParams.readonly ? 'doctor' : 'therapist');
   // 分享模式：只能查看特定科室
@@ -429,12 +430,15 @@ export default function RehabCareLink() {
     let cancelled = false;
     async function load() {
       try {
+        setIsLoadingPatients(true);
         const res = await api('/api/patients');
         if (cancelled) return;
         const list = Array.isArray(res?.items) ? res.items : [];
         setPatients(list);
       } catch (e) {
         console.error('加载患者数据失败:', e);
+      } finally {
+        if (!cancelled) setIsLoadingPatients(false);
       }
     }
     load();
@@ -891,7 +895,7 @@ export default function RehabCareLink() {
   };
 
   // 生成今日治疗日志（调用AI生成个性化日志，支持补充说明）
-  const generateTodayLog = useCallback(async (patient) => {
+  const generateTodayLog = useCallback(async (patient, todayNotes = '') => {
     if (!patient) return;
 
     const today = new Date();
@@ -915,7 +919,7 @@ export default function RehabCareLink() {
           treatmentPlan: patient.treatmentPlan,
           completedItems: itemsForLog,
           previousLogs: (patient.treatmentLogs || []).slice(0, 3),
-          supplementNotes: patient.supplementNotes || '',
+          supplementNotes: todayNotes || patient.supplementNotes || '',
         }),
       });
 
@@ -1474,6 +1478,7 @@ export default function RehabCareLink() {
           <HomePage
             userRole={userRole}
             patients={patients}
+            isLoadingPatients={isLoadingPatients}
             departments={departments}
             getDepartmentPatients={getDepartmentPatients}
             navigateTo={navigateTo}
@@ -1490,6 +1495,7 @@ export default function RehabCareLink() {
           <PatientsPage
             selectedDepartment={selectedDepartment}
             getDepartmentPatients={getDepartmentPatients}
+            isLoadingPatients={isLoadingPatients}
             goBack={goBack}
             navigateTo={navigateTo}
           />

@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Clock } from '.
 const PatientsPage = React.memo(({
   selectedDepartment,
   getDepartmentPatients,
+  isLoadingPatients,
   goBack,
   navigateTo
 }) => {
@@ -57,8 +58,16 @@ const PatientsPage = React.memo(({
 
         {/* 列表区域 */}
         <div className="flex-1 overflow-y-auto hide-scrollbar">
-          {/* 进行中 */}
-          <div className="mb-6">
+          {/* 加载状态 */}
+          {isLoadingPatients ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+              <p className="text-sm text-slate-500">加载患者数据中...</p>
+            </div>
+          ) : (
+            <>
+              {/* 进行中 */}
+              <div className="mb-6">
             <h3 className="text-sm font-bold text-slate-600 mb-3 flex items-center gap-2 pl-1">
               <div className="w-2 h-2 bg-emerald-500 rounded-full" />
               进行中 ({activePatients.length})
@@ -83,6 +92,8 @@ const PatientsPage = React.memo(({
                 ))}
               </div>
             </div>
+          )}
+            </>
           )}
         </div>
       </div>
@@ -150,6 +161,7 @@ PatientsPage.propTypes = {
     icon: PropTypes.string.isRequired,
   }).isRequired,
   getDepartmentPatients: PropTypes.func.isRequired,
+  isLoadingPatients: PropTypes.bool,
   goBack: PropTypes.func.isRequired,
   navigateTo: PropTypes.func.isRequired,
 };
