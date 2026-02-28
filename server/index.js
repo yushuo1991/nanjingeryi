@@ -1116,7 +1116,25 @@ function createApp() {
       const items = rows.map((r) => {
         try {
           const data = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
-          return { ...data, id: Number(r.id), createdAt: r.created_at, updatedAt: r.updated_at };
+          // 只返回列表需要的基本字段，减少数据传输量
+          return {
+            id: Number(r.id),
+            name: data.name,
+            age: data.age,
+            gender: data.gender,
+            bedNo: data.bedNo,
+            department: data.department,
+            departmentId: data.departmentId,
+            avatar: data.avatar,
+            diagnosis: data.diagnosis,
+            admissionDate: data.admissionDate,
+            status: data.status,
+            todayTreated: data.todayTreated,
+            safetyAlerts: data.safetyAlerts || [],
+            gasScore: data.gasScore,
+            createdAt: r.created_at,
+            updatedAt: r.updated_at
+          };
         } catch (parseError) {
           console.error(`Failed to parse patient ${r.id}:`, parseError);
           return { id: Number(r.id), name: 'Error', error: 'Invalid data', createdAt: r.created_at, updatedAt: r.updated_at };
