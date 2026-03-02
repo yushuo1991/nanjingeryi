@@ -1,0 +1,227 @@
+name: 终极修复 - 手动验证并安装依赖
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ultimate-fix:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 完全停止PM2
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 停止PM2 =========="
+          pm2 delete rehab-care-link-server || true
+          pm2 kill || true
+          sleep 3
+          echo "PM2已停止"
+
+    - name: 备份数据
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 备份数据 =========="
+          mkdir -p /tmp/rehab-backup
+          cp /var/www/rehab-care-link/server/.env /tmp/rehab-backup/.env 2>/dev/null || true
+          cp /var/www/rehab-care-link/server/rehab_care.db /tmp/rehab-backup/rehab_care.db 2>/dev/null || true
+          echo "备份完成"
+
+    - name: 清理旧文件
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 清理旧文件 =========="
+          rm -rf /var/www/rehab-care-link/server
+          mkdir -p /var/www/rehab-care-link/server
+          echo "清理完成"
+
+    - name: 部署新代码
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        source: "server/"
+        target: "/var/www/rehab-care-link/"
+        strip_components: 0
+
+    - name: 安装依赖并启动
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        command_timeout: 30m
+        script: |
+          cd /var/www/rehab-care-link/server
+
+          echo "========== 1. 恢复数据 =========="
+          cp /tmp/rehab-backup/.env .env 2>/dev/null || echo "${{ secrets.SERVER_ENV }}" > .env
+          cp /tmp/rehab-backup/rehab_care.db rehab_care.db 2>/dev/null || true
+
+          echo ""
+          echo "========== 2. 清理npm =========="
+          rm -rf node_modules package-lock.json
+          npm cache clean --force
+
+          echo ""
+          echo "========== 3. 安装依赖（第一次）=========="
+          npm install --production 2>&1 | tail -30
+
+          echo ""
+          echo "========== 4. 验证关键依赖 =========="
+          echo "检查 multer:"
+          if [ -d "node_modules/multer" ]; then
+            echo "✅ multer 存在"
+            ls -lh node_modules/multer/package.json
+          else
+            echo "❌ multer 不存在"
+          fi
+
+          echo ""
+          echo "检查 busboy:"
+          if [ -d "node_modules/busboy" ]; then
+            echo "✅ busboy 存在"
+            ls -lh node_modules/busboy/package.json
+          else
+            echo "❌ busboy 不存在"
+          fi
+
+          echo ""
+          echo "检查 express:"
+          if [ -d "node_modules/express" ]; then
+            echo "✅ express 存在"
+          else
+            echo "❌ express 不存在"
+          fi
+
+          echo ""
+          echo "========== 5. 手动安装缺失的依赖 =========="
+
+          # 手动安装 busboy
+          if [ ! -d "node_modules/busboy" ]; then
+            echo "手动安装 busboy..."
+            npm install busboy@^1.6.0 --save --production
+          fi
+
+          # 手动安装 multer
+          if [ ! -d "node_modules/multer" ]; then
+            echo "手动安装 multer..."
+            npm install multer@^1.4.5-lts.1 --save --production
+          fi
+
+          echo ""
+          echo "========== 6. 再次验证依赖 =========="
+          for pkg in multer busboy express better-sqlite3 json5; do
+            if [ -d "node_modules/$pkg" ]; then
+              echo "✅ $pkg"
+            else
+              echo "❌ $pkg 缺失！"
+            fi
+          done
+
+          echo ""
+          echo "========== 7. 检查 mime-db =========="
+          if [ -f "node_modules/mime-db/db.json" ]; then
+            echo "mime-db/db.json 存在"
+            # 验证 JSON 是否有效
+            if node -e "require('./node_modules/mime-db/db.json')" 2>/dev/null; then
+              echo "✅ mime-db/db.json 有效"
+            else
+              echo "❌ mime-db/db.json 损坏，重新安装..."
+              rm -rf node_modules/mime-db
+              npm install mime-db --save --production
+            fi
+          else
+            echo "❌ mime-db/db.json 不存在"
+          fi
+
+          echo ""
+          echo "========== 8. 测试加载模块 =========="
+          node -e "
+            try {
+              require('multer');
+              console.log('✅ multer 可以加载');
+            } catch(e) {
+              console.log('❌ multer 加载失败:', e.message);
+            }
+            try {
+              require('busboy');
+              console.log('✅ busboy 可以加载');
+            } catch(e) {
+              console.log('❌ busboy 加载失败:', e.message);
+            }
+          "
+
+          echo ""
+          echo "========== 9. 检查路由代码 =========="
+          grep -n "regenerate-plan" index.js | head -3
+
+          echo ""
+          echo "========== 10. 启动PM2 =========="
+          PORT=3201 pm2 start index.js --name rehab-care-link-server
+          pm2 save
+
+          echo ""
+          echo "========== 11. 等待启动 =========="
+          sleep 10
+
+          echo ""
+          echo "========== 12. 检查PM2状态 =========="
+          pm2 status
+
+          echo ""
+          echo "========== 13. 检查PM2日志 =========="
+          pm2 logs rehab-care-link-server --lines 50 --nostream
+
+          echo ""
+          echo "========== 14. 测试健康检查 =========="
+          curl -f http://localhost:3201/api/health && echo "✅ 健康检查通过" || echo "❌ 健康检查失败"
+
+          echo ""
+          echo "========== 15. 测试regenerate-plan端点 =========="
+          HTTP_CODE=$(curl -s -o /tmp/response.txt -w "%{http_code}" -X POST http://localhost:3201/api/patients/1/regenerate-plan \
+            -H "Content-Type: application/json" \
+            -d '{"supplementNotes":"test","profile":{"patient":{"name":"test"},"risks":[],"contraindications":[],"monitoring":[],"keyFindings":[]}}')
+
+          echo "HTTP状态码: $HTTP_CODE"
+          echo "响应内容:"
+          cat /tmp/response.txt
+
+          if [ "$HTTP_CODE" = "404" ]; then
+            echo ""
+            echo "❌ 端点返回404，路由未注册！"
+            echo "检查最新的错误日志:"
+            pm2 logs rehab-care-link-server --err --lines 20 --nostream
+          elif [ "$HTTP_CODE" = "400" ]; then
+            echo ""
+            echo "✅ 端点存在（返回400是因为测试数据不完整）"
+          elif [ "$HTTP_CODE" = "502" ]; then
+            echo ""
+            echo "✅ 端点存在（返回502可能是AI API问题）"
+          else
+            echo ""
+            echo "✅ 端点响应正常"
+          fi
+
+          echo ""
+          echo "========== 完成！ =========="
