@@ -1,0 +1,48 @@
+name: 检查服务器代码语法
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-syntax:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检查代码语法和路由注册
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          cd /var/www/rehab-care-link/server
+
+          echo "========== 检查 Node.js 语法 =========="
+          node -c index.js && echo "✅ 语法正确" || echo "❌ 语法错误"
+
+          echo ""
+          echo "========== 尝试加载模块 =========="
+          node -e "
+            try {
+              const { createApp } = require('./index.js');
+              const app = createApp();
+              const routes = [];
+              app._router.stack.forEach(r => {
+                if (r.route) routes.push(r.route.path);
+              });
+              console.log('已注册的路由数量:', routes.length);
+              console.log('包含 regenerate-plan 的路由:', routes.filter(r => r.includes('regenerate-plan')));
+            } catch(e) {
+              console.error('加载失败:', e.message);
+              console.error(e.stack);
+            }
+          "
+
+          echo ""
+          echo "========== 检查依赖是否完整 =========="
+          npm ls better-sqlite3 2>&1 | head -5
+          npm ls json5 2>&1 | head -5
+
+          echo ""
+          echo "完成！"
