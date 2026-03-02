@@ -1,0 +1,34 @@
+name: 测试regenerate-plan端点
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-endpoint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 直接测试后端端点
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== 测试 localhost:3201 =========="
+          curl -X POST http://localhost:3201/api/patients/1/regenerate-plan \
+            -H "Content-Type: application/json" \
+            -d '{"supplementNotes":"测试","profile":{"patient":{"name":"测试"},"risks":[],"contraindications":[],"monitoring":[],"keyFindings":[]}}' \
+            2>&1 | head -20
+
+          echo ""
+          echo "========== 检查 PM2 日志中的错误 =========="
+          pm2 logs rehab-care-link-server --lines 20 --nostream | tail -20
+
+          echo ""
+          echo "========== 检查 Express 路由注册 =========="
+          grep -A 5 "app.post.*regenerate-plan" /var/www/rehab-care-link/server/index.js
+
+          echo ""
+          echo "完成！"
