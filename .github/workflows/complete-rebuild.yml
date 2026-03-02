@@ -88,13 +88,22 @@ jobs:
 
           echo ""
           echo "========== 4. 验证关键依赖 =========="
-          for pkg in multer express better-sqlite3 json5; do
+          for pkg in multer express better-sqlite3 json5 busboy; do
             if [ -d "node_modules/$pkg" ]; then
               echo "✅ $pkg"
             else
               echo "❌ $pkg 缺失"
             fi
           done
+
+          echo ""
+          echo "========== 4.5. 手动安装busboy（如果缺失）=========="
+          if [ ! -d "node_modules/busboy" ]; then
+            echo "busboy缺失，手动安装..."
+            npm install busboy --save --production
+          else
+            echo "busboy已存在"
+          fi
 
           echo ""
           echo "========== 5. 验证关键文件 =========="
