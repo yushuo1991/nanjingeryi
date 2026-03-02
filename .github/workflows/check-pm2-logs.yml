@@ -1,0 +1,42 @@
+name: 检查PM2日志和路由
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-logs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检查PM2日志
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "========== PM2 状态 =========="
+          pm2 status
+
+          echo ""
+          echo "========== PM2 错误日志（最新30行）=========="
+          pm2 logs rehab-care-link-server --err --lines 30 --nostream | tail -30
+
+          echo ""
+          echo "========== PM2 输出日志（最新20行）=========="
+          pm2 logs rehab-care-link-server --out --lines 20 --nostream | tail -20
+
+          echo ""
+          echo "========== 测试直接访问后端 =========="
+          curl -X POST http://localhost:3201/api/patients/1/regenerate-plan \
+            -H "Content-Type: application/json" \
+            -d '{"supplementNotes":"test","profile":{"patient":{"name":"test"},"risks":[],"contraindications":[],"monitoring":[],"keyFindings":[]}}' \
+            2>&1 | head -10
+
+          echo ""
+          echo "========== 检查进程重启次数 =========="
+          pm2 describe rehab-care-link-server | grep -E "restart|uptime"
+
+          echo ""
+          echo "完成！"
