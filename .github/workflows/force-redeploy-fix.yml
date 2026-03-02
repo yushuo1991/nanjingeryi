@@ -1,0 +1,99 @@
+name: 强制重新部署并修复
+
+on:
+  workflow_dispatch:
+
+jobs:
+  force-redeploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 设置 Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: 停止服务器进程
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "停止 PM2 进程..."
+          pm2 delete rehab-care-link-server || true
+          pm2 kill || true
+          sleep 3
+
+    - name: 清理服务器文件
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "备份 .env 和数据库..."
+          cp /var/www/rehab-care-link/server/.env /tmp/backup.env 2>/dev/null || true
+          cp /var/www/rehab-care-link/server/rehab_care.db /tmp/backup.db 2>/dev/null || true
+
+          echo "清理旧文件..."
+          rm -rf /var/www/rehab-care-link/server
+          mkdir -p /var/www/rehab-care-link/server
+
+    - name: 部署服务器代码
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        source: "server/*"
+        target: "/var/www/rehab-care-link/"
+        strip_components: 0
+
+    - name: 配置并启动服务
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        command_timeout: 15m
+        script: |
+          cd /var/www/rehab-care-link/server
+
+          echo "恢复 .env 和数据库..."
+          cp /tmp/backup.env .env 2>/dev/null || echo "${{ secrets.SERVER_ENV }}" > .env
+          cp /tmp/backup.db rehab_care.db 2>/dev/null || true
+
+          echo "安装依赖..."
+          npm install --production
+
+          echo "检查关键文件..."
+          ls -lh index.js qwen.js db.js
+
+          echo "检查 regenerate-plan 路由..."
+          grep -n "regenerate-plan" index.js || echo "警告：未找到 regenerate-plan 路由"
+
+          echo "启动 PM2..."
+          PORT=3201 pm2 start index.js --name rehab-care-link-server --log /var/log/rehab-api.log --error /var/log/rehab-error.log
+          pm2 save
+
+          echo "等待服务启动..."
+          sleep 5
+
+          echo "检查 PM2 状态..."
+          pm2 status
+
+          echo "检查最新日志..."
+          pm2 logs rehab-care-link-server --lines 20 --nostream
+
+          echo "测试端点..."
+          curl -f http://localhost:3201/api/health || echo "警告：健康检查失败"
+
+          echo "完成！"
