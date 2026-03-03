@@ -1,0 +1,116 @@
+name: 最终修复 - 清除PM2 socket并重启
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-pm2-socket:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 步骤1 - 通过PID清除PM2 socket（不杀SSH进程）
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        timeout: 60s
+        command_timeout: 2m
+        script: |
+          echo "=== 1. 通过PID文件精确杀PM2 daemon ==="
+          if [ -f ~/.pm2/pm2.pid ]; then
+            PM2_PID=$(cat ~/.pm2/pm2.pid)
+            echo "PM2 daemon PID: $PM2_PID"
+            kill -9 $PM2_PID 2>/dev/null && echo "已杀死" || echo "进程不存在"
+          else
+            echo "pm2.pid 不存在"
+          fi
+
+          echo ""
+          echo "=== 2. 删除PM2 socket和锁文件 ==="
+          rm -f ~/.pm2/pub.sock
+          rm -f ~/.pm2/rpc.sock
+          rm -f ~/.pm2/pm2.pid
+          rm -f ~/.pm2/*.lock
+          echo "Socket文件已清除"
+
+          echo ""
+          echo "=== 3. 杀死应用进程（精确匹配）==="
+          pkill -f "node.*rehab-care-link" 2>/dev/null || true
+          echo "完成"
+
+    - name: 步骤2 - 重新启动PM2（新的SSH连接）
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        timeout: 60s
+        command_timeout: 5m
+        script: |
+          echo "=== 1. 确认PM2 socket已清除 ==="
+          ls -la ~/.pm2/*.sock 2>/dev/null || echo "Socket文件不存在（正常）"
+
+          echo ""
+          echo "=== 2. 检查server文件状态 ==="
+          cd /var/www/rehab-care-link/server
+          ls package.json && echo "✅ package.json 存在" || echo "❌ package.json 不存在"
+          ls node_modules/multer 2>/dev/null && echo "✅ multer 存在" || echo "❌ multer 不存在"
+          ls node_modules/busboy 2>/dev/null && echo "✅ busboy 存在" || echo "❌ busboy 不存在"
+          ls node_modules/express 2>/dev/null && echo "✅ express 存在" || echo "❌ express 不存在"
+
+          echo ""
+          echo "=== 3. 启动PM2（socket已清除，daemon会重新初始化）==="
+          cd /var/www/rehab-care-link/server
+          PORT=3201 pm2 start index.js --name rehab-care-link-server
+          pm2 save --force
+          echo "启动命令已发送"
+
+    - name: 步骤3 - 等待并验证
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        timeout: 60s
+        command_timeout: 3m
+        script: |
+          echo "=== 等待服务器启动 ==="
+          sleep 8
+
+          echo ""
+          echo "=== PM2状态 ==="
+          pm2 status
+
+          echo ""
+          echo "=== 健康检查 ==="
+          curl -sf http://localhost:3201/api/health && echo "✅ 健康检查通过" || echo "❌ 健康检查失败"
+
+          echo ""
+          echo "=== 测试 regenerate-plan 路由 ==="
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3201/api/patients/1/regenerate-plan \
+            -H "Content-Type: application/json" \
+            -d '{"supplementNotes":"test","profile":{"patient":{"name":"test"},"risks":[],"contraindications":[],"monitoring":[],"keyFindings":[]}}')
+          echo "状态码: $CODE"
+          if [ "$CODE" = "400" ] || [ "$CODE" = "502" ]; then
+            echo "✅ 路由已注册！（400=参数不完整，502=AI API问题，均表示路由正常）"
+          elif [ "$CODE" = "404" ]; then
+            echo "❌ 路由仍未注册，查看PM2错误日志："
+            pm2 logs rehab-care-link-server --err --lines 20 --nostream
+          else
+            echo "状态码 $CODE"
+          fi
+
+          echo ""
+          echo "=== 测试 generate-log 路由 ==="
+          CODE2=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3201/api/patients/1/generate-log \
+            -H "Content-Type: application/json" \
+            -d '{"notes":"test"}')
+          echo "generate-log 状态码: $CODE2"
+          [ "$CODE2" != "404" ] && echo "✅ generate-log 路由正常" || echo "❌ generate-log 路由404"
+
+          echo ""
+          echo "完成！"
