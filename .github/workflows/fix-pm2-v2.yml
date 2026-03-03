@@ -1,0 +1,129 @@
+name: 最终修复v2 - 分步重启（忽略PM2步骤失败）
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-server:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 步骤1 - 杀PM2 daemon和清socket（允许失败）
+      continue-on-error: true
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        timeout: 30s
+        command_timeout: 1m
+        script: |
+          if [ -f ~/.pm2/pm2.pid ]; then
+            kill -9 $(cat ~/.pm2/pm2.pid) 2>/dev/null || true
+          fi
+          rm -f ~/.pm2/pub.sock ~/.pm2/rpc.sock ~/.pm2/pm2.pid ~/.pm2/*.lock
+          echo "PM2清理完成"
+
+    - name: 步骤2 - 杀端口3201上的旧进程（新SSH连接）
+      continue-on-error: true
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        timeout: 30s
+        command_timeout: 1m
+        script: |
+          echo "=== 杀死端口3201上的进程 ==="
+          fuser -k 3201/tcp 2>/dev/null || true
+          # 备用方法
+          lsof -ti:3201 2>/dev/null | xargs kill -9 2>/dev/null || true
+          sleep 2
+          echo "端口清理完成"
+          # 确认端口已空闲
+          if fuser 3201/tcp 2>/dev/null; then
+            echo "警告：端口3201仍被占用"
+          else
+            echo "✅ 端口3201已空闲"
+          fi
+
+    - name: 步骤3 - 启动服务（全新PM2 daemon）
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        timeout: 60s
+        command_timeout: 5m
+        script: |
+          echo "=== 检查server目录 ==="
+          cd /var/www/rehab-care-link/server
+          ls package.json 2>/dev/null && echo "✅ package.json存在" || echo "❌ 无package.json，尝试从备份恢复"
+          ls node_modules/multer 2>/dev/null && echo "✅ multer" || echo "❌ multer缺失"
+          ls node_modules/busboy 2>/dev/null && echo "✅ busboy" || echo "❌ busboy缺失"
+
+          echo ""
+          echo "=== 安装缺失依赖 ==="
+          # 若无package.json，创建一个最小的
+          if [ ! -f package.json ]; then
+            echo '{"name":"rehab","version":"1.0.0","dependencies":{}}' > package.json
+          fi
+          # 确保关键依赖存在
+          for pkg in multer busboy express cors better-sqlite3 jsonwebtoken bcryptjs json5 dotenv node-cache; do
+            if [ ! -d "node_modules/$pkg" ]; then
+              echo "安装 $pkg..."
+              npm install $pkg --no-save --silent 2>&1 | tail -2
+            fi
+          done
+
+          echo ""
+          echo "=== 启动PM2 ==="
+          PORT=3201 pm2 start index.js --name rehab-care-link-server
+          pm2 save --force
+
+    - name: 步骤4 - 验证结果
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        timeout: 60s
+        command_timeout: 3m
+        script: |
+          echo "=== 等待服务启动 ==="
+          sleep 10
+
+          echo ""
+          echo "=== PM2状态 ==="
+          pm2 status
+
+          echo ""
+          echo "=== 检查启动错误 ==="
+          pm2 logs rehab-care-link-server --err --lines 10 --nostream | grep -v "WARN\|JWT_SECRET" | tail -10
+
+          echo ""
+          echo "=== 健康检查 ==="
+          curl -sf http://localhost:3201/api/health || echo "❌ 健康检查失败"
+
+          echo ""
+          echo "=== 测试 regenerate-plan ==="
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3201/api/patients/1/regenerate-plan \
+            -H "Content-Type: application/json" \
+            -d '{"supplementNotes":"test","profile":{"patient":{"name":"test"},"risks":[],"contraindications":[],"monitoring":[],"keyFindings":[]}}')
+          echo "HTTP状态码: $CODE"
+          [ "$CODE" != "404" ] && echo "✅ 路由正常！" || echo "❌ 路由仍404，查看日志："
+          [ "$CODE" = "404" ] && pm2 logs rehab-care-link-server --err --lines 30 --nostream | tail -30
+
+          echo ""
+          echo "=== 测试 generate-log ==="
+          CODE2=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3201/api/patients/1/generate-log \
+            -H "Content-Type: application/json" -d '{"notes":"test"}')
+          echo "generate-log 状态码: $CODE2"
+          [ "$CODE2" != "404" ] && echo "✅ 路由正常！" || echo "❌ 路由404"
+
+          echo ""
+          echo "完成！"
