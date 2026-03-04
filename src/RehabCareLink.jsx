@@ -102,12 +102,6 @@ const allPatients = [
     todayTreated: false,
     safetyAlerts: ['防跌倒'],
     rehabProblems: '呼吸功能下降，运动耐力不足，需要加强呼吸训练和体能恢复',
-    gasScore: 65,
-    gasGoals: [
-      { name: '呼吸功能', target: 80, current: 70 },
-      { name: '运动耐力', target: 75, current: 55 },
-      { name: '日常活动', target: 90, current: 72 }
-    ],
     treatmentPlan: {
       focus: '改善呼吸功能，增强运动耐力',
       highlights: ['今日患儿精神状态良好，增加运动训练强度'],
@@ -154,11 +148,6 @@ const allPatients = [
     todayTreated: true,
     safetyAlerts: ['过敏体质', '避免冷空气刺激'],
     rehabProblems: '呼吸控制能力弱，体能较差，情绪不稳定影响训练配合度',
-    gasScore: 45,
-    gasGoals: [
-      { name: '呼吸控制', target: 85, current: 50 },
-      { name: '体能恢复', target: 70, current: 38 }
-    ],
     treatmentPlan: {
       focus: '哮喘康复训练，提高呼吸控制能力',
       highlights: ['⚠️ 今日患儿情绪不佳，改用游戏化训练方式'],
@@ -749,16 +738,6 @@ export default function RehabCareLink() {
             bedNo: profile?.patient?.bedNo || '',
             medicalRecordImage: reader.result,
             rehabProblems: getRehabProblems(),
-            gasGoals: planGasGoals.length
-              ? planGasGoals.slice(0, 2).map((g) => ({
-                  name: g.name || '',
-                  target: Number(g.target || 100),
-                  current: Number(g.current || 0),
-                }))
-              : [
-                  { name: '功能目标1', target: 100, current: 0 },
-                  { name: '功能目标2', target: 100, current: 0 },
-                ],
             treatmentPlan: {
               focus: plan?.focus || '',
               highlights: [],
@@ -794,10 +773,6 @@ export default function RehabCareLink() {
             bedNo: '',
             medicalRecordImage: reader.result,
             rehabProblems: '',
-            gasGoals: [
-              { name: '功能目标1', target: 100, current: 0 },
-              { name: '功能目标2', target: 100, current: 0 }
-            ],
             treatmentPlan: {
               focus: '',
               highlights: [],
@@ -895,30 +870,6 @@ export default function RehabCareLink() {
     setAiResult(prev => ({
       ...prev,
       [field]: value
-    }));
-  };
-
-  // 添加GAS目标
-  const addGasGoal = () => {
-    setAiResult(prev => ({
-      ...prev,
-      gasGoals: [...prev.gasGoals, { name: '', target: 100, current: 0 }]
-    }));
-  };
-
-  // 更新GAS目标
-  const updateGasGoal = (index, field, value) => {
-    setAiResult(prev => ({
-      ...prev,
-      gasGoals: prev.gasGoals.map((g, i) => i === index ? { ...g, [field]: value } : g)
-    }));
-  };
-
-  // 删除GAS目标
-  const removeGasGoal = (index) => {
-    setAiResult(prev => ({
-      ...prev,
-      gasGoals: prev.gasGoals.filter((_, i) => i !== index)
     }));
   };
 
@@ -1213,15 +1164,6 @@ export default function RehabCareLink() {
       return aiResult.gender === '男' ? '👦' : '👧';
     };
 
-    // 计算GAS分数 (防止除以0)
-    const gasScore = aiResult.gasGoals.length > 0
-      ? Math.round(aiResult.gasGoals.reduce((sum, g) => {
-          const target = Number(g.target) || 1; // 防止除以0
-          const current = Number(g.current) || 0;
-          return sum + (current / target * 100);
-        }, 0) / aiResult.gasGoals.length)
-      : 0;
-
     const newPatient = {
       name: aiResult.name.trim(),
       age: aiResult.age.trim(),
@@ -1237,8 +1179,6 @@ export default function RehabCareLink() {
       medicalRecordImage: aiResult.medicalRecordImage, // 保存病历图片
       rehabProblems: aiResult.rehabProblems || '', // 当下存在的康复问题
       safetyAlerts: aiResult.safetyAlerts,
-      gasScore: gasScore,
-      gasGoals: aiResult.gasGoals.filter(g => g.name.trim()),
       treatmentPlan: {
         focus: aiResult.treatmentPlan.focus || '康复训练',
         highlights: aiResult.treatmentPlan.highlights.filter(h => h.trim()),

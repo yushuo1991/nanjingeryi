@@ -141,7 +141,6 @@ function createApp() {
     const title = `康复治疗记录单（${escapeHtml(p.department || '')}）`;
 
     const safety = Array.isArray(p.safetyAlerts) ? p.safetyAlerts : [];
-    const gasGoals = Array.isArray(p.gasGoals) ? p.gasGoals : [];
     const plan = p.treatmentPlan && typeof p.treatmentPlan === 'object' ? p.treatmentPlan : {};
     const items = Array.isArray(plan.items) ? plan.items : [];
     const precautions = Array.isArray(plan.precautions) ? plan.precautions : [];
@@ -163,15 +162,6 @@ function createApp() {
         </tr>
       `;
     }).join('');
-
-    const goalRows = gasGoals.slice(0, 2).map((g, idx) => `
-      <tr>
-        <td class="c center">${idx + 1}</td>
-        <td class="c">${escapeHtml(g?.name || '')}</td>
-        <td class="c center">${escapeHtml(g?.current ?? '')}</td>
-        <td class="c center">${escapeHtml(g?.target ?? '')}</td>
-      </tr>
-    `).join('');
 
     const logRows = logs.slice(0, 7).map((l) => {
       const date = fmtDateCn(l?.date);
@@ -249,20 +239,12 @@ function createApp() {
     </div>
 
     <div class="box">
-      <div class="section">三、康复目标（GAS）</div>
-      <table class="small">
-        <tr><th style="width:10mm">序号</th><th>目标</th><th style="width:22mm">当前</th><th style="width:22mm">目标</th></tr>
-        ${goalRows || '<tr><td class="c center">1</td><td class="c"></td><td class="c center"></td><td class="c center"></td></tr><tr><td class="c center">2</td><td class="c"></td><td class="c center"></td><td class="c center"></td></tr>'}
-      </table>
-    </div>
-
-    <div class="box">
-      <div class="section">四、今日个体化重点</div>
+      <div class="section">三、今日个体化重点</div>
       <div class="small">${escapeHtml(highlights.slice(0, 2).join('；') || '—')}</div>
     </div>
 
     <div class="box">
-      <div class="section">五、今日治疗计划与执行情况</div>
+      <div class="section">四、今日治疗计划与执行情况</div>
       <div class="small" style="margin-bottom:2mm;"><b>治疗重点：</b>${escapeHtml(plan.focus || '')}</div>
       <table class="small">
         <tr>
@@ -278,7 +260,7 @@ function createApp() {
     </div>
 
     <div class="box">
-      <div class="section">六、当日治疗记录（供管床医生查阅）</div>
+      <div class="section">五、当日治疗记录（供管床医生查阅）</div>
       <table class="small">
         <tr>
           <th style="width:28mm">记录日期</th>
@@ -300,7 +282,7 @@ function createApp() {
     </div>
 
     <div class="box">
-      <div class="section">七、近期治疗记录（最近7条）</div>
+      <div class="section">六、近期治疗记录（最近7条）</div>
       <table class="small">
         <tr>
           <th style="width:24mm">日期</th>
@@ -616,14 +598,6 @@ function createApp() {
     const clampArr = (arr, max) => (Array.isArray(arr) ? arr.map(asStr).filter(Boolean).slice(0, max) : []);
     const root = parsed && typeof parsed === 'object' ? parsed : {};
 
-    const gasGoals = Array.isArray(root.gasGoals)
-      ? root.gasGoals.slice(0, 2).map((g) => ({
-          name: asStr(g?.name),
-          target: Number(g?.target || 0) || 0,
-          current: Number(g?.current || 0) || 0,
-        }))
-      : [];
-
     let items = Array.isArray(root.items)
       ? root.items.slice(0, 3).map((it) => ({
           name: asStr(it?.name),
@@ -653,7 +627,6 @@ function createApp() {
     const review = root.review && typeof root.review === 'object' ? root.review : null;
 
     return {
-      gasGoals,
       highlights: clampArr(root.highlights, 2),
       focus: asStr(root.focus),
       items,
@@ -1196,7 +1169,6 @@ function createApp() {
             status: data.status,
             todayTreated: data.todayTreated,
             safetyAlerts: data.safetyAlerts || [],
-            gasScore: data.gasScore,
             createdAt: r.created_at,
             updatedAt: r.updated_at
           };
