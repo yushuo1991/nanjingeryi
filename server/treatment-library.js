@@ -325,9 +325,9 @@ function getAlternativeItems(currentItemId, category, currentPlan = []) {
   const categoryItems = allItems.filter(item => item.category === category);
 
   // 排除当前项目和已在方案中的项目
-  const currentItemIds = currentPlan.map(item => item.id);
+  const currentItemIds = currentPlan.map(item => String(item.id));
   const alternatives = categoryItems.filter(
-    item => item.id !== currentItemId && !currentItemIds.includes(item.id)
+    item => String(item.id) !== String(currentItemId) && !currentItemIds.includes(String(item.id))
   );
 
   return alternatives;

@@ -1234,6 +1234,43 @@ function createApp() {
     }
   });
 
+  // GET /api/patients/:id - Get single patient details
+  app.get('/api/patients/:id', async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!id || isNaN(id)) {
+        return jsonError(res, 400, 'Invalid patient ID');
+      }
+
+      const pool = await getPool();
+      const [rows] = await pool.query('SELECT * FROM patients WHERE id = ?', [id]);
+
+      if (!rows || rows.length === 0) {
+        return jsonError(res, 404, 'Patient not found');
+      }
+
+      const row = rows[0];
+      let patient;
+      try {
+        patient = JSON.parse(row.data);
+        patient.id = Number(row.id);
+        patient.createdAt = row.created_at;
+        patient.updatedAt = row.updated_at;
+      } catch (parseError) {
+        console.error(`Failed to parse patient ${id}:`, parseError);
+        return jsonError(res, 500, 'Invalid patient data');
+      }
+
+      res.json({
+        success: true,
+        patient
+      });
+    } catch (error) {
+      console.error('GET /api/patients/:id error:', error);
+      return jsonError(res, 500, 'Failed to fetch patient: ' + error.message);
+    }
+  });
+
   // POST /api/patients
   app.post('/api/patients', async (req, res) => {
     const patient = req.body?.patient;

@@ -882,8 +882,7 @@ export default function RehabCareLink() {
           precautions: Array.isArray(plan.precautions) ? plan.precautions : prev.treatmentPlan.precautions,
         },
       }));
-      // 生成方案后自动确认建档并跳转
-      setTimeout(() => confirmAdmission(), 300); // 延迟确保状态更新完成
+      showToast('方案生成完成，请检查后点击"确认建档"', 'success');
     } catch (e) {
       showToast(e.message || '生成方案失败', 'error');
     } finally {
@@ -1338,7 +1337,7 @@ export default function RehabCareLink() {
     // 更新患者状态
     const patient = batchPatients[index];
     const newLog = {
-      date: '2026-01-11',
+      date: new Date().toISOString().split('T')[0],
       items: record.items,
       highlight: record.highlight,
       notes: record.notes,
