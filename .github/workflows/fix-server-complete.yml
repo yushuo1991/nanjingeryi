@@ -1,0 +1,101 @@
+name: 完整修复服务器（Nginx + better-sqlite3）
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-all:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 步骤1 - 修复 better-sqlite3 并重启后端
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        timeout: 60s
+        command_timeout: 10m
+        script: |
+          echo "=== 停止 PM2 ==="
+          pm2 stop rehab-care-link-server || true
+          pm2 delete rehab-care-link-server || true
+
+          echo ""
+          echo "=== 重新编译 better-sqlite3 ==="
+          cd /var/www/rehab-care-link/server
+          npm rebuild better-sqlite3 --build-from-source
+
+          echo ""
+          echo "=== 验证编译结果 ==="
+          if [ -f node_modules/better-sqlite3/build/Release/better_sqlite3.node ]; then
+            echo "✅ better-sqlite3 编译成功"
+          else
+            echo "❌ 编译失败，尝试重新安装"
+            npm install better-sqlite3@latest --force
+          fi
+
+          echo ""
+          echo "=== 启动 PM2 ==="
+          PORT=3201 pm2 start index.js --name rehab-care-link-server
+          pm2 save --force
+          sleep 5
+          pm2 status
+
+    - name: 步骤2 - 检查并启动 Nginx
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        timeout: 60s
+        command_timeout: 5m
+        script: |
+          echo "=== 检查 Nginx 状态 ==="
+          if systemctl is-active --quiet nginx; then
+            echo "✅ Nginx 正在运行"
+          else
+            echo "❌ Nginx 未运行，尝试启动"
+            sudo systemctl start nginx
+            sleep 2
+            if systemctl is-active --quiet nginx; then
+              echo "✅ Nginx 启动成功"
+            else
+              echo "❌ Nginx 启动失败，查看日志："
+              sudo systemctl status nginx
+            fi
+          fi
+
+          echo ""
+          echo "=== 检查 Nginx 配置 ==="
+          sudo nginx -t
+
+          echo ""
+          echo "=== 检查端口监听 ==="
+          sudo netstat -tlnp | grep -E ':(80|3201) '
+
+    - name: 步骤3 - 完整验证
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        timeout: 60s
+        command_timeout: 3m
+        script: |
+          echo "=== 后端健康检查 ==="
+          curl -sf http://localhost:3201/api/health && echo "✅ 后端正常" || echo "❌ 后端异常"
+
+          echo ""
+          echo "=== Nginx 代理检查 ==="
+          curl -sf http://localhost/api/health && echo "✅ Nginx 代理正常" || echo "❌ Nginx 代理异常"
+
+          echo ""
+          echo "=== PM2 日志（最后10行）==="
+          pm2 logs rehab-care-link-server --lines 10 --nostream
+
+          echo ""
+          echo "=== 完成！==="
