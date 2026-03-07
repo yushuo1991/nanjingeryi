@@ -1,0 +1,27 @@
+name: 检查服务器路由
+on:
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 检查路由和日志
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "=== 检查路由是否存在 ==="
+          grep -n "patients/:id" /var/www/rehab-care-link/server/index.js | head -10
+
+          echo ""
+          echo "=== 直接测试路由 ==="
+          curl -s http://localhost:3201/api/patients/1
+          echo ""
+          curl -s http://localhost:3201/api/patients/4
+          
+          echo ""
+          echo "=== PM2最新输出日志 ==="
+          pm2 logs rehab-care-link-server --lines 10 --nostream 2>/dev/null | tail -15
