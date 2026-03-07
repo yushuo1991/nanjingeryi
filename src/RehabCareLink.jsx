@@ -468,15 +468,29 @@ export default function RehabCareLink() {
            p1.updatedAt !== p2.updatedAt;
   }, []);
 
-  // 保持selectedPatient与patients数组同步
+  // 保持selectedPatient与patients数组同步（只在列表版本有更多数据时更新）
   useEffect(() => {
     if (selectedPatient) {
       const updatedPatient = patients.find(p => p.id === selectedPatient.id);
       if (updatedPatient && hasPatientChanged(updatedPatient, selectedPatient)) {
-        setSelectedPatient(updatedPatient);
+        // 不用精简版覆盖已有完整数据的 selectedPatient
+        if (!selectedPatient.treatmentPlan || updatedPatient.treatmentPlan) {
+          setSelectedPatient(updatedPatient);
+        }
       }
     }
   }, [patients, selectedPatient, hasPatientChanged]);
+
+  // 详情页：如果 selectedPatient 缺少 treatmentPlan，从后端拉取完整数据
+  useEffect(() => {
+    if (currentPage === 'patientDetail' && selectedPatient?.id && !selectedPatient.treatmentPlan) {
+      api(`/api/patients/${selectedPatient.id}`).then(res => {
+        if (res?.success && res.patient?.treatmentPlan) {
+          setSelectedPatient(res.patient);
+        }
+      }).catch(() => {});
+    }
+  }, [currentPage, selectedPatient?.id, selectedPatient?.treatmentPlan]);
 
   // 导航函数 - 增强版：自动清理无关状态
   const navigateTo = (page, data = null) => {
