@@ -742,6 +742,35 @@ export default function RehabCareLink() {
             return parts.length > 0 ? parts.join('；') : '';
           };
 
+          // 构建 items，并行预取备选方案
+          const rawItems = Array.isArray(plan?.items)
+            ? plan.items.map((it, idx) => ({
+                id: Date.now() + idx,
+                name: it.name || '',
+                icon: '🎯',
+                duration: it.duration || '',
+                completed: false,
+                note: it.notes || '',
+                category: it.category || 'active',
+              }))
+            : [];
+
+          const itemsWithAlts = await Promise.all(
+            rawItems.map(async (item) => {
+              try {
+                const altRes = await api('/api/treatment/alternatives', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ currentItemId: item.id, category: item.category, currentPlan: rawItems })
+                });
+                if (altRes?.success && altRes.alternatives?.length > 0) {
+                  return { ...item, _alternatives: altRes.alternatives, _altIndex: 0 };
+                }
+              } catch {}
+              return item;
+            })
+          );
+
           setAiResult({
             _caseId: caseId,
             name: profile?.patient?.name || '',
@@ -755,16 +784,7 @@ export default function RehabCareLink() {
             treatmentPlan: {
               focus: plan?.focus || '',
               highlights: [],
-              items: Array.isArray(plan?.items)
-                ? plan.items.map((it, idx) => ({
-                    id: Date.now() + idx,
-                    name: it.name || '',
-                    icon: '🎯',
-                    duration: it.duration || '',
-                    completed: false,
-                    note: it.notes || '',
-                  }))
-                : [],
+              items: itemsWithAlts,
               precautions: Array.isArray(plan?.precautions) ? plan.precautions : []
             },
             safetyAlerts: Array.isArray(profile?.risks) ? profile.risks : []
