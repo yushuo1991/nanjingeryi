@@ -1146,6 +1146,7 @@ export default function RehabCareLink() {
             ...nextAlt,
             id: Date.now(),
             completed: false,
+            duration: it.duration,
             _alternatives: alternatives,
             _altIndex: nextIndex,
           })
