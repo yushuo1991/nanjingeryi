@@ -58,6 +58,7 @@ const AIIntakeModal = ({
   addTreatmentItem,
   updateTreatmentItem,
   removeTreatmentItem,
+  replaceWithAlternative,
   handleGeneratePlan,
   confirmAdmission,
   isOcrProcessing,
@@ -78,12 +79,18 @@ const AIIntakeModal = ({
     setOcrProgress(0);
   };
 
-  // 打开替换弹窗
+  // 刷新按钮：优先用预取备选直接轮换，否则打开弹窗
   const handleReplaceClick = async (index) => {
     const item = aiResult.treatmentPlan.items[index];
-    setReplacingItemIndex(index);
 
-    // 调用API获取备选项目
+    // 有预取备选方案时直接轮换，无需弹窗
+    if (item._alternatives?.length > 0) {
+      replaceWithAlternative(index);
+      return;
+    }
+
+    // 降级：调用API获取备选项目并打开弹窗
+    setReplacingItemIndex(index);
     try {
       const response = await fetch('/api/treatment/alternatives', {
         method: 'POST',
@@ -491,6 +498,7 @@ AIIntakeModal.propTypes = {
   addTreatmentItem: PropTypes.func.isRequired,
   updateTreatmentItem: PropTypes.func.isRequired,
   removeTreatmentItem: PropTypes.func.isRequired,
+  replaceWithAlternative: PropTypes.func.isRequired,
   handleGeneratePlan: PropTypes.func.isRequired,
   confirmAdmission: PropTypes.func.isRequired,
   isOcrProcessing: PropTypes.bool.isRequired,

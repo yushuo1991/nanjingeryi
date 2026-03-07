@@ -850,24 +850,44 @@ export default function RehabCareLink() {
         showToast('AI生成方案完成', 'success');
       }
 
+      // 构建 items 数组
+      const newItems = Array.isArray(plan.items)
+        ? plan.items.map((it, idx) => ({
+            id: it.id || Date.now() + idx,
+            name: it.name || '',
+            icon: it.icon || '🎯',
+            duration: it.duration || '',
+            completed: false,
+            note: it.note || it.notes || '',
+            category: it.category || 'active',
+            适用状态: it.适用状态 || [],
+            禁忌: it.禁忌 || []
+          }))
+        : [];
+
+      // 并行预取每个项目的备选方案
+      const itemsWithAlts = await Promise.all(
+        newItems.map(async (item) => {
+          try {
+            const altRes = await api('/api/treatment/alternatives', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ currentItemId: item.id, category: item.category, currentPlan: newItems })
+            });
+            if (altRes?.success && altRes.alternatives?.length > 0) {
+              return { ...item, _alternatives: altRes.alternatives, _altIndex: 0 };
+            }
+          } catch {}
+          return item;
+        })
+      );
+
       setAiResult((prev) => ({
         ...prev,
         treatmentPlan: {
           focus: plan.focus || prev.treatmentPlan.focus,
           highlights: [],
-          items: Array.isArray(plan.items)
-            ? plan.items.map((it, idx) => ({
-                id: it.id || Date.now() + idx,
-                name: it.name || '',
-                icon: it.icon || '🎯',
-                duration: it.duration || '',
-                completed: false,
-                note: it.note || it.notes || '',
-                category: it.category || 'active',
-                适用状态: it.适用状态 || [],
-                禁忌: it.禁忌 || []
-              }))
-            : prev.treatmentPlan.items,
+          items: newItems.length > 0 ? itemsWithAlts : prev.treatmentPlan.items,
           precautions: Array.isArray(plan.precautions) ? plan.precautions : prev.treatmentPlan.precautions,
         },
       }));
@@ -1087,6 +1107,31 @@ export default function RehabCareLink() {
         items: prev.treatmentPlan.items.filter((_, i) => i !== index)
       }
     }));
+  };
+
+  // 轮换到下一个备选方案（直接替换，无需弹窗）
+  const replaceWithAlternative = (index) => {
+    setAiResult(prev => {
+      const items = prev.treatmentPlan.items;
+      const item = items[index];
+      const alternatives = item._alternatives;
+      if (!alternatives || alternatives.length === 0) return prev;
+      const nextIndex = ((item._altIndex || 0) + 1) % alternatives.length;
+      const nextAlt = alternatives[nextIndex];
+      return {
+        ...prev,
+        treatmentPlan: {
+          ...prev.treatmentPlan,
+          items: items.map((it, i) => i !== index ? it : {
+            ...nextAlt,
+            id: Date.now(),
+            completed: false,
+            _alternatives: alternatives,
+            _altIndex: nextIndex,
+          })
+        }
+      };
+    });
   };
 
   // 添加安全提醒
@@ -1535,6 +1580,7 @@ export default function RehabCareLink() {
         addTreatmentItem={addTreatmentItem}
         updateTreatmentItem={updateTreatmentItem}
         removeTreatmentItem={removeTreatmentItem}
+        replaceWithAlternative={replaceWithAlternative}
         handleGeneratePlan={handleGeneratePlan}
         confirmAdmission={confirmAdmission}
         isOcrProcessing={isOcrProcessing}
