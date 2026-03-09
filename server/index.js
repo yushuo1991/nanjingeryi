@@ -611,17 +611,35 @@ function createApp() {
         }))
       : [];
 
-    // Enforce total duration <= 20 minutes (product requirement).
+    // Enforce total duration == 20 minutes (product requirement).
     const parseMinutes = (value) => {
       const s = String(value || '');
       const m = s.match(/(\d+)\s*(分钟|分|min|mins|minute)/i) || s.match(/(\d+)/);
       if (!m) return 0;
       return Math.max(0, Number(m[1]) || 0);
     };
-    const totalMinutes = items.reduce((sum, it) => sum + parseMinutes(it.duration), 0);
-    if (items.length && totalMinutes > 20) {
-      const per = Math.max(1, Math.floor(20 / items.length));
-      items = items.map((it) => ({ ...it, duration: `${per}分钟` }));
+    if (items.length) {
+      const totalMinutes = items.reduce((sum, it) => sum + parseMinutes(it.duration), 0);
+      if (totalMinutes !== 20) {
+        if (totalMinutes === 0) {
+          // Can't parse durations — distribute evenly
+          const base = Math.floor(20 / items.length);
+          const remainder = 20 - base * items.length;
+          items = items.map((it, i) => ({ ...it, duration: `${base + (i < remainder ? 1 : 0)}分钟` }));
+        } else {
+          // Redistribute proportionally, last item absorbs rounding error
+          const scale = 20 / totalMinutes;
+          let assigned = 0;
+          items = items.map((it, i) => {
+            if (i === items.length - 1) {
+              return { ...it, duration: `${Math.max(1, 20 - assigned)}分钟` };
+            }
+            const mins = Math.max(1, Math.round(parseMinutes(it.duration) * scale));
+            assigned += mins;
+            return { ...it, duration: `${mins}分钟` };
+          });
+        }
+      }
     }
 
     const review = root.review && typeof root.review === 'object' ? root.review : null;
