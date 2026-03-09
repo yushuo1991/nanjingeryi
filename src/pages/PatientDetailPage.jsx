@@ -421,9 +421,18 @@ const PatientDetailPage = React.memo(({
                             <div className="mb-2">
                               <p className="text-xs font-semibold text-slate-500 mb-1">训练项目：</p>
                               {previewPlan.items.map((item, i) => (
-                                <p key={i} className="text-xs text-slate-600 ml-2">
-                                  {i + 1}. {item.name} ({item.duration})
-                                </p>
+                                <div key={i} className="mb-2 ml-2">
+                                  <p className="text-xs font-semibold text-slate-700">{i + 1}. {item.name} <span className="font-normal text-slate-400">({item.duration})</span></p>
+                                  {item.intensity && <p className="text-xs text-slate-500 ml-2">强度：{item.intensity}</p>}
+                                  {item.steps?.length > 0 && (
+                                    <ul className="ml-2 mt-0.5 space-y-0.5">
+                                      {item.steps.map((step, j) => (
+                                        <li key={j} className="text-xs text-slate-600">· {step}</li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                  {item.notes && <p className="text-xs text-amber-600 ml-2 mt-0.5">备注：{item.notes}</p>}
+                                </div>
                               ))}
                             </div>
                           )}

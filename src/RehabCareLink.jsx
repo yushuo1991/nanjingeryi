@@ -934,14 +934,16 @@ export default function RehabCareLink() {
     const today = new Date();
     const dateStr = today.toISOString().split('T')[0];
 
+    const planItems = patient.treatmentPlan?.items || [];
+
     // 收集已完成的治疗项目
-    const completedItems = patient.treatmentPlan.items
+    const completedItems = planItems
       .filter(item => item.completed)
       .map(item => ({ name: item.name, duration: item.duration || '5分钟' }));
 
     const itemsForLog = completedItems.length > 0
       ? completedItems
-      : patient.treatmentPlan.items.map(item => ({ name: item.name, duration: item.duration || '5分钟' }));
+      : planItems.map(item => ({ name: item.name, duration: item.duration || '5分钟' }));
 
     try {
       const res = await api(`/api/patients/${patient.id}/generate-log`, {
