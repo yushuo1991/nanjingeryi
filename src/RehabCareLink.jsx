@@ -936,18 +936,28 @@ export default function RehabCareLink() {
     // 收集已完成的治疗项目
     const completedItems = planItems
       .filter(item => item.completed)
-      .map(item => ({ name: item.name, duration: item.duration || '5分钟' }));
+      .map(item => ({ name: item.name, duration: item.duration || '5分钟', intensity: item.intensity || '', steps: item.steps || [] }));
 
     const itemsForLog = completedItems.length > 0
       ? completedItems
-      : planItems.map(item => ({ name: item.name, duration: item.duration || '5分钟' }));
+      : planItems.map(item => ({ name: item.name, duration: item.duration || '5分钟', intensity: item.intensity || '', steps: item.steps || [] }));
 
     try {
       const res = await api(`/api/patients/${patient.id}/generate-log`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          patient: { name: patient.name, age: patient.age, diagnosis: patient.diagnosis, admissionDate: patient.admissionDate },
+          patient: {
+            name: patient.name,
+            age: patient.age,
+            diagnosis: patient.diagnosis,
+            admissionDate: patient.admissionDate,
+            patientState: patient.patientState || '',
+            rehabProblems: patient.rehabProblems || '',
+            risks: patient.risks || [],
+            contraindications: patient.contraindications || [],
+            monitoring: patient.monitoring || [],
+          },
           treatmentPlan: patient.treatmentPlan,
           completedItems: itemsForLog,
           previousLogs: (patient.treatmentLogs || []).slice(0, 3),

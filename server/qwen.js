@@ -116,6 +116,7 @@ function buildLogPrompt(context) {
     '- 语言要专业但自然，像真实的治疗师记录',
     '- 不要出现"上午时段"、"下午时段"等时段区分，每天只进行一次训练',
     '- 不同天的日志必须有明显差异：患儿状态不同、观察重点不同',
+    '- 患儿状态（配合度/意识）决定训练类型：昏迷/意识障碍只能被动训练，配合度差以辅助为主，配合度良好可安排主动训练',
     '⚠️ 禁止编造精确数据：',
     '- 禁止写具体角度（如"屈曲达105度"、"活动度90度"），因为无法从现有资料中评估',
     '- 禁止写具体重复次数（如"重复8次"、"各10次"），这些数据无法从病历推断',
@@ -128,6 +129,11 @@ function buildLogPrompt(context) {
     `- 年龄：${patient.age}`,
     `- 诊断：${patient.diagnosis}`,
     `- 入院日期：${patient.admissionDate || '未知'}`,
+    patient.patientState ? `- 患儿状态：${patient.patientState}` : '',
+    patient.rehabProblems ? `- 康复问题：${patient.rehabProblems}` : '',
+    (patient.risks?.length) ? `- 风险提示：${patient.risks.slice(0, 3).join('；')}` : '',
+    (patient.contraindications?.length) ? `- 禁忌：${patient.contraindications.slice(0, 3).join('；')}` : '',
+    (patient.monitoring?.length) ? `- 监测要求：${patient.monitoring.slice(0, 3).join('；')}` : '',
     '',
     supplementNotes ? [
       '⚠️ 治疗师补充说明（请务必参考以下内容生成更贴合实际的日志）：',
@@ -138,13 +144,22 @@ function buildLogPrompt(context) {
     ].join('\n') : '',
     `治疗计划：`,
     `- 治疗重点：${treatmentPlan.focus || '功能训练'}`,
-    `- 计划项目：${treatmentPlan.items?.map(i => i.name).join('、') || '无'}`,
+    `- 计划项目：\n${treatmentPlan.items?.map(i => {
+  let line = `  • ${i.name}（${i.duration || ''}）`;
+  if (i.intensity) line += `，强度：${i.intensity}`;
+  if (i.steps?.length) line += `，步骤：${i.steps.slice(0, 2).join('；')}`;
+  return line;
+}).join('\n') || '无'}`,
     `- 注意事项：${treatmentPlan.precautions?.join('；') || '无'}`,
     '',
-    completedItems?.length > 0 ? `今日已完成项目：${completedItems.map(i => i.name).join('、')}` : '今日完成项目：按计划执行',
+    completedItems?.length > 0 ? `今日已完成项目：\n${completedItems.map(i => {
+  let line = `  • ${i.name}（${i.duration || ''}）`;
+  if (i.intensity) line += `，强度：${i.intensity}`;
+  return line;
+}).join('\n')}` : '今日完成项目：按计划执行',
     '',
-    previousLogs?.length > 0 ? `最近3次治疗记录（供参考进展，新日志必须与这些记录有明显差异）：\n${previousLogs.slice(0, 3).map(log =>
-      `${log.date}: ${log.highlight || log.notes || '常规训练'}`
+    previousLogs?.length > 0 ? `最近${Math.min(3, previousLogs.length)}次治疗记录（供参考进展，新日志必须体现变化）：\n${previousLogs.slice(0, 3).map(log =>
+      `${log.date}：配合度${log.cooperation || '未记录'}，耐受性${log.tolerance || '未记录'}。${log.highlight || log.notes || '常规训练'}`
     ).join('\n')}` : '这是首次治疗记录',
     '',
     '输出格式：',
