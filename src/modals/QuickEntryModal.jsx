@@ -10,7 +10,7 @@ import { ClipboardList, X } from '../components/icons';
  * @param {Function} props.onClose - Close handler
  * @param {Array} props.treatmentTemplates - Array of treatment template categories
  */
-const QuickEntryModal = ({ isOpen, onClose, treatmentTemplates }) => {
+const QuickEntryModal = ({ isOpen, onClose, onConfirm, treatmentTemplates }) => {
   const [selectedItems, setSelectedItems] = useState([]);
 
   const toggleItem = (item) => {
@@ -85,7 +85,11 @@ const QuickEntryModal = ({ isOpen, onClose, treatmentTemplates }) => {
           <button
             disabled={selectedItems.length === 0}
             className="w-full btn-particle btn-particle-emerald py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed mt-4"
-            onClick={onClose}
+            onClick={() => {
+              if (onConfirm) onConfirm(selectedItems);
+              setSelectedItems([]);
+              onClose();
+            }}
           >
             <div className="points_wrapper">
               <div className="point"></div>
@@ -112,6 +116,7 @@ const QuickEntryModal = ({ isOpen, onClose, treatmentTemplates }) => {
 QuickEntryModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
+  onConfirm: PropTypes.func,
   treatmentTemplates: PropTypes.arrayOf(PropTypes.shape({
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     category: PropTypes.string,

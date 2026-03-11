@@ -16,9 +16,6 @@ import { api } from './lib/api';
 import { printPatientRecord, printBatchRecords, generateTreatmentCard } from './lib/print';
 
 // UI Components
-import GlassCard from './components/ui/GlassCard';
-import ModalBase from './components/ui/ModalBase';
-import ParticleButton from './components/ui/ParticleButton';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 
 // Lazy load Modal Components
@@ -1025,7 +1022,7 @@ export default function RehabCareLink() {
 
     setGeneratedLog(newLog);
     setShowLogConfirm(true);
-  }, []);
+  }, [selectedPatient, showToast]);
 
   // 确认保存日志
   const confirmSaveLog = useCallback(async () => {
@@ -1631,6 +1628,32 @@ export default function RehabCareLink() {
           isOpen={showQuickEntry}
           onClose={() => setShowQuickEntry(false)}
           treatmentTemplates={treatmentTemplates}
+          onConfirm={(items) => {
+            if (!selectedPatient || !items.length) return;
+            const existing = selectedPatient.treatmentPlan?.items || [];
+            const existingNames = new Set(existing.map(i => i.name));
+            const newItems = items
+              .filter(i => !existingNames.has(i.name))
+              .map(i => ({
+                name: i.name,
+                duration: '',
+                frequency: '每日1次',
+                intensity: '',
+                steps: [],
+                monitoring: [],
+                stopCriteria: [],
+                notes: '',
+              }));
+            if (newItems.length === 0) {
+              showToast('所选项目已存在', 'info');
+              return;
+            }
+            const merged = [...existing, ...newItems];
+            updatePatient(selectedPatient.id, {
+              treatmentPlan: { ...selectedPatient.treatmentPlan, items: merged }
+            });
+            showToast(`已添加 ${newItems.length} 项治疗项目`, 'success');
+          }}
         />
 
         {/* 添加科室弹窗 */}
@@ -1755,7 +1778,7 @@ export default function RehabCareLink() {
 
       {/* 日志确认对话框 */}
       {showLogConfirm && generatedLog && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowLogConfirm(false)}>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => { setShowLogConfirm(false); setGeneratedLog(null); }}>
           <div className="bg-white/95 backdrop-blur-2xl rounded-3xl p-6 max-w-md w-full shadow-2xl max-h-[80vh] overflow-y-auto border border-white/80" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
