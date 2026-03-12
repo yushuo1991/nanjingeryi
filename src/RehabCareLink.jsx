@@ -1616,6 +1616,7 @@ export default function RehabCareLink() {
         isOcrProcessing={isOcrProcessing}
         isSavingPatient={isSavingPatient}
         departments={departments}
+        showToast={showToast}
       />
 
         <BatchReportModal
