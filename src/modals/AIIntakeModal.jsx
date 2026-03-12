@@ -6,6 +6,7 @@ import {
 } from '../components/icons';
 import ModalBase from '../components/ui/ModalBase';
 import ParticleButton from '../components/ui/ParticleButton';
+import { api } from '../lib/api';
 import BoxLoader from '../components/ui/BoxLoader';
 import ReplaceItemModal from './ReplaceItemModal';
 
@@ -63,7 +64,8 @@ const AIIntakeModal = ({
   confirmAdmission,
   isOcrProcessing,
   isSavingPatient,
-  departments
+  departments,
+  showToast,
 }) => {
   const [newAlertInput, setNewAlertInput] = useState('');
   const [showReplaceModal, setShowReplaceModal] = useState(false);
@@ -151,12 +153,11 @@ const AIIntakeModal = ({
         rehabProblems: aiResult.rehabProblems || '',
         patientState: aiResult.patientState || '',
       };
-      const res = await fetch(`/api/cases/${aiResult._caseId}/refine-plan`, {
+      const data = await api(`/api/cases/${aiResult._caseId}/refine-plan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ profile, feedback: planFeedback.trim() }),
       });
-      const data = await res.json();
       if (data.success && data.plan) {
         const newItems = Array.isArray(data.plan.items)
           ? data.plan.items.map((it, idx) => ({
@@ -183,9 +184,11 @@ const AIIntakeModal = ({
           },
         }));
         setPlanFeedback('');
+        showToast?.('方案已根据反馈重新生成', 'success');
       }
     } catch (e) {
       console.error('refine plan failed:', e);
+      showToast?.('调整方案失败：' + (e.message || '未知错误'), 'error');
     } finally {
       setIsRefining(false);
     }
@@ -599,6 +602,7 @@ AIIntakeModal.propTypes = {
     name: PropTypes.string,
     icon: PropTypes.string,
   })).isRequired,
+  showToast: PropTypes.func,
 };
 
 AIIntakeModal.defaultProps = {
