@@ -1041,6 +1041,27 @@ function createApp() {
     }
   });
 
+  // 根据治疗师反馈调整方案（建档阶段，无需 patientId）
+  app.post('/api/cases/:id/refine-plan', async (req, res) => {
+    const caseId = Number(req.params.id);
+    if (!caseId) return jsonError(res, 400, 'Invalid caseId');
+
+    const { profile, feedback } = req.body;
+    if (!feedback || typeof feedback !== 'string') return jsonError(res, 400, 'feedback is required');
+    if (!profile || typeof profile !== 'object') return jsonError(res, 400, 'profile is required');
+
+    try {
+      requiredEnv('DASHSCOPE_API_KEY');
+      const prompt = buildRegeneratePlanPrompt(profile, feedback);
+      const parsed = await callVisionJson({ imageDataUrls: [], prompt, requestTag: 'refine-plan' });
+      const plan = clampPlan(parsed);
+      res.json({ success: true, plan });
+    } catch (e) {
+      console.error('AI refine plan failed:', e);
+      jsonError(res, 502, e.message || 'AI refine plan failed');
+    }
+  });
+
   // 智能匹配治疗方案（基于模板库）
   app.post('/api/treatment/match-plan', async (req, res) => {
     try {

@@ -69,6 +69,8 @@ const AIIntakeModal = ({
   const [showReplaceModal, setShowReplaceModal] = useState(false);
   const [replacingItemIndex, setReplacingItemIndex] = useState(null);
   const [alternatives, setAlternatives] = useState([]);
+  const [planFeedback, setPlanFeedback] = useState('');
+  const [isRefining, setIsRefining] = useState(false);
 
   const handleClose = () => {
     onClose();
@@ -128,6 +130,65 @@ const AIIntakeModal = ({
         items: updatedItems
       }
     }));
+  };
+
+  // 根据治疗师反馈重新调整方案
+  const handleRefinePlan = async () => {
+    if (!planFeedback.trim() || !aiResult?._caseId) return;
+    setIsRefining(true);
+    try {
+      const profile = {
+        patient: {
+          name: aiResult.name,
+          gender: aiResult.gender,
+          age: aiResult.age,
+          bedNo: aiResult.bedNo,
+          department: aiResult.department,
+          diagnosis: aiResult.diagnosis,
+          admissionDate: null,
+        },
+        risks: aiResult.safetyAlerts || [],
+        rehabProblems: aiResult.rehabProblems || '',
+        patientState: aiResult.patientState || '',
+      };
+      const res = await fetch(`/api/cases/${aiResult._caseId}/refine-plan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile, feedback: planFeedback.trim() }),
+      });
+      const data = await res.json();
+      if (data.success && data.plan) {
+        const newItems = Array.isArray(data.plan.items)
+          ? data.plan.items.map((it, idx) => ({
+              id: Date.now() + idx,
+              name: it.name || '',
+              icon: '🎯',
+              duration: it.duration || '',
+              intensity: it.intensity || '',
+              steps: it.steps || [],
+              monitoring: it.monitoring || [],
+              stopCriteria: it.stopCriteria || [],
+              completed: false,
+              note: it.notes || '',
+              category: 'active',
+            }))
+          : [];
+        setAiResult(prev => ({
+          ...prev,
+          treatmentPlan: {
+            focus: data.plan.focus || prev.treatmentPlan.focus,
+            highlights: data.plan.highlights || [],
+            items: newItems.length > 0 ? newItems : prev.treatmentPlan.items,
+            precautions: Array.isArray(data.plan.precautions) ? data.plan.precautions : prev.treatmentPlan.precautions,
+          },
+        }));
+        setPlanFeedback('');
+      }
+    } catch (e) {
+      console.error('refine plan failed:', e);
+    } finally {
+      setIsRefining(false);
+    }
   };
 
   return (
@@ -424,6 +485,36 @@ const AIIntakeModal = ({
               ))}
             </div>
           </div>
+
+          {/* 方案反馈 & 重新调整 */}
+          {aiResult.treatmentPlan.items.length > 0 && (
+            <div className="bg-amber-50/60 border border-amber-200 rounded-2xl p-4">
+              <h5 className="text-sm font-bold text-slate-700 mb-1 flex items-center gap-2">
+                <Sparkles size={15} className="text-amber-500" />
+                方案不合适？告诉 AI 调整
+              </h5>
+              <p className="text-xs text-slate-400 mb-2">例如：患儿昏迷，不能主动训练；左侧骨折，避免左上肢活动</p>
+              <textarea
+                value={planFeedback}
+                onChange={(e) => setPlanFeedback(e.target.value)}
+                placeholder="描述问题或要求，AI 将据此重新生成方案..."
+                className="w-full border border-amber-200 rounded-xl px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100 outline-none bg-white resize-none"
+                rows={2}
+                disabled={isRefining}
+              />
+              <button
+                onClick={handleRefinePlan}
+                disabled={!planFeedback.trim() || isRefining}
+                className="mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-amber-500 to-orange-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                {isRefining ? (
+                  <><Loader2 size={15} className="animate-spin" />AI 正在调整方案...</>
+                ) : (
+                  <><Sparkles size={15} />根据反馈重新生成</>
+                )}
+              </button>
+            </div>
+          )}
 
           {/* Submit buttons */}
           <div className="flex gap-3 pt-2 pb-4">
